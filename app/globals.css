@@ -1,21 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Matte Blue-Green Core */
+  --primary: #3fa6a0;      /* matte teal */
+  --primary-dark: #2a7a75; /* deeper matte teal */
+
+  /* Supporting Blues */
+  --blue-1: #5f8fb7; /* soft steel blue */
+  --blue-2: #3f6f95; /* matte ocean blue */
+  --blue-3: #2c4e6b; /* deep navy-matte */
+
+  /* Supporting Greens */
+  --green-1: #6cae81; /* muted leaf green */
+  --green-2: #4d8c62; /* matte forest green */
+  --green-3: #3a6d4b; /* darker forest matte */
+
+  /* Background & Surface */
+  --background: #0c111a;
+  --foreground: #e6e6e6;
+
+  --card-bg: #111823;
+  --card-border: #1a2333;
+
+  --input-bg: #101726;
+  --input-border: #223048;
+
+  --danger: #ff3b3b;
+
+  /* Extra: Matte Gradients */
+  --gradient-1: linear-gradient(135deg, #3fa6a0, #3f6f95);
+  --gradient-2: linear-gradient(135deg, #6cae81, #3a6d4b);
+
+  --glow: rgba(63, 166, 160, 0.4); /* softer matte glow */
 }
+
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+
+  --color-danger: var(--danger);
+  --color-glow: var(--glow);
+
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f8faff;
+    --foreground: #1a1a1a;
+
+    --card-bg: #ffffff;
+    --card-border: #e5e7eb;
+
+    --input-bg: #f1f5f9;
+    --input-border: #cbd5e1;
   }
 }
 
@@ -23,4 +71,25 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sidebar Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* Track almost invisible */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb soft matte */
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+
+/* Slight contrast on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
