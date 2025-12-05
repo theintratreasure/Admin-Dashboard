@@ -40,11 +40,6 @@ const navItems: NavItem[] = [
   { href: "/admin/users", label: "Users", icon: <User size={16} /> },
   { href: "/admin/user-kyc", label: "User KYC", icon: <User size={16} /> },
 
-  // Inventory / Products
-  { href: "/admin/inventory", label: "Inventory", icon: <Package size={16} /> },
-  { href: "/admin/products", label: "Products", icon: <Package size={16} /> },
-  { href: "/admin/billing", label: "Billing", icon: <CreditCard size={16} /> },
-
   // Analytics / Reports
   { href: "/admin/reports", label: "Reports", icon: <BarChart2 size={16} /> },
   { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={16} /> },

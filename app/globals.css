@@ -2,22 +2,22 @@
 
 :root {
   /* Matte Blue-Green Core */
-  --primary: #3fa6a0;      /* matte teal */
-  --primary-dark: #2a7a75; /* deeper matte teal */
+  --primary: #3fa6a0;      
+  --primary-dark: #2a7a75; 
 
   /* Supporting Blues */
-  --blue-1: #5f8fb7; /* soft steel blue */
-  --blue-2: #3f6f95; /* matte ocean blue */
-  --blue-3: #2c4e6b; /* deep navy-matte */
+  --blue-1: #5f8fb7;
+  --blue-2: #3f6f95;
+  --blue-3: #2c4e6b;
 
   /* Supporting Greens */
-  --green-1: #6cae81; /* muted leaf green */
-  --green-2: #4d8c62; /* matte forest green */
-  --green-3: #3a6d4b; /* darker forest matte */
+  --green-1: #6cae81;
+  --green-2: #4d8c62;
+  --green-3: #3a6d4b;
 
   /* Background & Surface */
   --background: #0c111a;
-  --foreground: #e6e6e6;
+  --foreground: #e0e6ed;
 
   --card-bg: #111823;
   --card-border: #1a2333;
@@ -31,7 +31,7 @@
   --gradient-1: linear-gradient(135deg, #3fa6a0, #3f6f95);
   --gradient-2: linear-gradient(135deg, #6cae81, #3a6d4b);
 
-  --glow: rgba(63, 166, 160, 0.4); /* softer matte glow */
+  --glow: rgba(63, 166, 160, 0.4); 
 }
 
 

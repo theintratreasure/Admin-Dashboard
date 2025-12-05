@@ -1,7 +1,7 @@
 export default function AdminDashboard() {
-    return(
+    return (
         <>
-        Admin Dashboard
+            Admin Dashboard
         </>
     )
 }
