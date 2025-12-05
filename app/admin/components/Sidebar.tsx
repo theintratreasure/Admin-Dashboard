@@ -11,6 +11,7 @@ import {
   LogOut,
   X,
   User,
+  BringToFront,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,13 +27,13 @@ const navItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
 
   // Trading Core
-  { href: "/admin/markets", label: "Markets", icon: <BarChart2 size={16} /> },
+  { href: "/admin/instruments", label: "Instruments", icon: <BarChart2 size={16} /> },
   { href: "/admin/live-trades", label: "Live Trades", icon: <ShoppingCart size={16} /> },
   { href: "/admin/orders", label: "Orders", icon: <ShoppingCart size={16} /> },
   { href: "/admin/positions", label: "Positions", icon: <Package size={16} /> },
 
   // Finance
-  { href: "/admin/wallets", label: "Wallets", icon: <CreditCard size={16} /> },
+  { href: "/admin/deposits", label: "Deposits", icon: <CreditCard size={16} /> },
   { href: "/admin/transactions", label: "Transactions", icon: <CreditCard size={16} /> },
   { href: "/admin/payouts", label: "Payouts", icon: <CreditCard size={16} /> },
 
@@ -45,6 +46,8 @@ const navItems: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={16} /> },
 
   // Settings / Controls
+
+  { href: "/admin/brokage", label: "Brokage", icon: <BringToFront size={16} /> },
   { href: "/admin/settings", label: "Settings", icon: <LayoutDashboard size={16} /> },
   { href: "/admin/system-logs", label: "System Logs", icon: <LayoutDashboard size={16} /> },
 ];
