@@ -1,0 +1,247 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Check, X, Eye, Search } from "lucide-react";
+
+// SAMPLE DEPOSIT DATA
+const deposits = [
+  {
+    id: 1,
+    name: "Ravi Sharma",
+    photo: "/users/ravi.png",
+    amount: 2500,
+    mode: "UPI",
+    utr: "UTR98445321",
+    remark: "Deposit for trading",
+    status: "Pending",
+    screenshot: "/deposit/ravi_upi.png",
+    date: "2025-02-27",
+  },
+  {
+    id: 2,
+    name: "Aman Gupta",
+    photo: "/users/aman.png",
+    amount: 5000,
+    mode: "Bank Transfer",
+    utr: "UTR76588721",
+    remark: "Wallet top-up",
+    status: "Accepted",
+    screenshot: "/deposit/aman_bank.png",
+    date: "2025-02-26",
+  },
+  {
+    id: 3,
+    name: "Priya Verma",
+    photo: "/users/priya.png",
+    amount: 1800,
+    mode: "UPI",
+    utr: "UTR55321912",
+    remark: "Deposit stuck",
+    status: "Pending",
+    screenshot: "/deposit/priya_upi.png",
+    date: "2025-02-27",
+  },
+];
+
+export default function UserDeposit() {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<any>(null);
+  const [rejectNote, setRejectNote] = useState("");
+
+  const filtered = deposits.filter((d) =>
+    d.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // SUMMARY
+  const totalDeposit = deposits.reduce((a, b) => a + b.amount, 0);
+  const pendingDeposit = deposits.filter((d) => d.status === "Pending").length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="p-6 space-y-6"
+    >
+      <h1 className="text-xl font-semibold text-[var(--text)]">User Deposits</h1>
+
+      {/* SUMMARY CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <SummaryCard label="Total Deposit" value={`₹${totalDeposit}`} color="var(--success)" />
+        <SummaryCard label="Pending Deposits" value={pendingDeposit} color="var(--danger)" />
+        <SummaryCard label="Pending Remarks" value="Remarks Required" color="var(--info)" />
+      </div>
+
+      {/* SEARCH BAR */}
+      <div className="flex items-center gap-3 bg-[var(--card-bg)] p-3 border border-[var(--border)] rounded-lg">
+        <Search size={18} className="text-[var(--text-muted)]" />
+        <input
+          placeholder="Search user by name..."
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-transparent text-[var(--text)] outline-none"
+        />
+      </div>
+
+      {/* TABLE */}
+      <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 shadow-sm overflow-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-[var(--input-bg)] text-[var(--text-muted)]">
+              <th className="py-3 text-left pl-3">User</th>
+              <th className="py-3 text-center">Amount</th>
+              <th className="py-3 text-center">Mode</th>
+              <th className="py-3 text-center">Transaction ID</th>
+              <th className="py-3 text-center">Remark</th>
+              <th className="py-3 text-center">Status</th>
+              <th className="py-3 text-center">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((d, i) => (
+              <tr
+                key={d.id}
+                className={`${
+                  i % 2 === 0 ? "bg-[var(--card-bg)]" : "bg-[var(--input-bg)]"
+                } border-b transition-all hover:bg-[var(--hover-bg)]`}
+              >
+                <td className="py-3 pl-3 flex items-center gap-2">
+                  <img src={d.photo} className="w-8 h-8 rounded-full" />
+                  {d.name}
+                </td>
+                <td className="text-center font-semibold text-[var(--success)]">
+                  ₹{d.amount}
+                </td>
+                <td className="text-center">{d.mode}</td>
+                <td className="text-center">{d.utr}</td>
+                <td className="text-center text-[var(--text-muted)]">{d.remark}</td>
+                <td
+                  className={`text-center font-medium ${
+                    d.status === "Pending"
+                      ? "text-yellow-400"
+                      : d.status === "Accepted"
+                      ? "text-[var(--success)]"
+                      : "text-[var(--danger)]"
+                  }`}
+                >
+                  {d.status}
+                </td>
+
+                {/* ACTION BUTTONS */}
+                <td className="flex justify-center gap-2 py-2">
+                  {/* ACCEPT */}
+                  <button
+                    style={{ background: "var(--success)", color: "#fff" }}
+                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
+                  >
+                    <Check size={14} /> Accept
+                  </button>
+
+                  {/* REJECT */}
+                  <button
+                    onClick={() => setSelected({ ...d, rejectMode: true })}
+                    style={{ background: "var(--danger)", color: "#fff" }}
+                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
+                  >
+                    <X size={14} /> Reject
+                  </button>
+
+                  {/* VIEW */}
+                  <button
+                    onClick={() => setSelected(d)}
+                    style={{ background: "var(--info)", color: "#fff" }}
+                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
+                  >
+                    <Eye size={14} /> View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL */}
+      {selected && (
+        <Modal close={() => setSelected(null)}>
+          {!selected.rejectMode ? (
+            <DepositDetails user={selected} />
+          ) : (
+            <RejectBox
+              save={(note: string) => {
+                setRejectNote(note);
+                setSelected(null);
+              }}
+              close={() => setSelected(null)}
+            />
+          )}
+        </Modal>
+      )}
+    </motion.div>
+  );
+}
+
+/* SUMMARY CARD */
+const SummaryCard = ({ label, value, color }: any) => (
+  <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 shadow-sm">
+    <p className="text-sm text-[var(--text-muted)]">{label}</p>
+    <h2 className="text-2xl font-bold" style={{ color }}>{value}</h2>
+  </div>
+);
+
+/* VIEW DETAILS COMPONENT */
+const DepositDetails = ({ user }: any) => (
+  <div>
+    <h2 className="text-md font-semibold mb-3">{user.name} – Deposit Details</h2>
+
+    <p><b>Amount:</b> ₹{user.amount}</p>
+    <p><b>Mode:</b> {user.mode}</p>
+    <p><b>UTR:</b> {user.utr}</p>
+    <p className="mb-3"><b>Remark:</b> {user.remark}</p>
+
+    <img
+      src={user.screenshot}
+      className="border border-[var(--border)] rounded-md w-full"
+    />
+  </div>
+);
+
+/* REJECT BOX */
+const RejectBox = ({ save, close }: any) => {
+  const [note, setNote] = useState("");
+
+  return (
+    <div>
+      <h2 className="font-semibold mb-3 text-red-500">Reject Deposit</h2>
+      <textarea
+        placeholder="Enter reason for rejection..."
+        onChange={(e) => setNote(e.target.value)}
+        className="w-full p-2 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)]"
+      />
+      <div className="flex justify-end gap-3 mt-3">
+        <button onClick={close} className="text-[var(--text-muted)] text-sm">
+          Cancel
+        </button>
+        <button
+          onClick={() => save(note)}
+          style={{ background: "var(--danger)", color: "#fff" }}
+          className="px-4 py-1 rounded-md text-sm"
+        >
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* MODAL */
+const Modal = ({ children, close }: any) => (
+  <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+    <div className="bg-[var(--card-bg)] border border-[var(--border)] p-6 rounded-xl shadow-xl w-[430px] relative">
+      {children}
+      <button className="absolute top-3 right-4 text-[var(--text-muted)]" onClick={close}>
+        ✕
+      </button>
+    </div>
+  </div>
+);

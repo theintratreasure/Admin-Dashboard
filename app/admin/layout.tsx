@@ -14,13 +14,23 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-neutral)]">
+    <div className="min-h-screen flex flex-col bg-[var(--card-bg)] text-[var(--foreground)]">
+     
       <Topbar />
+
+      
       <div className="flex flex-1">
+        {/* Left Sidebar */}
         <AdminSidebar />
-        <main className="flex-1 p-6 lg:ml-64 overflow-y-auto bg-[var(--color-neutral)]">
+
+        {/* Main Content Area */}
+        <main
+          className="flex-1 w-full bg-[var(--card-bg)] text-[var(--foreground)] pl-6 pr-6 pt-4 transition-all duration-300"
+          style={{
+            marginLeft: "var(--sidebar-width)",
+          }}
+        >
           {children}
         </main>
       </div>

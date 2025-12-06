@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
 
   // Users
   { href: "/admin/users", label: "Users", icon: <User size={16} /> },
-  { href: "/admin/user-kyc", label: "User KYC", icon: <User size={16} /> },
+  { href: "/admin/user_kyc ", label: "User KYC", icon: <User size={16} /> },
 
   // Analytics / Reports
   { href: "/admin/reports", label: "Reports", icon: <BarChart2 size={16} /> },
