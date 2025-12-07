@@ -3,9 +3,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X, Eye, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // SAMPLE DEPOSIT DATA
-const deposits = [
+
+
+export default function UserDeposit() {
+
+  const [deposits, setDeposits]  = useState([
   {
     id: 1,
     name: "Ravi Sharma",
@@ -26,7 +31,7 @@ const deposits = [
     mode: "Bank Transfer",
     utr: "UTR76588721",
     remark: "Wallet top-up",
-    status: "Accepted",
+    status: "Pending",
     screenshot: "/deposit/aman_bank.png",
     date: "2025-02-26",
   },
@@ -42,12 +47,10 @@ const deposits = [
     screenshot: "/deposit/priya_upi.png",
     date: "2025-02-27",
   },
-];
-
-export default function UserDeposit() {
+]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<any>(null);
-  const [rejectNote, setRejectNote] = useState("");
+  const router = useRouter();
 
   const filtered = deposits.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase())
@@ -57,12 +60,35 @@ export default function UserDeposit() {
   const totalDeposit = deposits.reduce((a, b) => a + b.amount, 0);
   const pendingDeposit = deposits.filter((d) => d.status === "Pending").length;
 
+  // ACCEPT FUNCTION
+  const acceptDeposit = (user: any) => {
+    const dt = new Date();
+    const date = dt.toLocaleDateString();
+    const time = dt.toLocaleTimeString();
+
+    const acceptedData = {
+      ...user,
+      status: "Accepted",
+      acceptedAt: `${date} ${time}`,
+    };
+
+    const confirmSave = window.confirm(
+    `${user.name}'s Deposit has been successfully accepted!\nDo you want to save this record?`
+  );
+
+  if (confirmSave) {
+    localStorage.setItem(`deposit-${user.id}`, JSON.stringify(acceptedData));
+
+    setDeposits((prev: any[]) => prev.filter((item) => item.id !== user.id));
+
+    setSelected(null); // Close modal after save
+    alert("Deposit Successfully Saved!");
+  }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-6 space-y-6"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
+
       <h1 className="text-xl font-semibold text-[var(--text)]">User Deposits</h1>
 
       {/* SUMMARY CARDS */}
@@ -72,7 +98,7 @@ export default function UserDeposit() {
         <SummaryCard label="Pending Remarks" value="Remarks Required" color="var(--info)" />
       </div>
 
-      {/* SEARCH BAR */}
+      {/* SEARCH */}
       <div className="flex items-center gap-3 bg-[var(--card-bg)] p-3 border border-[var(--border)] rounded-lg">
         <Search size={18} className="text-[var(--text-muted)]" />
         <input
@@ -87,7 +113,7 @@ export default function UserDeposit() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-[var(--input-bg)] text-[var(--text-muted)]">
-              <th className="py-3 text-left pl-3">User</th>
+              <th className="py-3 pl-3 text-left">User</th>
               <th className="py-3 text-center">Amount</th>
               <th className="py-3 text-center">Mode</th>
               <th className="py-3 text-center">Transaction ID</th>
@@ -109,28 +135,17 @@ export default function UserDeposit() {
                   <img src={d.photo} className="w-8 h-8 rounded-full" />
                   {d.name}
                 </td>
-                <td className="text-center font-semibold text-[var(--success)]">
-                  ₹{d.amount}
-                </td>
+                <td className="text-center font-semibold text-[var(--success)]">₹{d.amount}</td>
                 <td className="text-center">{d.mode}</td>
                 <td className="text-center">{d.utr}</td>
                 <td className="text-center text-[var(--text-muted)]">{d.remark}</td>
-                <td
-                  className={`text-center font-medium ${
-                    d.status === "Pending"
-                      ? "text-yellow-400"
-                      : d.status === "Accepted"
-                      ? "text-[var(--success)]"
-                      : "text-[var(--danger)]"
-                  }`}
-                >
-                  {d.status}
-                </td>
+                <td className="text-center text-yellow-400">{d.status}</td>
 
-                {/* ACTION BUTTONS */}
+                {/* ACTIONS */}
                 <td className="flex justify-center gap-2 py-2">
                   {/* ACCEPT */}
                   <button
+                    onClick={() => setSelected({ ...d, confirmAccept: true })}
                     style={{ background: "var(--success)", color: "#fff" }}
                     className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
                   >
@@ -161,19 +176,19 @@ export default function UserDeposit() {
         </table>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL LOGIC */}
       {selected && (
         <Modal close={() => setSelected(null)}>
-          {!selected.rejectMode ? (
-            <DepositDetails user={selected} />
-          ) : (
-            <RejectBox
-              save={(note: string) => {
-                setRejectNote(note);
-                setSelected(null);
-              }}
+          {selected.confirmAccept ? (
+            <AcceptConfirm
+              user={selected}
+              confirm={() => acceptDeposit(selected)}
               close={() => setSelected(null)}
             />
+          ) : selected.rejectMode ? (
+            <RejectBox close={() => setSelected(null)} />
+          ) : (
+            <DepositDetails user={selected} />
           )}
         </Modal>
       )}
@@ -189,41 +204,52 @@ const SummaryCard = ({ label, value, color }: any) => (
   </div>
 );
 
-/* VIEW DETAILS COMPONENT */
+/* DETAILS MODAL */
 const DepositDetails = ({ user }: any) => (
   <div>
     <h2 className="text-md font-semibold mb-3">{user.name} – Deposit Details</h2>
-
     <p><b>Amount:</b> ₹{user.amount}</p>
     <p><b>Mode:</b> {user.mode}</p>
     <p><b>UTR:</b> {user.utr}</p>
     <p className="mb-3"><b>Remark:</b> {user.remark}</p>
+    <img src={user.screenshot} className="border border-[var(--border)] rounded-md w-full" />
+  </div>
+);
 
-    <img
-      src={user.screenshot}
-      className="border border-[var(--border)] rounded-md w-full"
-    />
+/* ACCEPT CONFIRMATION POPUP */
+const AcceptConfirm = ({ user, confirm, close }: any) => (
+  <div>
+    <h2 className="font-semibold text-green-500 mb-3">Confirm Accept</h2>
+    <p>Do you want to accept <b>{user.name}</b>'s deposit?</p>
+
+    <div className="flex justify-end gap-3 mt-4">
+      <button onClick={close} className="text-[var(--text-muted)] text-sm">Cancel</button>
+      <button
+        onClick={confirm}
+        style={{ background: "var(--success)", color: "#fff" }}
+        className="px-4 py-1 rounded-md text-sm"
+      >
+        Yes, Accept
+      </button>
+    </div>
   </div>
 );
 
 /* REJECT BOX */
-const RejectBox = ({ save, close }: any) => {
+const RejectBox = ({ close }: any) => {
   const [note, setNote] = useState("");
-
   return (
     <div>
       <h2 className="font-semibold mb-3 text-red-500">Reject Deposit</h2>
       <textarea
-        placeholder="Enter reason for rejection..."
+        placeholder="Enter reason..."
         onChange={(e) => setNote(e.target.value)}
         className="w-full p-2 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)]"
       />
       <div className="flex justify-end gap-3 mt-3">
-        <button onClick={close} className="text-[var(--text-muted)] text-sm">
-          Cancel
-        </button>
+        <button onClick={close} className="text-[var(--text-muted)] text-sm">Cancel</button>
         <button
-          onClick={() => save(note)}
+          onClick={close}
           style={{ background: "var(--danger)", color: "#fff" }}
           className="px-4 py-1 rounded-md text-sm"
         >
@@ -234,14 +260,12 @@ const RejectBox = ({ save, close }: any) => {
   );
 };
 
-/* MODAL */
+/* MODAL WRAPPER */
 const Modal = ({ children, close }: any) => (
   <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
     <div className="bg-[var(--card-bg)] border border-[var(--border)] p-6 rounded-xl shadow-xl w-[430px] relative">
       {children}
-      <button className="absolute top-3 right-4 text-[var(--text-muted)]" onClick={close}>
-        ✕
-      </button>
+      <button className="absolute top-3 right-4 text-[var(--text-muted)]" onClick={close}>✕</button>
     </div>
   </div>
 );

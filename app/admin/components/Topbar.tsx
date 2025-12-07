@@ -45,7 +45,7 @@ const Topbar: React.FC = () => {
 
           {/* Search Box */}
           <div className="relative w-40 sm:w-52 md:w-60">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 opacity-70 text-[var(--foreground)]" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 opacity-70 text-[var(--primary)]" />
             <input
               type="text"
               placeholder="Search markets, users, logs..."
@@ -54,14 +54,14 @@ const Topbar: React.FC = () => {
             />
           </div>
 
-          {/* 🌗 Theme Toggle Button — ADDED HERE */}
+          {/*Theme Toggle Button — ADDED HERE */}
           <button
             onClick={toggleTheme}
             className="h-10 w-10 rounded-full flex items-center justify-center 
             border border-[var(--input-border)] bg-[var(--input-bg)] 
             hover:scale-105 transition-transform shadow-sm"
           >
-            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === "light" ? <Moon size={18}  /> : <Sun size={18} />}
           </button>
 
           {/* Profile */}
