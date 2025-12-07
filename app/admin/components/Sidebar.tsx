@@ -17,7 +17,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem {
-  href?: string;
+  href: string; // <-- make this required
   label: string;
   icon: JSX.Element;
   children?: { href: string; label: string }[];
@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
   { href: "/admin/live-trades", label: "Live Trades", icon: <ShoppingCart size={16} /> },
 
   {
+    href: "/admin/payment", // <-- add this so href is never undefined
     label: "Payment",
     icon: <CreditCard size={16} />,
     children: [
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
   { href: "/admin/settings", label: "Settings", icon: <LayoutDashboard size={16} /> },
   { href: "/admin/system-logs", label: "System Logs", icon: <LayoutDashboard size={16} /> },
 ];
+
 
 const AdminSidebar: React.FC = () => {
   const [open, setOpen] = useState(false);
