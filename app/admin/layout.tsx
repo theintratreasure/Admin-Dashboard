@@ -26,7 +26,7 @@ export default async function AdminLayout({
 
         {/* Main Content Area */}
         <main
-          className="flex-1 w-full bg-[var(--card-bg)] text-[var(--foreground)] pl-6 pr-6 pt-4 transition-all duration-300"
+          className="flex-1 w-full bg-[var(--card-bg)] text-[var(--foreground)] p-0 sm:pl-6 sm:pr-6 sm:pt-4 transition-all duration-300"
           style={{
             marginLeft: "var(--sidebar-width)",
           }}
