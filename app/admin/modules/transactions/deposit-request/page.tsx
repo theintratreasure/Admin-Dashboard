@@ -109,72 +109,112 @@ export default function UserDeposit() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 shadow-sm overflow-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-[var(--input-bg)] text-[var(--text-muted)]">
-              <th className="py-3 pl-3 text-left">User</th>
-              <th className="py-3 text-center">Amount</th>
-              <th className="py-3 text-center">Mode</th>
-              <th className="py-3 text-center">Transaction ID</th>
-              <th className="py-3 text-center">Remark</th>
-              <th className="py-3 text-center">Status</th>
-              <th className="py-3 text-center">Actions</th>
-            </tr>
-          </thead>
+      <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 shadow-sm overflow-x-auto">
+  <table className="w-full text-sm min-w-[850px]">
+  <thead>
+    <tr className="border-b bg-[var(--input-bg)] text-[var(--text-muted)]">
+      <th className="py-3 px-4 text-left">User</th>
+      <th className="py-3 px-4 text-center">Amount</th>
+      <th className="py-3 px-4 text-center">Mode</th>
+      <th className="py-3 px-4 text-center">Txn ID</th>
+      <th className="py-3 px-4 text-center">Remark</th>
+      <th className="py-3 px-4 text-center">Status</th>
+      <th className="py-3 px-4 text-center w-[200px]">Actions</th>
+    </tr>
+  </thead>
 
-          <tbody>
-            {filtered.map((d, i) => (
-              <tr
-                key={d.id}
-                className={`${
-                  i % 2 === 0 ? "bg-[var(--card-bg)]" : "bg-[var(--input-bg)]"
-                } border-b transition-all hover:bg-[var(--hover-bg)]`}
-              >
-                <td className="py-3 pl-3 flex items-center gap-2">
-                  <img src={d.photo} className="w-8 h-8 rounded-full" />
-                  {d.name}
-                </td>
-                <td className="text-center font-semibold text-[var(--success)]">₹{d.amount}</td>
-                <td className="text-center">{d.mode}</td>
-                <td className="text-center">{d.utr}</td>
-                <td className="text-center text-[var(--text-muted)]">{d.remark}</td>
-                <td className="text-center text-yellow-400">{d.status}</td>
+  <tbody>
+    {filtered.map((d, i) => (
+      <tr
+        key={d.id}
+        className={`${
+          i % 2 === 0 ? "bg-[var(--card-bg)]" : "bg-[var(--input-bg)]"
+        } border-b hover:bg-[var(--hover-bg)] transition-all`}
+      >
+        <td className="py-3 px-4 flex items-center gap-2 whitespace-nowrap">
+          <img src={d.photo} className="w-8 h-8 rounded-full" />
+          {d.name}
+        </td>
 
-                {/* ACTIONS */}
-                <td className="flex justify-center gap-2 py-2">
-                  {/* ACCEPT */}
-                  <button
-                    onClick={() => setSelected({ ...d, confirmAccept: true })}
-                    style={{ background: "var(--success)", color: "#fff" }}
-                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
-                  >
-                    <Check size={14} /> Accept
-                  </button>
+        <td className="px-4 text-center font-semibold text-[var(--success)] whitespace-nowrap">
+          ₹{d.amount}
+        </td>
 
-                  {/* REJECT */}
-                  <button
-                    onClick={() => setSelected({ ...d, rejectMode: true })}
-                    style={{ background: "var(--danger)", color: "#fff" }}
-                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
-                  >
-                    <X size={14} /> Reject
-                  </button>
+        <td className=" px-4 text-center whitespace-nowrap">
+          {d.mode}
+        </td>
 
-                  {/* VIEW */}
-                  <button
-                    onClick={() => setSelected(d)}
-                    style={{ background: "var(--info)", color: "#fff" }}
-                    className="px-3 py-1 text-xs rounded-md flex items-center gap-1"
-                  >
-                    <Eye size={14} /> View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <td className="px-4 text-center truncate max-w-[150px]">
+          {d.utr}
+        </td>
+
+        <td className=" px-4 text-center text-[var(--text-muted)] truncate max-w-[200px]">
+          {d.remark}
+        </td>
+
+        <td className=" px-4 text-center text-yellow-400 whitespace-nowrap">
+          {d.status}
+        </td>
+
+        <td
+  className="
+    flex flex-col sm:flex-row
+    justify-center items-center
+    gap-3 sm:gap-2
+    py-3
+    w-full
+  "
+>
+  {/* Accept */}
+  <button
+    onClick={() => setSelected({ ...d, confirmAccept: true })}
+    className="
+      bg-[var(--success)] text-white
+      w-full sm:w-auto
+      px-4 py-2
+      text-xs rounded-md
+      flex items-center justify-center gap-2
+    "
+  >
+    <Check size={14} /> Accept
+  </button>
+
+  {/* Reject */}
+  <button
+    onClick={() => setSelected({ ...d, rejectMode: true })}
+    className="
+      bg-[var(--danger)] text-white
+      w-full sm:w-auto
+      px-4 py-2
+      text-xs rounded-md
+      flex items-center justify-center gap-2
+    "
+  >
+    <X size={14} /> Reject
+  </button>
+
+  {/* View */}
+  <button
+    onClick={() => setSelected(d)}
+    className="
+      bg-[var(--info)] text-white
+      w-full sm:w-auto
+      px-4 py-2
+      text-xs rounded-md
+      flex items-center justify-center gap-2
+    "
+  >
+    <Eye size={14} /> View
+  </button>
+</td>
+
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+</div>
+
 
       {/* MODAL LOGIC */}
       {selected && (

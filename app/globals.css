@@ -30,6 +30,7 @@ html.dark {
     --input-bg: #101726;
     --input-border: #223048;
     --glow: rgba(63, 166, 160, 0.35);
+    --text-muted: #cbd5e1;
 }
 
 body {

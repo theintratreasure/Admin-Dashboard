@@ -168,7 +168,12 @@ export default function Overview() {
         <motion.div variants={item} className="bg-[var(--card-bg)]  border-[var(--border)] p-6 rounded-xl shadow-sm col-span-2">
           <p className="text-sm text-[var(--text-muted)]">Sales Overview</p>
           
-          <Bar data={salesData} height={120} />
+          <div className="relative h-64 sm:h-72 md:h-80">
+  <Bar data={salesData} options={{ responsive: true, maintainAspectRatio: false }} />
+</div>
+
+
+
         </motion.div>
 
         <motion.div variants={item} className="bg-[var(--card-bg)] border border-[var(--border)] p-6 rounded-xl shadow-sm">

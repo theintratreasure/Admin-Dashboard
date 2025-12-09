@@ -1,9 +1,8 @@
 "use client";
 
-import React, { JSX, useEffect, useRef, useState } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import {
   LayoutDashboard,
-  Package,
   ShoppingCart,
   BarChart2,
   CreditCard,
@@ -11,133 +10,137 @@ import {
   LogOut,
   User,
   BringToFront,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem {
-  href: string; // <-- make this required
+  href: string;
   label: string;
   icon: JSX.Element;
-  children?: { href: string; label: string }[];
+  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
-  { href: "/admin/instruments", label: "Instruments", icon: <BarChart2 size={16} /> },
-  { href: "/admin/live-trades", label: "Live Trades", icon: <ShoppingCart size={16} /> },
+  { href: "/admin/modules/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { href: "/admin/modules/instruments", label: "Instruments", icon: <BarChart2 size={18} /> },
 
   {
-    href: "/admin/payment", // <-- add this so href is never undefined
-    label: "Payment",
-    icon: <CreditCard size={16} />,
+    href: "/admin/modules/trades",
+    label: "Trades",
+    icon: <ShoppingCart size={18} />,
     children: [
-      { href: "#", label: "Deposit" },
-      { href: "/admin/transaction", label: "Transaction" },
-      { href: "/admin/pay", label: "Pay" },
-      { href: "/admin/all-deposit", label: "All Deposit" },
+      { href: "/admin/modules/trades/live", label: "Trades Live", icon: <></> },
+      { href: "/admin/modules/trades/active-positions", label: "Active Positions", icon: <></> },
+      { href: "/admin/modules/trades/close-positions", label: "Close Positions", icon: <></> },
+      { href: "/admin/modules/trades/close-trades", label: "Closed Trades", icon: <></> },
+      { href: "/admin/modules/trades/pending-orders", label: "Pending Orders", icon: <></> },
     ],
   },
 
-  { href: "/admin/positions", label: "Positions", icon: <Package size={16} /> },
-  { href: "/admin/deposits", label: "Deposits", icon: <CreditCard size={16} /> },
-  { href: "/admin/transactions", label: "Transactions", icon: <CreditCard size={16} /> },
-  { href: "/admin/payouts", label: "Payouts", icon: <CreditCard size={16} /> },
-  { href: "/admin/users", label: "Users", icon: <User size={16} /> },
-  { href: "/admin/user_kyc", label: "User KYC", icon: <User size={16} /> },
-  { href: "/admin/reports", label: "Reports", icon: <BarChart2 size={16} /> },
-  { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={16} /> },
-  { href: "/admin/brokage", label: "Brokage", icon: <BringToFront size={16} /> },
-  { href: "/admin/settings", label: "Settings", icon: <LayoutDashboard size={16} /> },
-  { href: "/admin/system-logs", label: "System Logs", icon: <LayoutDashboard size={16} /> },
+  {
+    href: "/admin/modules/users",
+    label: "Users",
+    icon: <User size={18} />,
+    children: [
+      { href: "/admin/modules/users/users-all", label: "Users All", icon: <></> },
+      { href: "/admin/modules/users/users-found", label: "Users Found", icon: <></> },
+    ],
+  },
+
+  {
+    href: "/admin/modules/verification",
+    label: "Verification",
+    icon: <User size={18} />,
+    children: [
+      { href: "/admin/modules/verification/pending-kyc", label: "Pending KYC", icon: <></> },
+      { href: "/admin/modules/verification/kyc", label: "KYC Completed", icon: <></> },
+    ],
+  },
+
+  {
+    href: "/admin/transactions",
+    label: "Transactions",
+    icon: <CreditCard size={18} />,
+    children: [
+      { href: "/admin/modules/transactions/bank-details", label: "Bank Details", icon: <></> },
+      { href: "/admin/modules/transactions/withdraw-request", label: "Withdraw Request", icon: <></> },
+      { href: "/admin/modules/transactions/deposit-request", label: "Deposit Request", icon: <></> },
+      { href: "/admin/modules/transactions/all-deposit", label: "Deposit All", icon: <></> },
+    ],
+  },
+
+  { href: "/admin/modules/notification", label: "Notification", icon: <LayoutDashboard size={18} /> },
+
+  {
+    href: "/admin/modules/account-security",
+    label: "Account & Security",
+    icon: <BringToFront size={18} />,
+    children: [
+      { href: "/admin/modules/account-security/change-password", label: "Change Login Password", icon: <></> },
+    ],
+  },
 ];
 
-
-const AdminSidebar: React.FC = () => {
+export default function AdminSidebar() {
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   const pathname = usePathname() ?? "/";
   const router = useRouter();
 
-
-  useEffect(() => {
-    const dropdown = navItems.find((item) =>
-      item.children?.some((child) => pathname.startsWith(child.href))
-    );
-
-    if (dropdown) setOpenDropdown(dropdown.label);
-  }, [pathname]);
-
-  useEffect(() => {
-    const handleOutside = (e: MouseEvent) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
-
-  const normalizePath = (p: string) => p.replace(/\/+$/, "") || "/";
+  const normalize = (p: string) => p.replace(/\/+$/, "");
   const isActive = (href: string) => {
-    const current = normalizePath(pathname);
-    const target = normalizePath(href);
-    if (target === "/admin") return current === "/admin";
-    return current === target || current.startsWith(target + "/");
+    const current = normalize(pathname);
+    href = normalize(href);
+    return current === href || current.startsWith(href + "/");
   };
 
-  const linkClass = (href: string) =>
-    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
-     ${isActive(href)
-      ? "bg-[var(--primary)] text-black shadow-[0_0_10px_var(--glow)]"
-      : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:bg-[var(--card-border)]"
-    }`;
-
-  const handleLogout = () => router.push("/");
+  useEffect(() => {
+    const parent = navItems.find(item =>
+      item.children?.some(child => isActive(child.href))
+    );
+    if (parent) setOpenDropdown(parent.label);
+  }, [pathname]);
 
   const SidebarContent = () => (
-    <nav className="px-4 py-6 h-[90vh] flex flex-col overflow-y-auto">
-      <h3 className="text-xs font-semibold text-[var(--foreground)] opacity-80 mb-3">
-        Admin Menu
-      </h3>
+    <nav className="flex flex-col justify-between h-full px-4 py-6 text-sm">
 
-      <div className="flex flex-col gap-1">
-        {navItems.map((item) =>
+      {/* SCROLLABLE MENU */}
+      <div className="flex-1 overflow-y-auto pr-1">
+        <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-4 tracking-wide">Admin Menu</h3>
+
+        {navItems.map(item =>
           item.children ? (
-            <div
-              key={item.label}
-              className="relative"
-              onClick={() =>
-                setOpenDropdown((prev) => (prev === item.label ? null : item.label))
-              }
-            >
+            <div key={item.label} className="mb-2">
               <button
-                className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition
-                  ${openDropdown === item.label
-                    ? "bg-[var(--primary)] text-black shadow-[0_0_10px_var(--glow)]"
-                    : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:bg-[var(--card-border)]"
-                  }`}
+                onClick={() =>
+                  setOpenDropdown(prev => (prev === item.label ? null : item.label))
+                }
+                className={`w-full flex justify-between items-center px-3 py-2 rounded-md transition-all duration-200 ${
+                  openDropdown === item.label || isActive(item.href)
+                    ? "bg-[var(--primary)] text-[var(--foreground)] font-semibold"
+                    : "text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
+                }`}
               >
-                <span className="flex items-center gap-3">
-                  {item.icon} {item.label}
-                </span>
-                <span>{openDropdown === item.label ? "^" : "v"}</span>
+                <span className="flex items-center gap-3">{item.icon}{item.label}</span>
+                <ChevronDown
+                  size={17}
+                  className={`transition-transform ${openDropdown === item.label ? "rotate-180" : ""}`}
+                />
               </button>
 
               {openDropdown === item.label && (
-                <div className="pl-10 flex flex-col gap-1 py-1">
-                  {item.children.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={`px-3 py-1 text-sm rounded-md transition
-                        ${pathname.startsWith(child.href)
-                          ? "text-[var(--primary)] font-semibold bg-[var(--card-border)]"
-                          : "text-[var(--foreground)] opacity-70 hover:opacity-100"
-                        }`}
+                <div className="pl-10 mt-1 flex flex-col gap-1">
+                  {item.children.map(child => (
+                    <Link key={child.href} href={child.href}
+                      className={`px-3 py-1 rounded-md ${
+                        isActive(child.href)
+                          ? "bg-[var(--primary)] text-[var(--foreground)] font-semibold"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
+                      }`}
                     >
                       {child.label}
                     </Link>
@@ -146,21 +149,26 @@ const AdminSidebar: React.FC = () => {
               )}
             </div>
           ) : (
-            <Link key={item.href} href={item.href} className={linkClass(item.href)}>
-              {item.icon} <span>{item.label}</span>
+            <Link key={item.href} href={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md mb-1 ${
+                isActive(item.href)
+                  ? "bg-[var(--primary)] text-[var(--foreground)] font-semibold"
+                  : "text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
+              }`}
+            >
+              {item.icon}{item.label}
             </Link>
           )
         )}
       </div>
 
-      {/* LOGOUT BUTTON */}
-      <div className="mt-auto">
+      {/* FOOTER LOGOUT FIXED */}
+      <div className="border-t border-[var(--card-border)] pt-4">
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--danger)]
-          hover:bg-[var(--input-border)] rounded-md transition"
+          onClick={() => router.push("/")}
+          className="w-full flex items-center gap-3 px-3 py-3 text-[var(--danger)] hover:bg-[var(--hover-bg)] rounded-md"
         >
-          <LogOut size={16} /> Logout
+          <LogOut size={18} /> Logout
         </button>
       </div>
     </nav>
@@ -168,17 +176,21 @@ const AdminSidebar: React.FC = () => {
 
   return (
     <>
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setOpen(!open)}
-          className="p-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-md shadow"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
+      {/* MOBILE MENU BUTTON */}
+      <button
+        onClick={() => setOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-[1100] p-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-md"
+      >
+        <Menu size={20} />
+      </button>
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="hidden lg:flex flex-col w-64 bg-[var(--card-bg)] border-r border-[var(--card-border)] min-h-screen fixed">
+      <aside className="
+        hidden lg:flex fixed top-[var(--topbar-height)] left-0
+        w-[260px] xl:w-[240px] lg:w-[220px] md:w-[200px] sm:w-[180px]
+        h-[calc(100vh-var(--topbar-height))]
+        bg-[var(--card-bg)] border-r border-[var(--card-border)] flex-col
+      ">
         <SidebarContent />
       </aside>
 
@@ -187,12 +199,18 @@ const AdminSidebar: React.FC = () => {
         {open && (
           <>
             <motion.aside
-              ref={sidebarRef}
-              initial={{ x: -300 }}
+              initial={{ x: -260 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              className="fixed inset-y-0 left-0 z-50 w-64 bg-[var(--card-bg)]
-              border-r border-[var(--card-border)] shadow-xl flex flex-col"
+              exit={{ x: -260 }}
+              transition={{ duration: 0.3 }}
+              className="
+                fixed top-[var(--topbar-height)] left-0
+                w-[240px] md:w-[220px] sm:w-[200px]
+                h-[calc(100vh-var(--topbar-height))]
+                bg-[var(--card-bg)]
+                border-r border-[var(--card-border)]
+                shadow-xl z-[1000] overflow-y-auto lg:hidden
+              "
             >
               <SidebarContent />
             </motion.aside>
@@ -201,7 +219,7 @@ const AdminSidebar: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black"
+              className="fixed inset-0 bg-black/60 z-[900] lg:hidden"
               onClick={() => setOpen(false)}
             />
           </>
@@ -209,6 +227,4 @@ const AdminSidebar: React.FC = () => {
       </AnimatePresence>
     </>
   );
-};
-
-export default AdminSidebar;
+}
