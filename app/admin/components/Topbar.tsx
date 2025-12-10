@@ -31,10 +31,6 @@ const Topbar: React.FC = () => {
 
         {/* Branding */}
         <div className="ml-12 lg:ml-0 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-[var(--primary)] flex items-center justify-center shadow-[0_0_10px_var(--glow)]">
-            <User className="text-black" size={20} />
-          </div>
-
           <h1 className="text-xl font-bold tracking-wide">
             Trading <span className="text-[var(--primary)]">Admin</span>
           </h1>
