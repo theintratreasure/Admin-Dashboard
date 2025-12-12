@@ -147,21 +147,49 @@ export default function TradesPage() {
       </div>
 
       {/* PAGINATION */}
-      <div className="flex flex-wrap justify-between mt-4 gap-3 text-[var(--text-muted)]">
-        <div className="flex items-center gap-3">
-          <select className="bg-[var(--card-bg)] border px-3 py-2 rounded-md">
-            <option>10</option><option>25</option><option>50</option>
-          </select>
-          Rows per page
-        </div>
+      <div className="
+  flex flex-wrap justify-between items-center 
+  mt-4 gap-4 text-[var(--text-muted)]
+">
 
-        <div className="flex items-center gap-2">
-          Page 1 of 1
-          {["<<", "<", "1", ">", ">>"].map((btn, i) => (
-            <button key={i} className={`px-3 py-1 border rounded-md ${btn === "1" ? "bg-[var(--primary)] text-black" : "bg-[var(--card-bg)]"}`}>{btn}</button>
-          ))}
-        </div>
-      </div>
+  {/* Rows Per Page */}
+  <div className="flex items-center gap-3">
+    <select
+      className="
+        bg-[var(--card-bg)] border border-[var(--card-border)] 
+        px-3 py-2 rounded-md text-[var(--foreground)]
+      "
+    >
+      <option>10</option>
+      <option>25</option>
+      <option>50</option>
+    </select>
+    <span>Rows per page</span>
+  </div>
+
+  {/* Pagination Buttons */}
+  <div className="flex items-center gap-2 flex-wrap">
+
+    <span>Page 1 of 1</span>
+
+    {["<<", "<", "1", ">", ">>"].map((btn, i) => (
+      <button
+        key={i}
+        className={`
+          px-3 py-1 rounded-md border border-[var(--card-border)]
+          ${
+            btn === "1"
+              ? "bg-[var(--primary)] text-white"
+              : "bg-[var(--card-bg)] hover:bg-[var(--hover-bg)] text-[var(--foreground)]"
+          }
+        `}
+      >
+        {btn}
+      </button>
+    ))}
+  </div>
+</div>
+
     </div>
   );
 }

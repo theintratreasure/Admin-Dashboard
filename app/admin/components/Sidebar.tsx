@@ -8,7 +8,9 @@ import {
   CreditCard,
   Menu,
   LogOut,
+  UserPlus,
   User,
+  DollarSign,
   BringToFront,
   ChevronDown,
   X,
@@ -26,38 +28,51 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-  { href: "/admin/modules/instruments", label: "Instruments", icon: <BarChart2 size={18} /> },
 
+ 
+  
+{
+    href: "/admin/instruments",
+    label: "Instruments",
+    icon: <BarChart2 size={18} />,
+    children: [
+      { href: "/admin/instruments/market-watch", label: "Market Watch", icon: <></> },
+      { href: "/admin/instruments/market-settings", label: "Market Settings", icon: <></> },
+      { href: "/admin/instruments/manage-scrips", label: "Manage Scrips", icon: <></> },
+      { href: "/admin/instruments/action-ledger", label: "Action Ledger", icon: <></> },
+    ],
+  },
   {
-    href: "/admin/modules/trades",
+    href: "/admin/trades",
     label: "Trades",
     icon: <ShoppingCart size={18} />,
     children: [
-      { href: "/admin/modules/trades/live", label: "Trades Live", icon: <></> },
-      { href: "/admin/modules/trades/active-positions", label: "Active Positions", icon: <></> },
-      { href: "/admin/modules/trades/close-positions", label: "Close Positions", icon: <></> },
-      { href: "/admin/modules/trades/close-trades", label: "Closed Trades", icon: <></> },
-      { href: "/admin/modules/trades/pending-orders", label: "Pending Orders", icon: <></> },
+      { href: "/admin/trades/live", label: "Trades Live", icon: <></> },
+      { href: "/admin/trades/active-positions", label: "Active Positions", icon: <></> },
+      { href: "/admin/trades/close-positions", label: "Close Positions", icon: <></> },
+      { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <></> },
+      { href: "/admin/trades/pending-orders", label: "Pending Orders", icon: <></> },
     ],
   },
 
   {
-    href: "/admin/modules/users",
+    href: "/admin/users",
     label: "Users",
     icon: <User size={18} />,
     children: [
-      { href: "/admin/modules/users/users-all", label: "Users All", icon: <></> },
-      { href: "/admin/modules/users/users-found", label: "Users Found", icon: <></> },
+      
+      { href: "/admin/users/users", label: "Users ", icon: <></> },
+      { href: "/admin/users/users-funds", label: "Users Funds", icon: <></> },
     ],
   },
 
   {
-    href: "/admin/modules/verification",
+    href: "/admin/verification",
     label: "Verification",
     icon: <User size={18} />,
     children: [
-      { href: "/admin/modules/verification/pending-kyc", label: "Pending KYC", icon: <></> },
-      { href: "/admin/modules/verification/kyc", label: "KYC Completed", icon: <></> },
+      { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <></> },
+      { href: "/admin/verification/kyc", label: "KYC Completed", icon: <></> },
     ],
   },
 
@@ -66,21 +81,24 @@ const navItems: NavItem[] = [
     label: "Transactions",
     icon: <CreditCard size={18} />,
     children: [
-      { href: "/admin/modules/transactions/bank-details", label: "Bank Details", icon: <></> },
-      { href: "/admin/modules/transactions/withdraw-request", label: "Withdraw Request", icon: <></> },
-      { href: "/admin/modules/transactions/deposit-request", label: "Deposit Request", icon: <></> },
-      { href: "/admin/modules/transactions/all-deposit", label: "Deposit All", icon: <></> },
+      { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <></> },
+      { href: "/admin/transactions/withdraw-request", label: "Withdraw Request", icon: <></> },
+      { href: "/admin/transactions/deposit-request", label: "Deposit Request", icon: <></> },
+      { href: "/admin/transactions/all-deposit", label: "Deposit All", icon: <></> },
     ],
   },
 
-  { href: "/admin/modules/notification", label: "Notification", icon: <LayoutDashboard size={18} /> },
+  { href: "/admin/notification", label: "Notification", icon: <LayoutDashboard size={18} /> },
+   { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
+   { href: "/admin/#", label: "Referral Management", icon: <UserPlus size={18} /> },
+  
 
   {
-    href: "/admin/modules/account-security",
+    href: "/admin/account-security",
     label: "Account & Security",
     icon: <BringToFront size={18} />,
     children: [
-      { href: "/admin/modules/account-security/change-password", label: "Change Login Password", icon: <></> },
+      { href: "/admin/account-security/change-password", label: "Change Login Password", icon: <></> },
     ],
   },
 ];

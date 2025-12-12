@@ -19,7 +19,7 @@
     --glow: rgba(106, 94, 249, 0.35);
     --duration: 350ms;
     --sidebar-width: 260px;
-  --topbar-height: 64px;
+    --topbar-height: 64px;
 }
 
 html.dark {

@@ -1,4 +1,4 @@
-import Overview from "./modules/dashboard/page";
+import Overview from "./components/Dashboard/DashboardOverview";
 
 
 export default function AdminDashboard() {
