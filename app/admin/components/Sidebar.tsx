@@ -3,17 +3,24 @@
 import React, { JSX, useEffect, useState } from "react";
 import {
   LayoutDashboard,
+  CandlestickChart,
   ShoppingCart,
-  BarChart2,
+  Users,
+  ShieldCheck,
   CreditCard,
+  Bell,
+  DollarSign,
+  Gift,
+  Settings,
+  Lock,
   Menu,
   LogOut,
-  UserPlus,
-  User,
-  DollarSign,
-  BringToFront,
   ChevronDown,
   X,
+  Activity,
+  Wallet,
+  FileText,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,19 +34,20 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-
- 
-  
-{
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: <LayoutDashboard size={18} />,
+  },
+  {
     href: "/admin/instruments",
     label: "Instruments",
-    icon: <BarChart2 size={18} />,
+    icon: <CandlestickChart size={18} />,
     children: [
-      { href: "/admin/instruments/market-watch", label: "Market Watch", icon: <></> },
-      { href: "/admin/instruments/market-settings", label: "Market Settings", icon: <></> },
-      { href: "/admin/instruments/manage-scrips", label: "Manage Scrips", icon: <></> },
-      { href: "/admin/instruments/action-ledger", label: "Action Ledger", icon: <></> },
+      { href: "/admin/instruments/market-watch", label: "Market Watch", icon: <Activity size={14} /> },
+      { href: "/admin/instruments/market-settings", label: "Market Settings", icon: <Settings size={14} /> },
+      { href: "/admin/instruments/manage-scrips", label: "Manage Scrips", icon: <FileText size={14} /> },
+      { href: "/admin/instruments/action-ledger", label: "Action Ledger", icon: <Wallet size={14} /> },
     ],
   },
   {
@@ -47,59 +55,56 @@ const navItems: NavItem[] = [
     label: "Trades",
     icon: <ShoppingCart size={18} />,
     children: [
-      { href: "/admin/trades/live", label: "Trades Live", icon: <></> },
-      { href: "/admin/trades/active-positions", label: "Active Positions", icon: <></> },
-      { href: "/admin/trades/close-positions", label: "Close Positions", icon: <></> },
-      { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <></> },
-      { href: "/admin/trades/pending-orders", label: "Pending Orders", icon: <></> },
+      { href: "/admin/trades/list", label: "Trades List", icon: <FileText size={14} /> },
+      { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
+      { href: "/admin/trades/close-positions", label: "Close Positions", icon: <X size={14} /> },
+      { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
+      { href: "/admin/trades/pending-orders", label: "Pending Orders", icon: <ClockIcon /> },
     ],
   },
-
   {
     href: "/admin/users",
     label: "Users",
-    icon: <User size={18} />,
+    icon: <Users size={18} />,
     children: [
-      
-      { href: "/admin/users/users", label: "Users ", icon: <></> },
-      { href: "/admin/users/users-funds", label: "Users Funds", icon: <></> },
+      { href: "/admin/users/users", label: "All Users", icon: <Users size={14} /> },
+      { href: "/admin/users/users-funds", label: "User Funds", icon: <Wallet size={14} /> },
     ],
   },
-
   {
     href: "/admin/verification",
     label: "Verification",
-    icon: <User size={18} />,
+    icon: <ShieldCheck size={18} />,
     children: [
-      { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <></> },
-      { href: "/admin/verification/kyc", label: "KYC Completed", icon: <></> },
+      { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <ClockIcon /> },
+      { href: "/admin/verification/kyc", label: "KYC Completed", icon: <UserCheck size={14} /> },
     ],
   },
-
   {
     href: "/admin/transactions",
     label: "Transactions",
     icon: <CreditCard size={18} />,
     children: [
-      { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <></> },
-      { href: "/admin/transactions/withdraw-request", label: "Withdraw Request", icon: <></> },
-      { href: "/admin/transactions/deposit-request", label: "Deposit Request", icon: <></> },
-      { href: "/admin/transactions/all-deposit", label: "Deposit All", icon: <></> },
+      { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <Wallet size={14} /> },
+      { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
+      { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
+      { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
     ],
   },
-
-  { href: "/admin/notification", label: "Notification", icon: <LayoutDashboard size={18} /> },
-   { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
-   { href: "/admin/#", label: "Referral Management", icon: <UserPlus size={18} /> },
-  
-
+  { href: "/admin/notification", label: "Notifications", icon: <Bell size={18} /> },
+  { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
+  { href: "/admin/referral", label: "Referral Management", icon: <Gift size={18} /> },
+  {
+    href: "/admin/settings",
+    label: "Admin Config",
+    icon: <Settings size={18} />,
+    children: [{ href: "/admin/enquiries", label: "Enquiries", icon: <FileText size={14} /> }],
+  },
   {
     href: "/admin/account-security",
     label: "Account & Security",
-    icon: <BringToFront size={18} />,
-    children: [
-      { href: "/admin/account-security/change-password", label: "Change Login Password", icon: <></> },
-    ],
+    icon: <Lock size={18} />,
+    children: [{ href: "/admin/account-security/change-password", label: "Change Password", icon: <Lock size={14} /> }],
   },
 ];
 
@@ -113,7 +118,6 @@ export default function AdminSidebar() {
   const normalize = (p: string) => p.replace(/\/+$/, "");
   const currentPath = normalize(pathname);
 
-  // strict true: exact match (top-level links)
   const isActive = (href: string, strict = false) => {
     const target = normalize(href);
     if (strict) return currentPath === target;
@@ -121,7 +125,6 @@ export default function AdminSidebar() {
   };
 
   useEffect(() => {
-    // sirf usi group ko open karo jiska child active hai (reload pe bhi)
     const parent = navItems.find(item =>
       item.children?.some(child => isActive(child.href)),
     );
@@ -129,72 +132,56 @@ export default function AdminSidebar() {
   }, [pathname]);
 
   const SidebarContent = () => (
-    <nav className="flex h-full flex-col justify-between px-4 py-6 text-sm">
-      {/* mobile drawer top row */}
-      <div className="mb-3 flex items-center justify-between lg:hidden">
-        <span className="text-sm font-semibold text-[var(--foreground)]">
-          Admin Menu
-        </span>
-        <button
-          onClick={() => setOpen(false)}
-          className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] p-1.5"
-        >
-          <X size={16} />
+    <nav className="flex h-full flex-col px-4 py-5 text-sm">
+      <div className="mb-4 flex items-center justify-between lg:hidden">
+        <span className="font-semibold">Admin Panel</span>
+        <button onClick={() => setOpen(false)} className="rounded-md p-1">
+          <X size={18} />
         </button>
       </div>
 
-      {/* SCROLLABLE MENU */}
-      <div className="flex-1 overflow-y-auto pr-1">
-        <h3 className="mb-4 hidden text-xs font-semibold tracking-wide text-[var(--text-muted)] lg:block">
-          Admin Menu
-        </h3>
-
+      <div className="flex-1 space-y-1 overflow-y-auto">
         {navItems.map(item =>
           item.children ? (
-            <div key={item.label} className="mb-2">
+            <div key={item.label}>
               <button
-                onClick={() =>
-                  setOpenDropdown(prev => (prev === item.label ? null : item.label))
-                }
-                className={`
-                  flex w-full items-center justify-between rounded-md px-3 py-2 
-                  text-[var(--foreground)] transition-all duration-200
-                  hover:bg-[var(--hover-bg)]
-                `}
+                onClick={() => setOpenDropdown(v => (v === item.label ? null : item.label))}
+                className="flex w-full items-center justify-between rounded-md px-0 py-2 hover:bg-[var(--hover-bg)]"
               >
                 <span className="flex items-center gap-3">
                   {item.icon}
                   {item.label}
                 </span>
                 <ChevronDown
-                  size={17}
-                  className={`transition-transform ${
-                    openDropdown === item.label ? "rotate-180" : ""
-                  }`}
+                  size={16}
+                  className={`transition-transform ${openDropdown === item.label ? "rotate-180" : ""}`}
                 />
               </button>
 
-              <AnimatePresence initial={false}>
+              <AnimatePresence>
                 {openDropdown === item.label && (
                   <motion.div
-                    key={item.label}
-                    initial={{ height: 0, opacity: 0, y: -4 }}
-                    animate={{ height: "auto", opacity: 1, y: 0 }}
-                    exit={{ height: 0, opacity: 0, y: -4 }}
-                    transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
-                    className="mt-1 flex flex-col gap-1 overflow-hidden pl-10"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{
+                      duration: 0.18,
+                      ease: "easeOut",
+                    }}
+                    className="ml-8 mt-1 space-y-1 overflow-hidden"
                   >
+
                     {item.children.map(child => (
                       <Link
                         key={child.href}
                         href={child.href}
-                        className={`rounded-md px-3 py-1 ${
-                          isActive(child.href)
-                            ? "bg-[var(--primary)] text-[var(--foreground)] font-semibold"
-                            : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                        }`}
+                        className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs ${isActive(child.href)
+                            ? "bg-[var(--primary)] font-semibold"
+                            : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                          }`}
                         onClick={() => setOpen(false)}
                       >
+                        {child.icon}
                         {child.label}
                       </Link>
                     ))}
@@ -206,11 +193,10 @@ export default function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`mb-1 flex items-center gap-3 rounded-md px-3 py-2 ${
-                isActive(item.href, true)
-                  ? "bg-[var(--primary)] text-[var(--foreground)] font-semibold"
-                  : "text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
-              }`}
+              className={`flex items-center gap-3 rounded-md px-0 py-2 ${isActive(item.href, true)
+                  ? "bg-[var(--primary)] font-semibold"
+                  : "hover:bg-[var(--hover-bg)]"
+                }`}
               onClick={() => setOpen(false)}
             >
               {item.icon}
@@ -220,11 +206,10 @@ export default function AdminSidebar() {
         )}
       </div>
 
-      {/* FOOTER LOGOUT FIXED */}
-      <div className="border-t border-[var(--card-border)] pt-4">
+      <div className="mt-4 border-t pt-4">
         <button
           onClick={() => router.push("/")}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-[var(--danger)] hover:bg-[var(--hover-bg)]"
+          className="flex w-full items-center gap-3 rounded-md px-0 py-2 text-red-500 hover:bg-red-500/10"
         >
           <LogOut size={18} /> Logout
         </button>
@@ -234,27 +219,17 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* MOBILE MENU BUTTON */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-[1100] rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] p-2 lg:hidden"
+        className="fixed left-4 top-4 z-[1100] rounded-md p-2 lg:hidden"
       >
         <Menu size={20} />
       </button>
 
-      {/* DESKTOP SIDEBAR */}
-      <aside
-        className="
-          fixed left-0 top-[var(--topbar-height)] hidden
-          h-[calc(100vh-var(--topbar-height))] w-[260px] flex-col
-          border-r border-[var(--card-border)] bg-[var(--card-bg)]
-          xl:w-[240px] lg:flex lg:w-[220px] md:w-[200px] sm:w-[180px]
-        "
-      >
+      <aside className="fixed left-0 top-[var(--topbar-height)] hidden h-[calc(100vh-var(--topbar-height))] w-[250px] border-r lg:flex">
         <SidebarContent />
       </aside>
 
-      {/* MOBILE SIDEBAR WITH ANIMATION */}
       <AnimatePresence>
         {open && (
           <>
@@ -262,28 +237,21 @@ export default function AdminSidebar() {
               initial={{ x: -260 }}
               animate={{ x: 0 }}
               exit={{ x: -260 }}
-              transition={{ duration: 0.3 }}
-              className="
-                fixed left-0 top-0
-                z-[1200] h-[100vh]
-                w-[260px] overflow-y-auto border-r border-[var(--card-border)]
-                bg-[var(--card-bg)] shadow-xl lg:hidden
-              "
+              className="fixed left-0 top-0 z-[1200] h-full w-[260px] border-r bg-[var(--card-bg)] lg:hidden"
             >
               <SidebarContent />
             </motion.aside>
-
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[900] bg-black/60 lg:hidden"
               onClick={() => setOpen(false)}
+              className="fixed inset-0 z-[900] bg-black/50 lg:hidden"
             />
           </>
         )}
       </AnimatePresence>
     </>
   );
+}
+
+function ClockIcon() {
+  return <span className="inline-block h-2 w-2 rounded-full bg-yellow-500" />;
 }
