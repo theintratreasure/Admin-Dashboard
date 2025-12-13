@@ -33,7 +33,7 @@ export default function MarketSettingsPage() {
         bg-[var(--card-bg)] 
         p-6 rounded-xl shadow
         border border-[var(--card-border)]
-        hover:shadow-xl transition
+        
       ">
         <h2 className="text-lg font-semibold mb-4">General Settings</h2>
 
@@ -56,7 +56,7 @@ export default function MarketSettingsPage() {
         bg-[var(--card-bg)] 
         p-6 rounded-xl shadow
         border border-[var(--card-border)]
-        hover:shadow-xl transition
+        
       ">
         <h2 className="text-lg font-semibold mb-6">Market Settings</h2>
 
@@ -68,7 +68,7 @@ export default function MarketSettingsPage() {
               className="
                 rounded-xl p-5 bg-[var(--card-bg)]
                 shadow border border-[var(--card-border)]
-                hover:shadow-xl transition
+               
               "
             >
               {/* Title + Switch */}

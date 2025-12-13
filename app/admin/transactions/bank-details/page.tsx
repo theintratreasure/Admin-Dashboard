@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil, Power, Trash2, Plus, X } from "lucide-react";
 
-/* ---------------------- TYPES ---------------------- */
+
 interface BankType {
   id: number;
   bankName: string;
@@ -25,7 +25,7 @@ interface BankCardProps {
   onEdit: () => void;
 }
 
-/* ---------------------- DUMMY DATA ---------------------- */
+
 const dummyData: BankType[] = [
   {
     id: 1,
@@ -234,16 +234,16 @@ function BankCard({
 
           <button
             onClick={onEdit}
-            className="px-9 py-2 bg-[var(--hover-bg)]  flex items-center rounded-lg text-black"
+            className="px-9 py-2 bg-[var(--hover-bg)]  gap-2 flex items-center rounded-lg text-black"
           >
             <Pencil size={16} /> Edit
           </button>
 
           <button
             onClick={onDelete}
-            className="px-8 py-2 bg-[var(--danger)] text-white  flex items-cente rounded-lg"
+            className="px-8 py-2 bg-[var(--danger)] text-white  gap-2 flex items-cente rounded-lg"
           >
-            <Trash2 size={16} /> Delete
+            <Trash2 size={17} />  Delete
           </button>
 
         </div>
@@ -315,6 +315,7 @@ function EditBankModal({
         </div>
 
       </div>
+  
     </div>
   );
 }
@@ -326,49 +327,94 @@ function AddBankModal({
   close,
   add,
 }: {
-  newBank: any;
+  newBank: {
+    bankName: string;
+    accountHolder: string;
+    accountNumber: string;
+    ifsc: string;
+    branch: string;
+    phonepe: string;
+    googlePay: string;
+    paytm: string;
+    upiId: string;
+  };
   handleChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => void;
   close: () => void;
   add: () => void;
 }) {
+  const fields: { key: keyof typeof newBank; label: string }[] = [
+    { key: "bankName", label: "Bank Name" },
+    { key: "accountHolder", label: "Account Holder Name" },
+    { key: "accountNumber", label: "Account Number" },
+    { key: "ifsc", label: "IFSC Code" },
+    { key: "branch", label: "Branch" },
+    { key: "upiId", label: "UPI ID" },
+    { key: "phonepe", label: "PhonePe Number" },
+    { key: "googlePay", label: "Google Pay Number" },
+    { key: "paytm", label: "Paytm Number" },
+  ];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // simple validation
+    for (const f of fields) {
+      if (!newBank[f.key]) {
+        alert(`❌ Please fill ${f.label}`);
+        return;
+      }
+    }
+
+    add();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="w-[850px] bg-[var(--card-bg)] text-[var(--foreground)] rounded-2xl p-8 border border-[var(--card-border)] relative">
 
-        <button onClick={close} className="absolute right-5 top-5 text-[var(--text-muted)] hover:text-white">
-          <X size={22} />
+        {/* CLOSE */}
+        <button
+          onClick={close}
+          className="absolute right-5 top-5 text-[var(--text-muted)] hover:text-white"
+        >
+          ✕
         </button>
 
         <h2 className="text-2xl font-bold">Add New Bank Account</h2>
-        <p className="text-sm text-[var(--text-muted)] mb-6">Fill bank details to add new account.</p>
+        <p className="text-sm text-[var(--text-muted)] mb-6">
+          Fill bank details to add new account.
+        </p>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            add();
-          }}
-        >
+        <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {Object.keys(newBank).map((field) => (
-              <div key={field}>
-                <label className="text-sm mb-1 block capitalize">
-                  {field.replace(/([A-Z])/g, " $1")}
+            {fields.map(({ key, label }) => (
+              <div key={key}>
+                <label className="text-sm mb-1 block">
+                  {label}
                 </label>
                 <input
                   type="text"
-                  name={field}
-                  value={newBank[field]}
+                  name={key}
+                  value={newBank[key]}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)]"
+                  className="w-full px-3 py-2 rounded-lg
+                    bg-[var(--input-bg)]
+                    border border-[var(--input-border)]
+                    focus:outline-none
+                    focus:ring-2 focus:ring-[var(--primary)]"
                 />
               </div>
             ))}
           </div>
 
           <div className="flex justify-end gap-4 mt-8">
-            <button type="button" onClick={close} className="px-5 py-2 bg-[var(--hover-bg)] text-black rounded-lg">
+            <button
+              type="button"
+              onClick={close}
+              className="px-5 py-2 bg-[var(--hover-bg)] text-black rounded-lg"
+            >
               Close
             </button>
 
@@ -380,7 +426,6 @@ function AddBankModal({
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

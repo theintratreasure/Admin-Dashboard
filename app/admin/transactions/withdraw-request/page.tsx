@@ -239,10 +239,11 @@ export default function WithdrawalRequests() {
   );
 }
 
-// ---------------------- ADD WITHDRAWAL MODAL ----------------------
+
 function AddWithdrawalModal({ close }: { close: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center
+        bg-black/60 backdrop-blur-sm">
       <div className="w-[95%] max-w-[500px] bg-[var(--card-bg)] rounded-xl p-6 border border-[var(--card-border)] relative">
         
         <button onClick={close} className="absolute right-4 top-4 text-[var(--text-muted)] hover:text-[var(--foreground)]">

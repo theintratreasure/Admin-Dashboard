@@ -61,16 +61,16 @@ export default function MarketWatch() {
       <h1 className="text-2xl font-semibold">Market Watch</h1>
 
       {/* FILTER ROW — FULLY RESPONSIVE */}
-      <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
+      <div className="flex flex-col md:flex-row md:items-end gap-4  md:gap-6">
 
         {/* DROPDOWN */}
-        <div className="relative w-full md:w-56" ref={dropdownRef}>
-          <label className="text-sm opacity-80">Exchange</label>
+        <div className="relative w-full md:w-56 " ref={dropdownRef}>
+          <label className="text-sm opacity-80 ">Exchange</label>
 
           <div
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="
-              bg-[var(--card-bg)] border border-[var(--border)]
+              bg-[var(--card-bg)] border border-[var(--card-border)]
               p-2 rounded-lg mt-1 text-sm cursor-pointer
               flex items-center justify-between
             "
@@ -83,7 +83,7 @@ export default function MarketWatch() {
             <div
               className="
                 absolute left-0 right-0 top-full mt-1
-                bg-[var(--card-bg)] border border-[var(--border)]
+                bg-[var(--card-bg)] border border-[var(--card-border)]
                 rounded-lg shadow-xl z-[9999]
               "
             >
@@ -95,7 +95,7 @@ export default function MarketWatch() {
                     setDropdownOpen(false);
                   }}
                   className="
-                    p-2 text-sm cursor-pointer hover:bg-[var(--primary)]/10
+                    p-2 text-sm cursor-pointer hover:bg-[var(--primary)]/10 border border-[var(--card-border)]
                   "
                 >
                   {opt}
@@ -113,7 +113,7 @@ export default function MarketWatch() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="
-              w-full bg-[var(--card-bg)] border border-[var(--border)]
+              w-full bg-[var(--card-bg)] border border-[var(--card-border)]
               p-3 rounded-lg text-sm mt-1
               focus:ring-[var(--primary)] focus:ring-2
             "
@@ -122,11 +122,11 @@ export default function MarketWatch() {
       </div>
 
       {/* TABLE WRAPPER — FIXED FOR MOBILE */}
-      <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl shadow-sm overflow-x-auto">
+      <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm overflow-x-auto">
 
         <table className="w-full min-w-[900px] text-sm">
-          <thead className="bg-[var(--primary)]/10 text-[var(--text-muted)]">
-            <tr>
+          <thead className="border-b text-[var(--text-muted)]">
+            <tr  className="border-b ">
               <th className="p-3 text-left">Action</th>
               <th className="p-3 text-left">Scrip</th>
               <th className="p-3 text-left">Bid</th>
@@ -142,7 +142,7 @@ export default function MarketWatch() {
             {paginatedData.map((row, i) => (
               <tr
                 key={i}
-                className="border-t border-[var(--border)] hover:bg-[var(--primary)]/10 transition"
+                className="border-t border border-[var(--card-border)]   hover:bg-[var(--primary)]/10 transition"
               >
                 <td className="p-3">
                   <button className="bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-md text-xs">

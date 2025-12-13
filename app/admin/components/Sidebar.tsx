@@ -91,7 +91,7 @@ const navItems: NavItem[] = [
       { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
     ],
   },
-  { href: "/admin/notification", label: "Notifications", icon: <Bell size={18} /> },
+  { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
   { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
   { href: "/admin/referral", label: "Referral Management", icon: <Gift size={18} /> },
   {
