@@ -92,23 +92,23 @@ export default function Overview() {
 
   // SCREENSHOT CHART DATA
   const buyData = {
-    labels: ["MCX", "Forex", "US Stocks", "Indices", "Equity", "Comex", "Options", "Crypto"],
+    labels: [ "Forex", "US Stocks", "Indices","Comex", "Crypto"],
     datasets: [
       {
         label: "Buy Turnover",
-        data: [1400000, 350000, 120000, 100000, 800000, 450000, 450000, 220000],
-        backgroundColor: "#d1d5db",
+        data: [1400000, 350000, 120000, 100000, 800000,],
+        backgroundColor: "#f87171",
         borderRadius: 10,
       },
     ],
   };
 
   const sellData = {
-    labels: ["MCX", "Forex", "US Stocks", "Indices", "Equity", "Comex", "Options", "Crypto"],
+    labels: ["Forex", "US Stocks", "Indices","Comex", "Crypto"],
     datasets: [
       {
         label: "Sell Turnover",
-        data: [1200000, 300000, 150000, 90000, 850000, 400000, 300000, 150000],
+        data: [1200000, 300000, 150000, 90000, 850000,],
         backgroundColor: "#f87171",
         borderRadius: 10,
       },
@@ -116,11 +116,11 @@ export default function Overview() {
   };
 
   const totalData = {
-    labels: ["MCX", "Forex", "US Stocks", "Indices", "Equity", "Comex", "Options", "Crypto"],
+    labels: ["Forex", "US Stocks", "Indices","Comex","Crypto"],
     datasets: [
       {
         label: "Total Turn Over",
-        data: [4, 3, 2, 1, 2, 3, 1, 1],
+        data: [4, 3, 2, 1, 2,],
         backgroundColor: "#60a5fa",
         borderRadius: 10,
       },
@@ -128,11 +128,11 @@ export default function Overview() {
   };
 
   const activeUserData = {
-    labels: ["MCX", "Forex", "US Stocks", "Indices", "Equity", "Comex", "Options", "Crypto"],
+    labels: ["Forex", "US Stocks", "Indices","Comex","Crypto"],
     datasets: [
       {
         label: "Active Users",
-        data: [72, 70, 69, 70, 68, 71, 69, 70],
+        data: [72, 70, 69, 70, 68],
         backgroundColor: "#3b82f6",
         borderRadius: 10,
       },

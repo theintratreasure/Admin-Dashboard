@@ -87,7 +87,7 @@ export default function TradesPage() {
             <Download size={16} /> Download
           </button>
 
-          <Link href="/admin/modules/trades/live/create">
+          <Link href="/admin/trades/live/create">
             <button className="flex items-center gap-2 bg-[var(--primary)] text-black px-4 py-2 rounded-md hover:opacity-90 transition font-medium">
               <Plus size={16} /> Add New Trade
             </button>

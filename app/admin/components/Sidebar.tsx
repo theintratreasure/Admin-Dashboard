@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
     label: "Trades",
     icon: <ShoppingCart size={18} />,
     children: [
-      { href: "/admin/trades/list", label: "Trades List", icon: <FileText size={14} /> },
+      { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
       { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
       { href: "/admin/trades/close-positions", label: "Close Positions", icon: <X size={14} /> },
       { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
