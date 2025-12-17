@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 
-export default function ThemeProvider({ children }: { children: React.ReactNode }) {
+export default function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   useEffect(() => {
     const savedTheme = localStorage.theme || "light";
 

@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLogout } from "@/hooks/useAuth";
 
 interface NavItem {
   href: string;
@@ -114,6 +115,7 @@ export default function AdminSidebar() {
 
   const pathname = usePathname() ?? "/";
   const router = useRouter();
+  const { mutate, isPending } = useLogout();
 
   const normalize = (p: string) => p.replace(/\/+$/, "");
   const currentPath = normalize(pathname);
@@ -131,6 +133,24 @@ export default function AdminSidebar() {
     if (parent) setOpenDropdown(parent.label);
   }, [pathname]);
 
+   const handleLogout = () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    mutate(refreshToken || "", {
+      onSettled: () => {
+        // 🔥 clear frontend auth
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+
+        // delete cookie
+        document.cookie =
+          "accessToken=; Max-Age=0; path=/;";
+
+        // redirect to login/home
+        router.replace("/");
+      },
+    });
+  };
   const SidebarContent = () => (
     <nav className="flex h-full flex-col px-4 py-5 text-sm">
       <div className="mb-4 flex items-center justify-between lg:hidden">
@@ -208,7 +228,7 @@ export default function AdminSidebar() {
 
       <div className="mt-4 border-t pt-4">
         <button
-          onClick={() => router.push("/")}
+          onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-md px-0 py-2 text-red-500 hover:bg-red-500/10"
         >
           <LogOut size={18} /> Logout
