@@ -16,6 +16,7 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
+import { useBroadcastNotification } from "@/hooks/useNotification";
 
 /* ================= TYPES ================= */
 
@@ -359,6 +360,37 @@ export default function NotificationsPage() {
 /* ================= MODAL ================= */
 
 function SendNotificationModal({ onClose }: { onClose: () => void }) {
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+
+  const broadcast = useBroadcastNotification();
+
+  const handleSend = () => {
+    if (!title || !message) {
+      alert("Title and message required");
+      return;
+    }
+
+    broadcast.mutate(
+      {
+        title,
+        message,
+        data: {
+          type: "ADMIN_BROADCAST",
+        },
+      },
+      {
+        onSuccess: () => {
+          alert("Notification sent successfully");
+          onClose();
+        },
+        onError: (err: any) => {
+          alert(err?.response?.data?.message || "Failed to send");
+        },
+      }
+    );
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center
@@ -374,37 +406,45 @@ function SendNotificationModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Send Notification</h2>
-          <button onClick={onClose}>
-            <X size={20} />
-          </button>
+          <button onClick={onClose}>✕</button>
         </div>
 
         <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder="Title"
           className="w-full mb-3 px-4 py-2 rounded-lg
-          bg-[var(--input-bg)] border border-[var(--input-border)]"
+          bg-[var(--input-bg)] border"
         />
 
         <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="Message"
           className="w-full px-4 py-2 rounded-lg
-          bg-[var(--input-bg)] border border-[var(--input-border)]"
+          bg-[var(--input-bg)] border"
         />
 
         <div className="flex justify-end gap-3 mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg
-            bg-[var(--card-bg)] border"
+            className="px-4 py-2 rounded-lg border"
           >
             Cancel
           </button>
-          <button className="px-5 py-2 rounded-lg bg-[var(--primary)] text-white">
-            Send
+
+          <button
+            disabled={broadcast.isPending}
+            onClick={handleSend}
+            className="px-5 py-2 rounded-lg
+            bg-[var(--primary)] text-white"
+          >
+            {broadcast.isPending ? "Sending..." : "Send"}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
