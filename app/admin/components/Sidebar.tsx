@@ -14,6 +14,7 @@ import {
   Settings,
   Lock,
   Menu,
+  MessageSquare,
   LogOut,
   ChevronDown,
   X,
@@ -94,6 +95,7 @@ const navItems: NavItem[] = [
   },
   { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
   { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
+  { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
   { href: "/admin/referral", label: "Referral Management", icon: <Gift size={18} /> },
   {
     href: "/admin/settings",
