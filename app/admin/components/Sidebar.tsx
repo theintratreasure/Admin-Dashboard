@@ -105,7 +105,7 @@ const navSections: {
           label: "Transactions",
           icon: <CreditCard size={18} />,
           children: [
-            { href: "/admin/transactions/bank-details", label: "Bank Detaails", icon: <DollarSign size={14} /> },
+            { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },

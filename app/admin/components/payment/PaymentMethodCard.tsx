@@ -154,7 +154,7 @@ export default function PaymentMethodCard({ data, onEdit }: any) {
                     <Pencil size={14} /> Edit
                 </button>
                 <button
-                    className="btn btn-ghost text-xs text-[var(--danger)]"
+                    className="btn text-xs text-[var(--danger)]"
                     onClick={() => del.mutate(data._id)}
                 >
                     <Trash2 size={14} /> Delete
