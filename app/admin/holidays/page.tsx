@@ -71,7 +71,7 @@ export default function HolidaysPage() {
             <tbody>
               {data?.data.map((h) => (
                 <tr key={h._id}>
-                  <td className="font-medium">{h.title}</td>
+                  <td className="font-medium capitalize">{h.title}</td>
                   <td>{new Date(h.date).toDateString()}</td>
                   <td>
                     <span className="pill">

@@ -105,6 +105,7 @@ const navSections: {
           label: "Transactions",
           icon: <CreditCard size={18} />,
           children: [
+            { href: "/admin/transactions/bank-details", label: "Bank Detaails", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
@@ -176,10 +177,10 @@ export default function AdminSidebar() {
   }, [openDropdown]);
 
   useLayoutEffect(() => {
-  if (scrollRef.current) {
-    scrollRef.current.scrollTop = scrollTopRef.current;
-  }
-}, [pathname]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollTopRef.current;
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     mutate("", {
@@ -255,10 +256,10 @@ export default function AdminSidebar() {
                             <Link
                               key={child.href}
                               href={child.href!}
-                               onClick={() => {
-    saveScroll();
-    setMobileOpen(false);
-  }}
+                              onClick={() => {
+                                saveScroll();
+                                setMobileOpen(false);
+                              }}
                               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs
                               ${isExactActive(child.href)
                                   ? "bg-[var(--primary)] text-white shadow"
@@ -277,10 +278,10 @@ export default function AdminSidebar() {
                   <Link
                     key={item.href}
                     href={item.href!}
-                     onClick={() => {
-    saveScroll();
-    setMobileOpen(false);
-  }}
+                    onClick={() => {
+                      saveScroll();
+                      setMobileOpen(false);
+                    }}
                     className={`flex items-center gap-3 rounded-xl px-3 py-2
         ${item.href === "/admin"
                         ? isExactActive(item.href)

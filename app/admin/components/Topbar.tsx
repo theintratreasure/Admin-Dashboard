@@ -40,7 +40,7 @@ const Topbar: React.FC = () => {
         <div className="flex items-center gap-4 flex-shrink-0">
 
           {/* Search Box */}
-          <div className="relative w-40 sm:w-52 md:w-60">
+          {/* <div className="relative w-40 sm:w-52 md:w-60">
             <Search className="absolute left-3 top-2.5 w-4 h-4 opacity-70 text-[var(--primary)]" />
             <input
               type="text"
@@ -48,7 +48,7 @@ const Topbar: React.FC = () => {
               className="pl-9 pr-4 py-2 text-sm rounded-lg border bg-[var(--input-bg)] border-[var(--input-border)]
               w-full focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition"
             />
-          </div>
+          </div> */}
 
           {/*Theme Toggle Button — ADDED HERE */}
           <button

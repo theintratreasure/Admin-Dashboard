@@ -6,6 +6,7 @@ import Pagination from "../../components/ui/pagination";
 import AdminKycTable from "../../components/kyc/AdminKycTable";
 import AdminKycViewModal from "../../components/kyc/AdminKycViewModal";
 import { AdminKyc } from "@/services/kyc/kyc.types";
+import GlobalLoader from "../../components/ui/GlobalLoader";
 
 type KycFilter = "ALL" | "VERIFIED" | "REJECTED";
 
@@ -22,7 +23,6 @@ export default function CompletedKycPage() {
     status:
       filter === "ALL" ? undefined : filter,
   });
-
   const list = data?.data?.list ?? [];
   const pagination = data?.data?.pagination;
 
@@ -37,18 +37,7 @@ export default function CompletedKycPage() {
           </h1>
 
           {/* FILTER */}
-          <select
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value as KycFilter);
-              setPage(1); // reset pagination
-            }}
-            className="rounded-lg px-3 py-2 text-sm"
-            style={{
-              background: "var(--input-bg)",
-              border: "1px solid var(--input-border)",
-            }}
-          >
+          <select value={filter} onChange={(e) => { setFilter(e.target.value as KycFilter); setPage(1); }} className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", }} >
             <option value="ALL">All</option>
             <option value="VERIFIED">Verified</option>
             <option value="REJECTED">Rejected</option>
@@ -57,7 +46,7 @@ export default function CompletedKycPage() {
 
         {/* CONTENT */}
         {isLoading ? (
-          <p>Loading…</p>
+          <div className="p-6 text-center text-sm"><GlobalLoader /></div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div

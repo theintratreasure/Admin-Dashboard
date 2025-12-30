@@ -1,13 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
-import { togglePaymentStatusService } from "@/services/payment-method/paymentMethod.services";
+import { paymentService } from "@/services/payment-method/payment-method.service";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export const useTogglePaymentStatus = () =>
-  useMutation({
-    mutationFn: ({
-      id,
-      is_active,
-    }: {
-      id: string;
-      is_active: boolean;
-    }) => togglePaymentStatusService({ id, is_active }),
+export const useTogglePaymentStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, is_active }: any) =>
+      paymentService.toggle(id, is_active),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["payment-methods"] }),
   });
+};

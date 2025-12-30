@@ -1,17 +1,10 @@
+import { paymentService } from "@/services/payment-method/payment-method.service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addPaymentMethodService } from "@/services/payment-method/paymentMethod.services";
 
 export const useAddPaymentMethod = () => {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: addPaymentMethodService,
-
-    onSuccess: () => {
-      
-      queryClient.invalidateQueries({
-        queryKey: ["payment-methods"],
-      });
-    },
+    mutationFn: paymentService.create,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["payment-methods"] }),
   });
 };

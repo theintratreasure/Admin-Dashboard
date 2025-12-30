@@ -11,6 +11,7 @@ import AdminKycTable from "../../components/kyc/AdminKycTable";
 import Pagination from "../../components/ui/pagination";
 import AdminKycViewModal from "../../components/kyc/AdminKycViewModal";
 import AdminCard from "../../components/ui/AdminCard";
+import GlobalLoader from "../../components/ui/GlobalLoader";
 
 export default function PendingKycPage() {
   const [page, setPage] = useState(1);
@@ -59,7 +60,13 @@ export default function PendingKycPage() {
       }
     );
   };
-
+if (isLoading) {
+    return(
+      <>
+        <div className="p-6 text-center text-sm"><GlobalLoader/></div>
+      </>
+    )
+  }
   return (
     <>
       <AdminCard title="Pending KYC Requests">

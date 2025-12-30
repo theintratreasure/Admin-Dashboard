@@ -1,17 +1,10 @@
+import { paymentService } from "@/services/payment-method/payment-method.service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deletePaymentMethodService } from "@/services/payment-method/paymentMethod.services";
 
 export const useDeletePaymentMethod = () => {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deletePaymentMethodService(id),
-
-    onSuccess: () => {
-      // 🔥 payment list auto refresh
-      queryClient.invalidateQueries({
-        queryKey: ["payment-methods"],
-      });
-    },
+    mutationFn: paymentService.remove,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["payment-methods"] }),
   });
 };

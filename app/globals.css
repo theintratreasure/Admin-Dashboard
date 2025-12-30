@@ -8,32 +8,32 @@
 /* ----------------- LIGHT THEME ----------------- */
 :root{
   /* brand */
-  --primary: #2b7f76;
-  --primary-dark: #21685f;
-  --accent: #06B6D4;
+  --primary: #1f6fd6;          /* chart blue */
+  --primary-dark: #2e8b74;     /* growth green */
+  --accent: #f4b400;           /* profit gold */
 
   /* backgrounds / surfaces */
-  --background: #f4f7fb;    /* app background (soft cool) */
-  --card-bg: #f8fbff;       /* cards — slightly tinted (not white) */
-  --hover-bg: #eef3ff;
+  --background: #f2f7fb;       /* soft sky */
+  --card-bg: #f8fbff;          /* lifted white-blue */
+  --hover-bg: #eaf2fb;
 
   /* text */
-  --foreground: #0f1724;    /* dark slate */
-  --text-muted: #55637a;
+  --foreground: #0b1320;       /* ALS black */
+  --text-muted: #5c6b82;
 
   /* borders / inputs */
-  --card-border: #e6eefc;
-  --input-bg: #eef3ff;
-  --input-border: #dbe8ff;
+  --card-border: #dde7f3;
+  --input-bg: #eaf2fb;
+  --input-border: #d4e2f2;
 
   /* states */
-  --success: #16a34a;
+  --success: #1f9d6a;          /* green from arrow tail */
   --danger: #dc2626;
-  --info: #2563eb;
+  --info: #1f6fd6;
 
-  /* small effects */
-  --glow: rgba(79,70,229,0.12);
-  --shadow-1: 0 6px 18px rgba(17,24,39,0.06);
+  /* effects */
+  --glow: rgba(31,111,214,0.12);
+  --shadow-1: 0 8px 22px rgba(15,23,42,0.06);
   --duration: 200ms;
 
   /* layout */
@@ -43,27 +43,34 @@
 
 /* ----------------- DARK THEME ----------------- */
 html.dark{
-  --primary: #2b7f76;
-  --primary-dark: #21685f;
-  --accent: #06b6d4;
+  /* brand */
+  --primary: #3b8cff;          /* electric chart blue */
+  --primary-dark: #3fbf9a;     /* growth green */
+  --accent: #f6c453;           /* gold highlight */
 
-  --background: #0f1621;     /* deep slate (not pure black) */
-  --card-bg: #131922;        /* lifted surface */
-  --hover-bg: #1a2430;
+  /* backgrounds / surfaces */
+  --background: #0b1220;       /* deep trading desk */
+  --card-bg: #111a2c;          /* elevated slate */
+  --hover-bg: #18243a;
 
-  --foreground: #e6eef8;
-  --text-muted: #9aa6b3;
+  /* text */
+  --foreground: #e7edf7;       /* soft white */
+  --text-muted: #9fb0c7;
 
-  --card-border: #22303f;
-  --input-bg: #0d1420;
-  --input-border: #1f2b38;
+  /* borders / inputs */
+  --card-border: #1e2c44;
+  --input-bg: #0e1627;
+  --input-border: #223356;
 
-  --success: #22c55e;
+  /* states */
+  --success: #3fd2a2;
   --danger: #ef4444;
 
-  --glow: rgba(6,182,212,0.08);
-  --shadow-1: 0 10px 30px rgba(0,0,0,0.45);
+  /* effects */
+  --glow: rgba(63,140,255,0.15);
+  --shadow-1: 0 14px 36px rgba(0,0,0,0.55);
 }
+
 
 /* ======================================================
    BASE

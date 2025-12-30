@@ -16,80 +16,134 @@ export default function Pagination({
   onLimitChange,
 }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between pt-4">
-      {/* LEFT */}
-      <select
-        value={limit}
-        onChange={(e) => onLimitChange(Number(e.target.value))}
-        className="rounded-lg px-3 py-2 text-sm"
-        style={{
-          background: "var(--input-bg)",
-          border: "1px solid var(--input-border)",
-        }}
-      >
-        {[10, 20, 50].map((n) => (
-          <option key={n} value={n}>
-            {n} Rows
-          </option>
-        ))}
-      </select>
-
-      {/* RIGHT */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-[var(--text-muted)]">
-          Page {page} of {totalPages}
+    <div
+      className="
+        mt-6
+        flex flex-col gap-4
+        rounded-2xl
+        border border-[var(--card-border)]
+        bg-[var(--card-bg)]
+        p-4
+        sm:flex-row sm:items-center sm:justify-between
+      "
+    >
+      {/* LEFT — LIMIT */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-medium text-[var(--text-muted)]">
+          Rows
         </span>
 
-        <PageBtn disabled={page === 1} onClick={() => onPageChange(1)}>
-          ≪
-        </PageBtn>
-        <PageBtn disabled={page === 1} onClick={() => onPageChange(page - 1)}>
-          ‹
-        </PageBtn>
-
-        <div
-          className="px-3 py-2 rounded-lg font-semibold"
-          style={{ background: "var(--primary)", color: "#fff" }}
+        <select
+          value={limit}
+          onChange={(e) => onLimitChange(Number(e.target.value))}
+          className="
+            rounded-xl px-3 py-2 text-sm font-medium
+            bg-[var(--input-bg)]
+            border border-[var(--input-border)]
+            focus:outline-none
+            focus:ring-2 focus:ring-[var(--primary)]/30
+          "
         >
-          {page}
+          {[10, 20, 50].map((n) => (
+            <option key={n} value={n}>
+              {n} / page
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* RIGHT — PAGINATION */}
+      <div className="flex flex-col items-center gap-3 sm:flex-row">
+        {/* PAGE INFO */}
+        <span className="text-xs text-[var(--text-muted)]">
+          Page <span className="font-semibold">{page}</span> of{" "}
+          <span className="font-semibold">{totalPages}</span>
+        </span>
+
+        {/* CONTROLS */}
+        <div className="flex items-center gap-1">
+          <PageBtn
+            disabled={page === 1}
+            onClick={() => onPageChange(1)}
+            label="First"
+          >
+            ≪
+          </PageBtn>
+
+          <PageBtn
+            disabled={page === 1}
+            onClick={() => onPageChange(page - 1)}
+            label="Previous"
+          >
+            ‹
+          </PageBtn>
+
+          {/* CURRENT PAGE */}
+          <div
+            className="
+              mx-1 min-w-[40px]
+              rounded-xl
+              bg-[var(--primary)]
+              px-3 py-2
+              text-center text-sm font-semibold
+              text-white
+              shadow
+            "
+          >
+            {page}
+          </div>
+
+          <PageBtn
+            disabled={page === totalPages}
+            onClick={() => onPageChange(page + 1)}
+            label="Next"
+          >
+            ›
+          </PageBtn>
+
+          <PageBtn
+            disabled={page === totalPages}
+            onClick={() => onPageChange(totalPages)}
+            label="Last"
+          >
+            ≫
+          </PageBtn>
         </div>
-
-        <PageBtn
-          disabled={page === totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          ›
-        </PageBtn>
-        <PageBtn
-          disabled={page === totalPages}
-          onClick={() => onPageChange(totalPages)}
-        >
-          ≫
-        </PageBtn>
       </div>
     </div>
   );
 }
 
+/* ================= BUTTON ================= */
+
 function PageBtn({
   children,
   disabled,
   onClick,
+  label,
 }: {
   children: React.ReactNode;
   disabled: boolean;
   onClick: () => void;
+  label?: string;
 }) {
   return (
     <button
+      aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="px-3 py-2 rounded-lg"
-      style={{
-        background: "var(--input-bg)",
-        border: "1px solid var(--input-border)",
-        opacity: disabled ? 0.4 : 1,
-      }}
+      className="
+        min-w-[36px]
+        rounded-xl px-3 py-2
+        text-sm font-medium
+        bg-[var(--input-bg)]
+        border border-[var(--input-border)]
+        transition
+        hover:bg-[var(--hover-bg)]
+        active:scale-95
+        disabled:opacity-40
+        disabled:cursor-not-allowed
+      "
     >
       {children}
     </button>

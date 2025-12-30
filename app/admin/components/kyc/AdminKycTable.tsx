@@ -1,71 +1,142 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { AdminKyc } from "@/services/kyc/kyc.types";
 
+type SortOrder = "asc" | "desc";
+
 export default function AdminKycTable({
-  list,
-  onView,
+    list,
+    onView,
 }: {
-  list: AdminKyc[];
-  onView: (k: AdminKyc) => void;
+    list: AdminKyc[];
+    onView: (k: AdminKyc) => void;
 }) {
-  return (
-    <div className="space-y-3">
-      {/* TABLE HEADER */}
-      <div className="mb-3 grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_auto] px-5 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
-        <span>User</span>
-        <span>Email</span>
-        <span>Document</span>
-        <span>Status</span>
-        <span>Date</span>
-        <span />
-      </div>
+    const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-      {list.map((u) => (
-        <div
-          key={u._id}
-          className="
+    const sortedList = [...list].sort((a, b) => {
+        const da = new Date(a.createdAt).getTime();
+        const db = new Date(b.createdAt).getTime();
+        return sortOrder === "asc" ? da - db : db - da;
+    });
+
+    const toggleSort = () =>
+        setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
+
+    const statusStyle = (status: AdminKyc["status"]) => {
+        switch (status) {
+            case "VERIFIED":
+                return "bg-green-500/10 text-green-400";
+            case "REJECTED":
+                return "bg-red-500/10 text-red-400";
+            case "PENDING":
+            default:
+                return "bg-amber-500/10 text-amber-400";
+        }
+    };
+
+    return (
+        <div className="relative -mx-2 overflow-x-auto">
+            <div className="min-w-[900px] space-y-3 px-2">
+
+                {/* ================= HEADER ================= */}
+                <div
+                    className="
+          grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_auto]
+          rounded-xl
+          bg-[var(--hover-bg)]
+          px-5 py-3
+          text-[11px] font-semibold uppercase tracking-wider
+          text-[var(--foreground)]
+        "
+                >
+                    <span>User</span>
+                    <span>Email</span>
+                    <span>Document</span>
+                    <span>Status</span>
+
+                    {/* SORTABLE DATE */}
+                    <button
+                        onClick={toggleSort}
+                        className="flex items-center gap-1 justify-start"
+                    >
+                        Date
+                        {sortOrder === "asc" ? (
+                            <ChevronUp size={14} />
+                        ) : (
+                            <ChevronDown size={14} />
+                        )}
+                    </button>
+                    <span>
+                        Action
+                    </span>
+                    <span />
+                </div>
+
+                {/* ================= ROWS ================= */}
+                {sortedList.map((u) => (
+                    <div
+                        key={u._id}
+                        className="
             grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_auto]
-            items-center gap-4 rounded-2xl
+            items-center gap-4
+            rounded-2xl
             border border-[var(--card-border)]
-            bg-[var(--card-bg)] px-5 py-4
+            bg-[var(--card-bg)]
+            px-5 py-4
+            hover:bg-[var(--hover-bg)]
           "
-        >
-          <div>
-            <p className="text-sm font-semibold">{u.user.name}</p>
-            <p className="text-xs text-[var(--text-muted)]">
-              {u.user.phone}
-            </p>
-          </div>
+                    >
+                        {/* USER */}
+                        <div>
+                            <p className="text-sm font-semibold">{u.user.name}</p>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                {u.user.phone}
+                            </p>
+                        </div>
 
-          <p className="truncate text-sm">{u.user.email}</p>
+                        {/* EMAIL */}
+                        <p className="truncate text-sm">{u.user.email}</p>
 
-          <p className="text-sm font-medium">
-            {u.documentType.replace("_", " ")}
-          </p>
+                        {/* DOCUMENT */}
+                        <p className="text-sm font-medium">
+                            {u.documentType.replace("_", " ")}
+                        </p>
 
-          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-400">
-            {u.status}
-          </span>
+                        {/* STATUS */}
+                        <span
+                            className={`rounded-full px-3 py-1 text-xs mx-auto font-semibold ${statusStyle(
+                                u.status
+                            )}`}
+                        >
+                            {u.status}
+                        </span>
 
-          <p className="text-xs text-[var(--text-muted)]">
-            {new Date(u.createdAt).toLocaleDateString()}
-          </p>
+                        {/* DATE */}
+                        <p className="text-xs text-[var(--text-muted)]">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                        </p>
 
-          {/* ✅ SINGLE BUTTON ONLY */}
-          <button
-            onClick={() => onView(u)}
-            className="
-              rounded-full bg-[var(--primary)]/10
-              px-4 py-2 text-xs font-medium
+                        {/* ACTION */}
+                        <button
+                            onClick={() => onView(u)}
+                            className="
+              rounded-full
+              bg-[var(--primary)]/10
+              px-4 py-2
+              text-xs font-medium
               text-[var(--primary)]
-              hover:bg-[var(--primary)] hover:text-white
+              transition-colors
+              hover:bg-[var(--primary)]
+              hover:text-white
             "
-          >
-            View
-          </button>
+                        >
+                            View
+                        </button>
+                    </div>
+                ))}
+            </div>
         </div>
-      ))}
-    </div>
-  );
+    );
 }
