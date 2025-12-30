@@ -1,22 +1,23 @@
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { getAdminKycService } from "@/services/kyc/kyc.services";
 import {
-  useQuery,
-  keepPreviousData,
-} from "@tanstack/react-query";
-import { getAdminKycService, KycStatus } from "@/services/kyc/kyc.services";
+  KycStatus,
+  AdminKycListResponse,
+} from "@/services/kyc/kyc.types";
 
-interface UseGetAdminAllKycParams {
+interface Params {
   status?: KycStatus;
-  page?: number;
-  limit?: number;
+  page: number;
+  limit: number;
 }
 
-export const useGetAdminAllKyc = ({
+export function useGetAdminAllKyc({
   status,
-  page = 1,
-  limit = 10,
-}: UseGetAdminAllKycParams) => {
-  return useQuery({
-    queryKey: ["admin-all-kyc", status, page, limit],
+  page,
+  limit,
+}: Params) {
+  return useQuery<AdminKycListResponse>({
+    queryKey: ["admin-kyc", status ?? "ALL", page, limit],
     queryFn: () =>
       getAdminKycService({
         status,
@@ -24,9 +25,7 @@ export const useGetAdminAllKyc = ({
         limit,
       }),
 
-  
+    // ✅ TanStack v5 correct way
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
   });
-};
+}

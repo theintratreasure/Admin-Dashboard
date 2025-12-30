@@ -362,6 +362,9 @@ export default function NotificationsPage() {
 function SendNotificationModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [type, setType] = useState<
+    "MAINTENANCE" | "HOLIDAY" | "GENERAL" | "INFORMATION"
+  >("GENERAL");
 
   const broadcast = useBroadcastNotification();
 
@@ -371,12 +374,18 @@ function SendNotificationModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    // ⏰ expire after 1 day
+    const expireAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ).toISOString();
+
     broadcast.mutate(
       {
         title,
         message,
+        expireAt,
         data: {
-          type: "ADMIN_BROADCAST",
+          type,
         },
       },
       {
@@ -409,6 +418,7 @@ function SendNotificationModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose}>✕</button>
         </div>
 
+        {/* TITLE */}
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -417,16 +427,34 @@ function SendNotificationModal({ onClose }: { onClose: () => void }) {
           bg-[var(--input-bg)] border"
         />
 
+        {/* MESSAGE */}
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="Message"
-          className="w-full px-4 py-2 rounded-lg
+          className="w-full mb-3 px-4 py-2 rounded-lg
           bg-[var(--input-bg)] border"
         />
 
-        <div className="flex justify-end gap-3 mt-4">
+        {/* TYPE SELECTOR */}
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value as any)}
+          className="w-full px-4 py-2 rounded-lg
+          bg-[var(--input-bg)] border"
+        >
+          <option value="GENERAL">General</option>
+          <option value="INFORMATION">Information</option>
+          <option value="MAINTENANCE">Maintenance</option>
+          <option value="HOLIDAY">Holiday</option>
+        </select>
+
+        <p className="text-xs text-[var(--text-muted)] mt-2">
+          Notification will expire automatically after 24 hours
+        </p>
+
+        <div className="flex justify-end gap-3 mt-5">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg border"
@@ -447,4 +475,5 @@ function SendNotificationModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
 

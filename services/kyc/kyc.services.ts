@@ -1,44 +1,29 @@
 import api from "@/api/axios";
-
-
-export type KycStatus = "PENDING" | "VERIFIED" | "REJECTED";
-
-export interface UpdateKycPayload {
-  status: "VERIFIED" | "REJECTED";
-  rejectionReason?: string;
-}
+import { KycStatus, AdminKycListResponse } from "./kyc.types";
 
 export const getAdminKycService = async ({
   status,
-  page = 1,
-  limit = 10,
+  page,
+  limit,
 }: {
   status?: KycStatus;
-  page?: number;
-  limit?: number;
-}) => {
+  page: number;
+  limit: number;
+}): Promise<AdminKycListResponse> => {
   const res = await api.get("/kyc/admin", {
     params: {
-      ...(status ? { status } : {}),
+      ...(status ? { status } : {}), // ALL => status removed
       page,
       limit,
-    },
-    headers: {
-      "Cache-Control": "no-cache",
     },
   });
 
   return res.data;
 };
-
-
-export const updateKycStatusService = async ({
-  id,
-  payload,
-}: {
-  id: string;
-  payload: UpdateKycPayload;
-}) => {
+export async function updateKycStatusService(
+  id: string,
+  payload: { status: "VERIFIED" | "REJECTED"; rejectionReason?: string }
+) {
   const res = await api.put(`/kyc/admin/${id}/status`, payload);
   return res.data;
-};
+}

@@ -1,39 +1,23 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateKycStatusService } from "@/services/kyc/kyc.services";
-import toast from "react-hot-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface UpdateKycArgs {
-  kycId: string;
+type UpdateArgs = {
+  id: string;
   payload: {
     status: "VERIFIED" | "REJECTED";
     rejectionReason?: string;
   };
-}
+};
 
 export function useUpdateKycStatus() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ kycId, payload }: UpdateKycArgs) =>
-      updateKycStatusService({
-        id: kycId,
-        payload,
-      }),
+    mutationFn: ({ id, payload }: UpdateArgs) =>
+      updateKycStatusService(id, payload),
 
     onSuccess: () => {
-      toast.success("KYC status updated successfully");
-
-    
-      queryClient.invalidateQueries({
-        queryKey: ["admin-all-kyc"],
-        exact: false,
-      });
-    },
-
-    onError: (error: any) => {
-      toast.error(
-        error?.response?.data?.message || "Failed to update KYC"
-      );
+      qc.invalidateQueries({ queryKey: ["admin-kyc"] });
     },
   });
 }
