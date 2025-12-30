@@ -34,19 +34,47 @@ export default function PaymentMethodCard({ data, onEdit }: any) {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-[var(--foreground)]">
+                        <h3
+                            className={`text-lg font-semibold text-[var(--foreground)]"
+                                }`}
+                        >
                             {data.title}
                         </h3>
-                        {data.is_active && (
-                            <span className="pill text-[var(--success)]">Active</span>
-                        )}
+
+                        <span
+                            className={`
+    inline-block px-2 py-0.5 text-xs font-medium rounded-full border
+    ${data.is_active
+                                    ? "text-[var(--success)] bg-[var(--hover-bg)] border-[var(--card-border)]"
+                                    : "text-[var(--danger)] bg-[rgba(220,38,38,0.12)] border-[var(--danger)]"
+                                }
+  `}
+                        >
+                            {data.is_active ? "Active" : "Inactive"}
+                        </span>
+
                     </div>
-                    <p className="text-xs text-[var(--text-muted)]">{label}</p>
+
+                    <p
+                        className={`text-xs 
+                                 "text-[var(--text-muted)]"
+                            }`}
+                    >
+                        {label}
+                    </p>
                 </div>
 
                 {/* Toggle */}
-                <label className="flex items-center gap-2 text-xs text-[var(--text-muted)] cursor-pointer select-none">
-                    <span>{data.is_active ? "Enabled" : "Disabled"}</span>
+                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                    <span
+                        className={
+                            data.is_active
+                                ? "text-[var(--text-muted)]"
+                                : "text-[var(--danger)]"
+                        }
+                    >
+                        {data.is_active ? "Enabled" : "Disabled"}
+                    </span>
 
                     <button
                         type="button"
@@ -54,21 +82,22 @@ export default function PaymentMethodCard({ data, onEdit }: any) {
                             toggle.mutate({ id: data._id, is_active: !data.is_active })
                         }
                         className={`relative inline-flex h-5 w-9 items-center rounded-full border transition
-            ${data.is_active
+        ${data.is_active
                                 ? "border-[var(--success)] bg-[var(--hover-bg)]"
-                                : "border-[var(--card-border)] bg-[var(--hover-bg)]"
+                                : "border-[var(--danger)] bg-[var(--hover-bg)]"
                             }`}
                     >
                         <span
                             className={`inline-block h-4 w-4 rounded-full
-              bg-[var(--foreground)]
-              shadow transition-transform
-              ${data.is_active ? "translate-x-4" : "translate-x-0.5"
-                                }`}
+          bg-[var(--foreground)]
+          shadow transition-transform
+          ${data.is_active ? "translate-x-4" : "translate-x-0.5"}
+        `}
                         />
                     </button>
                 </label>
             </div>
+
 
             {/* BODY */}
             <div className="mt-4 flex-1 space-y-3">
