@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Topbar from "./components/Topbar";
 import AdminSidebar from "./components/Sidebar";
 import { useAdminMe } from "@/hooks/useAdmin";
+import GlobalLoader from "./components/ui/GlobalLoader";
 
 export default function AdminLayout({
   children,
@@ -29,7 +30,14 @@ export default function AdminLayout({
     }
   }, [isError, error, router]);
 
- 
+  // ⏳ loading
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <GlobalLoader />
+      </div>
+    );
+  }
 
   // ⛔ while redirecting → blank screen
   if (isError) {

@@ -236,10 +236,11 @@ function ImageCard({
     <div
       onClick={onClick}
       className="
-        group relative h-[260px] cursor-zoom-in
+        group relative h-[260px] cursor-zoom-in 
         overflow-hidden rounded-2xl
         border border-[var(--card-border)]
         bg-black
+        
       "
     >
       {src ? (
@@ -248,8 +249,9 @@ function ImageCard({
             src={src}
             alt={label}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="object-contain transform-gpu transition-transform duration-700 ease-out group-hover:scale-110"
           />
+
           <div className="absolute inset-0 bg-black/20 opacity-0 transition group-hover:opacity-100" />
         </>
       ) : (

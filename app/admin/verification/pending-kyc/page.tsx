@@ -63,30 +63,53 @@ export default function PendingKycPage() {
   return (
     <>
       <AdminCard title="Pending KYC Requests">
-        {isLoading ? (
-          <p>Loading…</p>
-        ) : (
-          <>
-            <AdminKycTable
-              list={list}
-              onView={(k) => setSelectedKyc(k)}
-            />
-{pagination && (
-  <Pagination
-    page={pagination.page}
-    totalPages={pagination.totalPages}
-    limit={pagination.limit}
-    onPageChange={setPage}
-    onLimitChange={(l) => {
-      setLimit(l);
-      setPage(1);
-    }}
-  />
-)}
+  {isLoading ? (
+    <p>Loading…</p>
+  ) : list.length === 0 ? (
+    /* ✅ EMPTY STATE */
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div
+        className="mb-3 rounded-full px-4 py-2 text-sm font-semibold"
+        style={{
+          background: "var(--hover-bg)",
+          color: "var(--text-muted)",
+        }}
+      >
+        🎉 All Clear
+      </div>
 
-          </>
-        )}
-      </AdminCard>
+      <h3 className="text-lg font-semibold">
+        No Pending KYC Requests
+      </h3>
+
+      <p className="mt-1 max-w-md text-sm text-[var(--text-muted)]">
+        There are currently no users waiting for KYC approval.
+        New requests will appear here automatically.
+      </p>
+    </div>
+  ) : (
+    <>
+      <AdminKycTable
+        list={list}
+        onView={(k) => setSelectedKyc(k)}
+      />
+
+      {pagination && (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          limit={pagination.limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => {
+            setLimit(l);
+            setPage(1);
+          }}
+        />
+      )}
+    </>
+  )}
+</AdminCard>
+
 
       {/* MODAL MUST BE OUTSIDE CARD */}
       {selectedKyc && (
@@ -100,6 +123,7 @@ export default function PendingKycPage() {
           }
         />
       )}
+      
     </>
   );
 }

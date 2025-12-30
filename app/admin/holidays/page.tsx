@@ -10,6 +10,7 @@ import {
 import { Plus, Trash2, Pencil, Power } from "lucide-react";
 import { Holiday } from "@/services/holiday/holiday.service";
 import Pagination from "../components/ui/pagination";
+import GlobalLoader from "../components/ui/GlobalLoader";
 
 /* ================= PAGE ================= */
 
@@ -55,7 +56,7 @@ export default function HolidaysPage() {
       {/* TABLE */}
       <div className="card-elevated overflow-hidden">
         {isLoading ? (
-          <div className="p-6 text-center text-sm">Loading…</div>
+          <div className="p-6 text-center text-sm"><GlobalLoader/></div>
         ) : (
           <table className="table">
             <thead>

@@ -29,7 +29,6 @@ export default function AdminKycTable({
             items-center gap-4 rounded-2xl
             border border-[var(--card-border)]
             bg-[var(--card-bg)] px-5 py-4
-            hover:shadow-[0_12px_35px_rgba(0,0,0,0.18)]
           "
         >
           <div>

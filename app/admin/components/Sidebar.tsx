@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX, useEffect, useState } from "react";
+import React, { JSX, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   CandlestickChart,
@@ -44,95 +44,95 @@ const navSections: {
   title: string;
   items: NavItem[];
 }[] = [
-  {
-    title: "Core",
-    items: [
-      {
-        href: "/admin",
-        label: "Dashboard",
-        icon: <LayoutDashboard size={18} />,
-      },
-    ],
-  },
-  {
-    title: "Trading",
-    items: [
-      {
-        label: "Instruments",
-        icon: <CandlestickChart size={18} />,
-        children: [
-          { href: "/admin/instruments/market-watch", label: "Market Watch", icon: <Activity size={14} /> },
-          { href: "/admin/instruments/manage-scrips", label: "Manage Scrips", icon: <FileText size={14} /> },
-          { href: "/admin/instruments/market-settings", label: "Market Settings", icon: <Settings size={14} /> },
-        ],
-      },
-      {
-        label: "Trades",
-        icon: <ShoppingCart size={18} />,
-        children: [
-          { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
-          { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
-          { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Users & Compliance",
-    items: [
-      {
-        label: "Users",
-        icon: <Users size={18} />,
-        children: [
-          { href: "/admin/users/users", label: "All Users", icon: <Users size={14} /> },
-          { href: "/admin/users/users-funds", label: "User Funds", icon: <Wallet size={14} /> },
-        ],
-      },
-      {
-        label: "Verification",
-        icon: <ShieldCheck size={18} />,
-        children: [
-          { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <ClockDot /> },
-          { href: "/admin/verification/kyc", label: "KYC Completed", icon: <UserCheck size={14} /> },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      {
-        label: "Transactions",
-        icon: <CreditCard size={18} />,
-        children: [
-          { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
-          { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
-          { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
-        ],
-      },
-      { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
-      { href: "/admin/holidays", label: "Market Holidays", icon: <CalendarDays size={18} /> }, // ✅ ADDED
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
-      { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
-      { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
-      {
-        label: "Admin Config",
-        icon: <Settings size={18} />,
-        children: [{ href: "/admin/settings", label: "Settings", icon: <Settings size={14} /> }],
-      },
-      {
-        label: "Account Security",
-        icon: <Lock size={18} />,
-        children: [{ href: "/admin/account-security/change-password", label: "Change Password", icon: <Lock size={14} /> }],
-      },
-    ],
-  },
-];
+    {
+      title: "Core",
+      items: [
+        {
+          href: "/admin",
+          label: "Dashboard",
+          icon: <LayoutDashboard size={18} />,
+        },
+      ],
+    },
+    {
+      title: "Trading",
+      items: [
+        {
+          label: "Instruments",
+          icon: <CandlestickChart size={18} />,
+          children: [
+            { href: "/admin/instruments/market-watch", label: "Market Watch", icon: <Activity size={14} /> },
+            { href: "/admin/instruments/manage-scrips", label: "Manage Scrips", icon: <FileText size={14} /> },
+            { href: "/admin/instruments/market-settings", label: "Market Settings", icon: <Settings size={14} /> },
+          ],
+        },
+        {
+          label: "Trades",
+          icon: <ShoppingCart size={18} />,
+          children: [
+            { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
+            { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
+            { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Users & Compliance",
+      items: [
+        {
+          label: "Users",
+          icon: <Users size={18} />,
+          children: [
+            { href: "/admin/users/users", label: "All Users", icon: <Users size={14} /> },
+            { href: "/admin/users/users-funds", label: "User Funds", icon: <Wallet size={14} /> },
+          ],
+        },
+        {
+          label: "Verification",
+          icon: <ShieldCheck size={18} />,
+          children: [
+            { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <ClockDot /> },
+            { href: "/admin/verification/kyc", label: "KYC Completed", icon: <UserCheck size={14} /> },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Finance",
+      items: [
+        {
+          label: "Transactions",
+          icon: <CreditCard size={18} />,
+          children: [
+            { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
+            { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
+            { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
+          ],
+        },
+        { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
+        { href: "/admin/holidays", label: "Market Holidays", icon: <CalendarDays size={18} /> }, // ✅ ADDED
+      ],
+    },
+    {
+      title: "System",
+      items: [
+        { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
+        { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
+        { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
+        {
+          label: "Admin Config",
+          icon: <Settings size={18} />,
+          children: [{ href: "/admin/settings", label: "Settings", icon: <Settings size={14} /> }],
+        },
+        {
+          label: "Account Security",
+          icon: <Lock size={18} />,
+          children: [{ href: "/admin/account-security/change-password", label: "Change Password", icon: <Lock size={14} /> }],
+        },
+      ],
+    },
+  ];
 
 /* ================= COMPONENT ================= */
 
@@ -140,25 +140,46 @@ export default function AdminSidebar() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const { mutate } = useLogout();
-
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollTopRef = useRef(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const normalize = (p: string) => p.replace(/\/+$/, "");
   const currentPath = normalize(pathname);
 
-  const isActive = (href?: string) =>
-    href && (currentPath === href || currentPath.startsWith(href + "/"));
+  const isExactActive = (href?: string) => {
+    if (!href) return false;
+    return currentPath === href;
+  };
+
+  const isNestedActive = (href?: string) => {
+    if (!href) return false;
+    return currentPath === href || currentPath.startsWith(href + "/");
+  };
 
   useEffect(() => {
     navSections.forEach(section =>
       section.items.forEach(item =>
         item.children?.forEach(child => {
-          if (isActive(child.href)) setOpenDropdown(item.label);
+          if (isNestedActive(child.href)) {
+            setOpenDropdown(item.label);
+          }
         }),
       ),
     );
   }, [pathname]);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollTopRef.current;
+    }
+  }, [openDropdown]);
+
+  useLayoutEffect(() => {
+  if (scrollRef.current) {
+    scrollRef.current.scrollTop = scrollTopRef.current;
+  }
+}, [pathname]);
 
   const handleLogout = () => {
     mutate("", {
@@ -168,6 +189,11 @@ export default function AdminSidebar() {
         router.replace("/");
       },
     });
+  };
+  const saveScroll = () => {
+    if (scrollRef.current) {
+      scrollTopRef.current = scrollRef.current.scrollTop;
+    }
   };
 
   const SidebarInner = () => (
@@ -179,7 +205,10 @@ export default function AdminSidebar() {
       </div>
 
       {/* NAV */}
-      <div className="flex-1 space-y-6 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-6 overflow-y-auto"
+      >
 
         {navSections.map(section => (
           <div key={section.title}>
@@ -192,9 +221,13 @@ export default function AdminSidebar() {
                 item.children ? (
                   <div key={item.label}>
                     <button
-                      onClick={() =>
-                        setOpenDropdown(v => (v === item.label ? null : item.label))
-                      }
+                      onClick={() => {
+                        if (scrollRef.current) {
+                          scrollTopRef.current = scrollRef.current.scrollTop;
+                        }
+
+                        setOpenDropdown(v => (v === item.label ? null : item.label));
+                      }}
                       className="group flex w-full items-center justify-between rounded-xl px-3 py-2
                       hover:bg-[var(--hover-bg)]"
                     >
@@ -204,9 +237,8 @@ export default function AdminSidebar() {
                       </span>
                       <ChevronDown
                         size={16}
-                        className={`transition-transform duration-150 ${
-                          openDropdown === item.label ? "rotate-180" : ""
-                        }`}
+                        className={`transition-transform duration-150 ${openDropdown === item.label ? "rotate-180" : ""
+                          }`}
                       />
                     </button>
 
@@ -223,13 +255,15 @@ export default function AdminSidebar() {
                             <Link
                               key={child.href}
                               href={child.href!}
-                              onClick={() => setMobileOpen(false)}
+                               onClick={() => {
+    saveScroll();
+    setMobileOpen(false);
+  }}
                               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs
-                              ${
-                                isActive(child.href)
+                              ${isExactActive(child.href)
                                   ? "bg-[var(--primary)] text-white shadow"
                                   : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
-                              }`}
+                                }`}
                             >
                               {child.icon}
                               {child.label}
@@ -243,13 +277,19 @@ export default function AdminSidebar() {
                   <Link
                     key={item.href}
                     href={item.href!}
-                    onClick={() => setMobileOpen(false)}
+                     onClick={() => {
+    saveScroll();
+    setMobileOpen(false);
+  }}
                     className={`flex items-center gap-3 rounded-xl px-3 py-2
-                    ${
-                      isActive(item.href)
-                        ? "bg-[var(--primary)] text-white shadow"
-                        : "hover:bg-[var(--hover-bg)]"
-                    }`}
+        ${item.href === "/admin"
+                        ? isExactActive(item.href)
+                          ? "bg-[var(--primary)] text-white shadow"
+                          : "hover:bg-[var(--hover-bg)]"
+                        : isNestedActive(item.href)
+                          ? "bg-[var(--primary)] text-white shadow"
+                          : "hover:bg-[var(--hover-bg)]"
+                      }`}
                   >
                     {item.icon}
                     {item.label}

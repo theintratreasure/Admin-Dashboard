@@ -8,8 +8,8 @@
 /* ----------------- LIGHT THEME ----------------- */
 :root{
   /* brand */
-  --primary: #4F46E5;
-  --primary-dark: #3b33c4;
+  --primary: #2b7f76;
+  --primary-dark: #21685f;
   --accent: #06B6D4;
 
   /* backgrounds / surfaces */
@@ -219,21 +219,61 @@ body {
   padding: 18px;
 }
 
-/* ======================================================
-   SCROLLBAR (subtle & readable)
-====================================================== */
+/* ===============================
+   PREMIUM SCROLLBAR (ADMIN)
+   =============================== */
 
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+/* Webkit (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
-::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(100,116,139,0.28);
-  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(100,116,139,0.45),
+    rgba(100,116,139,0.25)
+  );
+  border-radius: 999px;
 }
+
+/* Hover = slightly stronger */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(100,116,139,0.65),
+    rgba(100,116,139,0.45)
+  );
+}
+
+/* ===============================
+   DARK THEME TUNING
+   =============================== */
 html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(148,163,184,0.18);
+  background: linear-gradient(
+    180deg,
+    rgba(148,163,184,0.35),
+    rgba(148,163,184,0.18)
+  );
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(148,163,184,0.55),
+    rgba(148,163,184,0.35)
+  );
 }
 
 /* ======================================================
