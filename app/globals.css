@@ -297,3 +297,14 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    - Use .pill for small meta
    - Keep body text at least 14px in UI forms for readability
 ====================================================== */
+.pill-success {
+  background-color: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 25%, transparent);
+}
+
+.pill-muted {
+  background-color: var(--hover-bg);
+  color: var(--text-muted);
+  border-color: var(--card-border);
+}

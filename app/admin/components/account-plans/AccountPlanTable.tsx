@@ -80,7 +80,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                   {/* MIN DEPOSIT */}
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="font-medium">
-                      ₹{p.minDeposit.toLocaleString("en-IN")}
+                      $ {p.minDeposit.toLocaleString("en-IN")}
                     </span>
                   </td>
 
