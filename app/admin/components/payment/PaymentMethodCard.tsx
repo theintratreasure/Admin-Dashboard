@@ -107,7 +107,7 @@ export default function PaymentMethodCard({ data, onEdit }: any) {
                         <CopyInput label="Account holder" value={data.account_name} onCopy={() => setToast("Copied")} />
                         <CopyInput
                             label="Account number"
-                            value={`****${data.account_number?.slice(-4)}`}
+                            value={data.account_number}
                             onCopy={() => setToast("Copied")}
                         />
                         <CopyInput label="IFSC" value={data.ifsc} onCopy={() => setToast("Copied")} />

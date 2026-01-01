@@ -75,6 +75,7 @@ const navSections: {
             { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
           ],
         },
+        { href: "/admin/account-plan", label: "Account Plans", icon: <Gift size={18} /> },
       ],
     },
     {
