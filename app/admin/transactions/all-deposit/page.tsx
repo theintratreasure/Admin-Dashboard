@@ -213,10 +213,10 @@ export default function AllDeposit() {
                       <td>
                         <span
                           className={`pill font-semibold ${d.status === "APPROVED"
-                              ? "pill-success shadow-sm"
-                              : d.status === "REJECTED"
-                                ? "pill-danger shadow-sm"
-                                : "pill-accent shadow-sm"
+                            ? "pill-success shadow-sm"
+                            : d.status === "REJECTED"
+                              ? "pill-danger shadow-sm"
+                              : "pill-accent shadow-sm"
                             }`}
                         >
                           {d.status}
@@ -225,26 +225,26 @@ export default function AllDeposit() {
 
                       {/* ACTIONS */}
                       <td className="text-center flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => setSelected(d)}
-                        className="btn p-2"
-                      >
-                        <Eye size={16} />
-                      </button>
-
-                      {d.status === "PENDING" && (
                         <button
-                          onClick={() => {
-                            setSelected(d);
-                            setEditAmount(d.amount);
-                            setEditOpen(true);
-                          }}
-                          className="p-2 text-[var(--primary)]"
+                          onClick={() => setSelected(d)}
+                          className="btn p-2"
                         >
-                          ✎
+                          <Eye size={16} />
                         </button>
-                      )}
-                    </td>
+
+                        {d.status === "PENDING" && (
+                          <button
+                            onClick={() => {
+                              setSelected(d);
+                              setEditAmount(d.amount);
+                              setEditOpen(true);
+                            }}
+                            className="p-2 text-[var(--primary)]"
+                          >
+                            ✎
+                          </button>
+                        )}
+                      </td>
                     </motion.tr>
                   ))
                 )}
@@ -265,7 +265,7 @@ export default function AllDeposit() {
 
       {/* MODAL */}
       <AnimatePresence>
-        {selected && (
+        {selected && !editOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -366,51 +366,54 @@ export default function AllDeposit() {
           </motion.div>
         )}
       </AnimatePresence>
-       {/* EDIT MODAL */}
-        {editOpen && selected && (
+      {/* EDIT MODAL */}
+      {editOpen && selected && (
+        <motion.div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60"
+          onClick={() => setEditOpen(false)}
+        >
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60"
-            onClick={() => setEditOpen(false)}
+            className="card-elevated w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              className="card-elevated w-full max-w-md p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-4">
-                Edit Deposit Amount
-              </h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Edit Deposit Amount
+            </h3>
 
-              <input
-                type="number"
-                value={editAmount}
-                onChange={(e) => setEditAmount(Number(e.target.value))}
-                className="input w-full mb-6"
-              />
+            <input
+              type="number"
+              value={editAmount}
+              onChange={(e) => setEditAmount(Number(e.target.value))}
+              className="input w-full mb-6"
+            />
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditOpen(false)}
-                  className="btn btn-ghost flex-1"
-                >
-                  Cancel
-                </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditOpen(false)}
+                className="btn btn-ghost flex-1"
+              >
+                Cancel
+              </button>
 
-                <button
-                  onClick={async () => {
-                    await editMutation.mutateAsync({
-                      id: selected._id,
-                      newAmount: editAmount,
-                    });
-                    refetch();
-                  }}
-                  className="btn btn-primary flex-1"
-                >
-                  Save
-                </button>
-              </div>
-            </motion.div>
+              <button
+                onClick={async () => {
+                  await editMutation.mutateAsync({
+                    id: selected._id,
+                    newAmount: editAmount,
+                  });
+                  setEditOpen(false);
+                  setSelected(null);
+
+                  refetch();
+                }}
+                className="btn btn-primary flex-1"
+              >
+                Save
+              </button>
+            </div>
           </motion.div>
-        )}
+        </motion.div>
+      )}
 
     </motion.div>
   );
