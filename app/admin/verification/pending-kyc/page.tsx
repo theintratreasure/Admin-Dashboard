@@ -15,7 +15,7 @@ import GlobalLoader from "../../components/ui/GlobalLoader";
 
 export default function PendingKycPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [selectedKyc, setSelectedKyc] =
     useState<AdminKyc | null>(null);
 

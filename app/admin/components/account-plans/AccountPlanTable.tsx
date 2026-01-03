@@ -224,7 +224,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
               <div>
                 <h3 className="text-sm font-semibold">{p.name}</h3>
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  Min Deposit: ₹{p.minDeposit.toLocaleString("en-IN")} · Min Lot:{" "}
+                  Min Deposit: ${p.minDeposit.toLocaleString("en-IN")} · Min Lot:{" "}
                   {p.minLotSize}
                 </p>
               </div>

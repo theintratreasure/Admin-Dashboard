@@ -82,7 +82,7 @@ export default function Overview() {
             ${Math.abs(netPnL).toLocaleString()}
           </span>
           <span className="text-xs opacity-70 mt-1">
-            Profit: ${mockStats.totalProfit.toLocaleString()} · Loss: ₹
+            Profit: ${mockStats.totalProfit.toLocaleString()} · Loss: $
             {mockStats.totalLoss.toLocaleString()}
           </span>
         </div>
@@ -242,7 +242,7 @@ export default function Overview() {
 
             <li className="flex justify-between px-3 py-3 border rounded-lg hover:bg-[var(--primary)]/10 cursor-pointer">
               <span>Average Trade Size</span>
-              <span className="font-semibold">₹18,500</span>
+              <span className="font-semibold">$18,500</span>
             </li>
           </ul>
         </motion.div>

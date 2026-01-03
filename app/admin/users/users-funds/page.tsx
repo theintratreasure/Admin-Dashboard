@@ -29,7 +29,7 @@ const initialFunds: FundType[] = [
   {
     id: 1,
     name: "Elon musk",
-    amount: "₹10,000",
+    amount: "$10,000",
     type: "Added",
     notes: "Approved",
     mode: "ONLINE",
@@ -38,7 +38,7 @@ const initialFunds: FundType[] = [
   {
     id: 2,
     name: "Kashiram shivaji",
-    amount: "₹777",
+    amount: "$777",
     type: "Deducted",
     notes: "xzcfxx",
     mode: "OFFLINE",
@@ -47,7 +47,7 @@ const initialFunds: FundType[] = [
   {
     id: 3,
     name: "Kashiram shivaji",
-    amount: "₹888",
+    amount: "$888",
     type: "Added",
     notes: "dsaf",
     mode: "OFFLINE",

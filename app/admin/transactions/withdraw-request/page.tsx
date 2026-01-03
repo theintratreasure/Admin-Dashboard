@@ -22,10 +22,10 @@ export default function WithdrawalRequests() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const [withdrawals, setWithdrawals] = useState<WithdrawalType[]>([
-    { id: 1, name: "Elon musk", email: "elon@gmail.com", amount: "₹6,000", date: "10/12/2025, 18:34:03", status: "PENDING" },
-    { id: 2, name: "Kashiram shivaji", email: "kashiram@test.com", amount: "₹777", date: "04/12/2025, 01:16:17", status: "APPROVED" },
-    { id: 3, name: "Trader Sam", email: "trader@user.com", amount: "₹1,200", date: "29/11/2025, 11:21:21", status: "APPROVED" },
-    { id: 4, name: "Trader Sam", email: "trader@user.com", amount: "₹100", date: "28/11/2025, 12:18:02", status: "APPROVED" },
+    { id: 1, name: "Elon musk", email: "elon@gmail.com", amount: "$6,000", date: "10/12/2025, 18:34:03", status: "PENDING" },
+    { id: 2, name: "Kashiram shivaji", email: "kashiram@test.com", amount: "$777", date: "04/12/2025, 01:16:17", status: "APPROVED" },
+    { id: 3, name: "Trader Sam", email: "trader@user.com", amount: "$1,200", date: "29/11/2025, 11:21:21", status: "APPROVED" },
+    { id: 4, name: "Trader Sam", email: "trader@user.com", amount: "$100", date: "28/11/2025, 12:18:02", status: "APPROVED" },
   ]);
 
   // Column visibility

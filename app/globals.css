@@ -303,6 +303,17 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   border-color: color-mix(in srgb, var(--success) 25%, transparent);
 }
 
+.pill-danger {
+  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+.pill-accent {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
 .pill-muted {
   background-color: var(--hover-bg);
   color: var(--text-muted);

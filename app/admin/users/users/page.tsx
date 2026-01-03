@@ -41,9 +41,9 @@ export default function TradingClients() {
   };
 
   const clients = [
-    { id: 1, first: "Trader", last: "Sam", email: "trader@user.com", ledger: "-", gross: "-", brokerage: "₹145.187", net: "-", admin: "-", demo: "-" },
-    { id: 2, first: "Trader 2", last: "Dhyan", email: "trader2@user.com", ledger: "-", gross: "-", brokerage: "₹0", net: "-", admin: "-", demo: "-" },
-    { id: 3, first: "My", last: "Trader", email: "satanianket@gmail.com", ledger: "-", gross: "-", brokerage: "₹0", net: "-", admin: "-", demo: "-" },
+    { id: 1, first: "Trader", last: "Sam", email: "trader@user.com", ledger: "-", gross: "-", brokerage: "$145.187", net: "-", admin: "-", demo: "-" },
+    { id: 2, first: "Trader 2", last: "Dhyan", email: "trader2@user.com", ledger: "-", gross: "-", brokerage: "$0", net: "-", admin: "-", demo: "-" },
+    { id: 3, first: "My", last: "Trader", email: "satanianket@gmail.com", ledger: "-", gross: "-", brokerage: "$0", net: "-", admin: "-", demo: "-" },
   ];
 
   const filtered = clients.filter((c) =>

@@ -93,7 +93,7 @@ export default function UserDeposit() {
 
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard label="Total Deposit" value={`₹${totalDeposit}`} color="var(--success)" />
+        <SummaryCard label="Total Deposit" value={`$${totalDeposit}`} color="var(--success)" />
         <SummaryCard label="Pending Deposits" value={pendingDeposit} color="var(--danger)" />
         <SummaryCard label="Pending Remarks" value="Remarks Required" color="var(--info)" />
       </div>
@@ -137,7 +137,7 @@ export default function UserDeposit() {
         </td>
 
         <td className="px-4 text-center font-semibold text-[var(--success)] whitespace-nowrap">
-          ₹{d.amount}
+          ${d.amount}
         </td>
 
         <td className=" px-4 text-center whitespace-nowrap">
@@ -248,7 +248,7 @@ const SummaryCard = ({ label, value, color }: any) => (
 const DepositDetails = ({ user }: any) => (
   <div>
     <h2 className="text-md font-semibold mb-3">{user.name} – Deposit Details</h2>
-    <p><b>Amount:</b> ₹{user.amount}</p>
+    <p><b>Amount:</b> ${user.amount}</p>
     <p><b>Mode:</b> {user.mode}</p>
     <p><b>UTR:</b> {user.utr}</p>
     <p className="mb-3"><b>Remark:</b> {user.remark}</p>

@@ -7,7 +7,7 @@ import Pagination from "../components/ui/pagination";
 
 export default function InquiryPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
 
   const { data, isLoading } = useInquiry(page, limit);
 
