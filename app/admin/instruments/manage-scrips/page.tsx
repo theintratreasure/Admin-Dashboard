@@ -181,6 +181,7 @@ export default function ManageInstruments() {
                 <th>Contract</th>
                 <th>Swap</th>
                 <th>Tradeable</th>
+                <th>Enable</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
@@ -230,6 +231,11 @@ export default function ManageInstruments() {
                       <td>
                         <span className={`pill ${row.isTradeable ? "pill-success" : "pill-danger"}`}>
                           {row.isTradeable ? "Yes" : "No"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`pill ${row.isActive ? "pill-success" : "pill-danger"}`}>
+                          {row.isActive ? "Yes" : "No"}
                         </span>
                       </td>
                       <td className="text-center flex justify-center gap-2">
@@ -307,6 +313,7 @@ export default function ManageInstruments() {
 
                 <Toggle label="Swap Enabled" value={form.swapEnabled} onChange={(v) => setForm({ ...form, swapEnabled: v })} />
                 <Toggle label="Tradeable" value={form.isTradeable} onChange={(v) => setForm({ ...form, isTradeable: v })} />
+                <Toggle label="Active" value={form.isActive} onChange={(v) => setForm({ ...form, isActive: v })} />
               </div>
 
               <div className="p-6 border-t flex gap-3 justify-end">
