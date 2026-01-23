@@ -178,21 +178,25 @@ export default function AllDeposit() {
                       {/* USER */}
                       <td>
                         <div className="font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                          {d.user?.name ?? d.user}
+                          {d.user?.name ?? "--"}
                         </div>
-                        <div className="text-xs text-[var(--text-muted)] truncate max-w-[200px]">
-                          {d.user?.email}
+
+                        <div className="text-xs text-[var(--text-muted)]">
+                          {d.user?.email ?? "—"}
                         </div>
+
                       </td>
 
                       {/* ACCOUNT */}
                       <td>
                         <div className="font-mono text-sm bg-[var(--input-bg)] px-2 py-1 rounded">
-                          {d.account?.account_number}
+                          {d.account?.account_number ?? "--"}
                         </div>
+
                         <div className="text-xs text-[var(--text-muted)] mt-1 capitalize">
-                          {d.account?.account_type} • {d.account?.account_plan_id?.name}
+                          {d.account?.plan_name ?? "--"}
                         </div>
+
                       </td>
 
                       {/* AMOUNT */}

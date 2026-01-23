@@ -23,6 +23,7 @@ import {
   FileText,
   UserCheck,
   CalendarDays,
+  HeartPlusIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -121,6 +122,7 @@ const navSections: {
       items: [
         { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
         { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
+        { href: "/admin/health", label: "Health", icon: <HeartPlusIcon size={18} /> },
         { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
         {
           label: "Admin Config",
