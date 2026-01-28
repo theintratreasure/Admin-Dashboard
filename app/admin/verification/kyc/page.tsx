@@ -12,7 +12,7 @@ type KycFilter = "ALL" | "VERIFIED" | "REJECTED";
 
 export default function CompletedKycPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [filter, setFilter] = useState<KycFilter>("ALL");
   const [selectedKyc, setSelectedKyc] =
     useState<AdminKyc | null>(null);
