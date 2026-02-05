@@ -177,7 +177,11 @@ export default function ManageInstruments() {
                 <th>Lot</th>
                 <th>Min Qty</th>
                 <th>Max Qty</th>
-                <th>Precision</th>
+                <th>QTY Precision</th>
+                <th>Price Precision</th>
+                <th>Ticksize</th>
+                <th>Swap Long</th>
+                <th>Swap Short</th>
                 <th>Contract</th>
                 <th>Swap</th>
                 <th>Tradeable</th>
@@ -221,7 +225,11 @@ export default function ManageInstruments() {
                       <td>{row.lotSize}</td>
                       <td>{row.minQty}</td>
                       <td>{row.maxQty}</td>
-                      <td>{row.qtyPrecision}/{row.pricePrecision}</td>
+                      <td>{row.qtyPrecision}</td>
+                      <td>{row.pricePrecision}</td>
+                      <td>{row.tickSize}</td>
+                      <td>{row.swapLong}</td>
+                      <td>{row.swapShort}</td>
                       <td>{row.contractSize}</td>
                       <td>
                         <span className={`pill ${row.swapEnabled ? "pill-success" : ""}`}>
@@ -310,6 +318,50 @@ export default function ManageInstruments() {
                 <PremiumInput label="Lot Size" type="number" value={form.lotSize} onChange={(v) => setForm({ ...form, lotSize: Number(v) })} />
                 <PremiumInput label="Min Qty" type="number" value={form.minQty} onChange={(v) => setForm({ ...form, minQty: Number(v) })} />
                 <PremiumInput label="Max Qty" type="number" value={form.maxQty} onChange={(v) => setForm({ ...form, maxQty: Number(v) })} />
+                <PremiumInput
+                  label="Qty Precision"
+                  type="number"
+                  value={form.qtyPrecision}
+                  onChange={(v) => setForm({ ...form, qtyPrecision: Number(v) })}
+                />
+
+                <PremiumInput
+                  label="Price Precision"
+                  type="number"
+                  value={form.pricePrecision}
+                  onChange={(v) => setForm({ ...form, pricePrecision: Number(v) })}
+                />
+
+                <PremiumInput
+                  label="Tick Size"
+                  type="number"
+                  value={form.tickSize ?? 0}
+                  onChange={(v) =>
+                    setForm({ ...form, tickSize: v ? Number(v) : null })
+                  }
+                />
+
+                <PremiumInput
+                  label="Contract Size"
+                  type="number"
+                  value={form.contractSize}
+                  onChange={(v) => setForm({ ...form, contractSize: Number(v) })}
+                />
+
+                <PremiumInput
+                  label="Swap Long"
+                  type="number"
+                  value={form.swapLong}
+                  onChange={(v) => setForm({ ...form, swapLong: Number(v) })}
+                />
+
+                <PremiumInput
+                  label="Swap Short"
+                  type="number"
+                  value={form.swapShort}
+                  onChange={(v) => setForm({ ...form, swapShort: Number(v) })}
+                />
+
 
                 <Toggle label="Swap Enabled" value={form.swapEnabled} onChange={(v) => setForm({ ...form, swapEnabled: v })} />
                 <Toggle label="Tradeable" value={form.isTradeable} onChange={(v) => setForm({ ...form, isTradeable: v })} />

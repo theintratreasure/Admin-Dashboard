@@ -1,20 +1,11 @@
 import api from "@/api/axios";
-import {
-  Instrument,
-  InstrumentListResponse,
-} from "@/types/instrument";
-
-type ListParams = {
-  page?: number;
-  limit?: number;
-  segment?: string;
-};
+import { Instrument, InstrumentListResponse } from "@/types/instrument";
 
 export const createInstrument = async (
   payload: Omit<Instrument, "_id">
 ): Promise<Instrument> => {
-  const res = await api.post("/instrument", payload);
-  return res.data;
+  const { data } = await api.post("/instrument", payload);
+  return data.data;
 };
 
 export const getInstruments = async (params: {
@@ -22,16 +13,16 @@ export const getInstruments = async (params: {
   limit: number;
   segment?: string;
 }): Promise<InstrumentListResponse> => {
-  const res = await api.get("/instrument", { params });
-  return res.data;
+  const { data } = await api.get("/instrument", { params });
+  return data;
 };
 
 export const updateInstrument = async (
   id: string,
   payload: Partial<Omit<Instrument, "_id" | "code">>
 ): Promise<Instrument> => {
-  const res = await api.put(`/instrument/${id}`, payload);
-  return res.data;
+  const { data } = await api.put(`/instrument/${id}`, payload);
+  return data.data;
 };
 
 export const deleteInstrument = async (id: string): Promise<void> => {

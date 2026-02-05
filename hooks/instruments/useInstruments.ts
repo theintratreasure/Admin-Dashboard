@@ -9,14 +9,13 @@ export const useInstruments = ({
   page: number;
   limit: number;
   segment?: string;
-}) =>
-  useQuery({
-    queryKey: ["instruments", page, limit, segment ?? "ALL"],
-    queryFn: () =>
-      getInstruments({
-        page,
-        limit,
-        segment,
-      }),
-    staleTime: 30_000,
+}) => {
+  return useQuery({
+    queryKey: ["instruments", page, limit, segment],
+    queryFn: () => getInstruments({ page, limit, segment }),
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
+};
