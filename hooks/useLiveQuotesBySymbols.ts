@@ -17,6 +17,15 @@ export function useLiveQuotesBySymbols(
 
     const [quotes, setQuotes] = useState<QuoteMap>({});
 
+    function pickNumber(...values: Array<number | string | undefined | null>) {
+        for (const v of values) {
+            if (v === undefined || v === null) continue;
+            const n = Number(v);
+            if (Number.isFinite(n)) return n;
+        }
+        return undefined;
+    }
+
     /* SOCKET INIT */
     useEffect(() => {
         if (!token) return;
@@ -28,10 +37,27 @@ export function useLiveQuotesBySymbols(
                 const s = msg.symbol;
                 if (!bufferRef.current[s]) return;
 
+                const nextOpen = pickNumber(
+                    msg.dayOpen,
+                    msg.open,
+                    msg.data?.dayOpen,
+                    msg.data?.open
+                );
+                const nextClose = pickNumber(
+                    msg.dayClose,
+                    msg.close,
+                    msg.data?.dayClose,
+                    msg.data?.close,
+                    msg.prevClose,
+                    msg.data?.prevClose
+                );
+
                 bufferRef.current[s] = {
                     ...bufferRef.current[s],
                     high: Number(msg.dayHigh),
                     low: Number(msg.dayLow),
+                    open: nextOpen ?? bufferRef.current[s].open,
+                    close: nextClose ?? bufferRef.current[s].close,
                 };
                 flush();
                 return;
@@ -46,6 +72,17 @@ export function useLiveQuotesBySymbols(
                 const old = bufferRef.current[s];
                 if (!old) return;
 
+                const nextOpen = pickNumber(
+                    msg.data?.dayOpen,
+                    msg.data?.open,
+                    msg.data?.openPrice
+                );
+                const nextClose = pickNumber(
+                    msg.data?.dayClose,
+                    msg.data?.close,
+                    msg.data?.prevClose
+                );
+
                 bufferRef.current[s] = {
                     ...old,
                     bid: bid.price,
@@ -54,6 +91,8 @@ export function useLiveQuotesBySymbols(
                     askVolume: ask.volume,
                     high: msg.data.dayHigh ?? old.high,
                     low: msg.data.dayLow ?? old.low,
+                    open: nextOpen ?? old.open,
+                    close: nextClose ?? old.close,
                     bidDir:
                         old.bid === "--"
                             ? "same"

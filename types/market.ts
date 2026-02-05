@@ -29,4 +29,6 @@ export type QuoteLiveState = {
   askDir: PriceDirection;
   high?: number;
   low?: number;
+  open?: number;
+  close?: number;
 };

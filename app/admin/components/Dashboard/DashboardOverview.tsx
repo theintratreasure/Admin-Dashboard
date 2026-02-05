@@ -94,12 +94,9 @@ export default function Overview() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-3 sm:px-6 lg:px-0">
 
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Admin Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-muted)]">
-            Trading system overview
-          </p>
+          <h2 className="text-sm sm:text-base font-semibold tracking-wide text-[var(--text-muted)]">
+            Dashboard
+          </h2>
         </div>
 
         {/* PNL CARD REMOVED */}

@@ -208,7 +208,7 @@ export default function AdminSidebar() {
       {/* NAV */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-6 overflow-y-auto"
+        className="flex-1 space-y-6 overflow-y-auto sidebar-scroll"
       >
 
         {navSections.map(section => (
@@ -260,14 +260,22 @@ export default function AdminSidebar() {
                                 saveScroll();
                                 setMobileOpen(false);
                               }}
-                              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs
+                              className={`flex items-center gap-2 rounded-none px-3 py-1.5 text-xs
                               ${isExactActive(child.href)
-                                  ? "bg-[var(--primary)] text-white shadow"
+                                  ? "bg-[var(--hover-bg)]"
                                   : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
                                 }`}
                             >
                               {child.icon}
-                              {child.label}
+                              <span
+                                className={
+                                  isExactActive(child.href)
+                                    ? "text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)]"
+                                    : ""
+                                }
+                              >
+                                {child.label}
+                              </span>
                             </Link>
                           ))}
                         </motion.div>
@@ -282,18 +290,26 @@ export default function AdminSidebar() {
                       saveScroll();
                       setMobileOpen(false);
                     }}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2
+                    className={`flex items-center gap-3 rounded-none px-3 py-2
         ${item.href === "/admin"
                         ? isExactActive(item.href)
-                          ? "bg-[var(--primary)] text-white shadow"
+                          ? "bg-[var(--hover-bg)]"
                           : "hover:bg-[var(--hover-bg)]"
                         : isNestedActive(item.href)
-                          ? "bg-[var(--primary)] text-white shadow"
+                          ? "bg-[var(--hover-bg)]"
                           : "hover:bg-[var(--hover-bg)]"
                       }`}
                   >
                     {item.icon}
-                    {item.label}
+                    <span
+                      className={
+                        isNestedActive(item.href) || isExactActive(item.href)
+                          ? "text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)]"
+                          : ""
+                      }
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 ),
               )}
@@ -305,7 +321,7 @@ export default function AdminSidebar() {
       {/* LOGOUT */}
       <button
         onClick={handleLogout}
-        className="mt-6 flex items-center gap-3 rounded-xl px-3 py-2 text-red-500 hover:bg-red-500/10"
+        className="mt-6 flex items-center gap-3 rounded-xl px-3 py-2 text-red-500 border border-[color-mix(in_srgb,var(--card-border)_70%,transparent)] hover:bg-red-500/10"
       >
         <LogOut size={18} />
         Logout
@@ -324,7 +340,7 @@ export default function AdminSidebar() {
       </button>
 
       {/* DESKTOP */}
-      <aside className="fixed left-0 top-[var(--topbar-height)] hidden h-[calc(100vh-var(--topbar-height))] w-[260px] border-r bg-[var(--card-bg)] lg:block">
+      <aside className="fixed left-0 top-[var(--topbar-height)] hidden h-[calc(100vh-var(--topbar-height))] w-[260px] bg-[var(--card-bg)] border-r border-[color-mix(in_srgb,var(--card-border)_70%,transparent)] lg:block">
         <SidebarInner />
       </aside>
 

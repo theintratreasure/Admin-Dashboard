@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 type PaginationProps = {
   page: number;
@@ -18,17 +18,16 @@ export default function Pagination({
   return (
     <div
       className="
-        mt-6
-        flex flex-col gap-4
+        mt-4 sm:mt-6
+        flex flex-row items-center justify-between gap-2
         rounded-2xl
         border border-[var(--card-border)]
         bg-[var(--card-bg)]
-        p-4
-        sm:flex-row sm:items-center sm:justify-between
+        p-3 sm:p-4
       "
     >
-      {/* LEFT — LIMIT */}
-      <div className="flex items-center gap-3">
+      {/* LEFT - LIMIT */}
+      <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-[var(--text-muted)]">
           Rows
         </span>
@@ -37,7 +36,7 @@ export default function Pagination({
           value={limit}
           onChange={(e) => onLimitChange(Number(e.target.value))}
           className="
-            rounded-xl px-3 py-2 text-sm font-medium
+            rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium
             bg-[var(--input-bg)]
             border border-[var(--input-border)]
             focus:outline-none
@@ -52,10 +51,10 @@ export default function Pagination({
         </select>
       </div>
 
-      {/* RIGHT — PAGINATION */}
-      <div className="flex flex-col items-center gap-3 sm:flex-row">
+      {/* RIGHT - PAGINATION */}
+      <div className="flex flex-row items-center gap-2 sm:flex-row">
         {/* PAGE INFO */}
-        <span className="text-xs text-[var(--text-muted)]">
+        <span className="hidden sm:inline text-[10px] sm:text-xs text-[var(--text-muted)]">
           Page <span className="font-semibold">{page}</span> of{" "}
           <span className="font-semibold">{totalPages}</span>
         </span>
@@ -66,8 +65,9 @@ export default function Pagination({
             disabled={page === 1}
             onClick={() => onPageChange(1)}
             label="First"
+            className="hidden sm:inline-flex"
           >
-            ≪
+            {"<<"}
           </PageBtn>
 
           <PageBtn
@@ -75,19 +75,18 @@ export default function Pagination({
             onClick={() => onPageChange(page - 1)}
             label="Previous"
           >
-            ‹
+            {"<"}
           </PageBtn>
 
           {/* CURRENT PAGE */}
           <div
             className="
-              mx-1 min-w-[40px]
-              rounded-xl
+              mx-1 min-w-[28px]
+              rounded-md
               bg-[var(--primary)]
-              px-3 py-2
-              text-center text-sm font-semibold
+              px-2 py-1
+              text-center text-[10px] sm:text-sm font-semibold
               text-white
-              shadow
             "
           >
             {page}
@@ -98,15 +97,16 @@ export default function Pagination({
             onClick={() => onPageChange(page + 1)}
             label="Next"
           >
-            ›
+            {">"}
           </PageBtn>
 
           <PageBtn
             disabled={page === totalPages}
             onClick={() => onPageChange(totalPages)}
             label="Last"
+            className="hidden sm:inline-flex"
           >
-            ≫
+            {">>"}
           </PageBtn>
         </div>
       </div>
@@ -121,21 +121,23 @@ function PageBtn({
   disabled,
   onClick,
   label,
+  className,
 }: {
   children: React.ReactNode;
   disabled: boolean;
   onClick: () => void;
   label?: string;
+  className?: string;
 }) {
   return (
     <button
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="
-        min-w-[36px]
-        rounded-xl px-3 py-2
-        text-sm font-medium
+      className={`
+        min-w-[24px] sm:min-w-[36px]
+        rounded-md px-1.5 py-1 sm:px-3 sm:py-2
+        text-[10px] sm:text-sm font-medium
         bg-[var(--input-bg)]
         border border-[var(--input-border)]
         transition
@@ -143,7 +145,8 @@ function PageBtn({
         active:scale-95
         disabled:opacity-40
         disabled:cursor-not-allowed
-      "
+        ${className ?? ""}
+      `}
     >
       {children}
     </button>

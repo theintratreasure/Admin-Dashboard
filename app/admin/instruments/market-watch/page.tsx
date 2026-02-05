@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Plus, Trash2, Search } from "lucide-react";
+import { useState, useEffect, useRef, Fragment } from "react";
+import {
+  Trash2,
+  Search,
+  SlidersHorizontal,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
+import { searchInstruments } from "@/services/instrument.service";
 
 import {
   useDefaultWatchlist,
@@ -33,6 +41,18 @@ function splitPrice(price: string) {
   };
 }
 
+function toNumber(value?: string | number) {
+  if (value === undefined || value === null) return null;
+  if (value === "--") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatSigned(value: number, digits = 2) {
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${Math.abs(value).toFixed(digits)}`;
+}
+
 function calcSpread(bid?: string, ask?: string) {
   if (!bid || !ask || bid === "--" || ask === "--") return "--";
 
@@ -50,9 +70,25 @@ export default function MarketWatch() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [code, setCode] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<
+    { code: string; name: string }[]
+  >([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchBoxRef = useRef<HTMLDivElement | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const viewBoxRef = useRef<HTMLDivElement | null>(null);
+
+  const [visibleCols, setVisibleCols] = useState({
+    code: true,
+    bid: true,
+    ask: true,
+    open: true,
+    chg: true,
+    lowHigh: true,
+    spread: true,
+    remove: true,
+  });
 
   const listQuery = useDefaultWatchlist();
   const addMutation = useAddDefaultWatchlist();
@@ -60,79 +96,241 @@ export default function MarketWatch() {
 
   const rows = listQuery.data?.data ?? [];
 
-  const filtered = useMemo(() => {
-    if (!search) return rows;
-    return rows.filter((r) =>
-      `${r.code} ${r.name}`.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [rows, search]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / limit));
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
-
-  const paginated = filtered.slice(
-    (page - 1) * limit,
-    page * limit
-  );
+  const paginated = rows.slice((page - 1) * limit, page * limit);
 
   /* 🔴 LIVE DATA */
   const symbols = rows.map((r) => r.code);
   const liveQuotes = useLiveQuotesBySymbols(token, symbols);
 
+  useEffect(() => {
+    let active = true;
+    const handler = setTimeout(async () => {
+      const q = search.trim();
+      if (!q) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const data = await searchInstruments({
+          q,
+          limit: 20,
+        });
+        if (active) setSearchResults(data);
+      } finally {
+        if (active) setIsSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
+  }, [search]);
+
+  useEffect(() => {
+    const onClick = (e: Event) => {
+      const target = e.target as Node;
+      const path = (e as Event & { composedPath?: () => EventTarget[] }).composedPath?.();
+
+      const isInsideSearch =
+        !!searchBoxRef.current &&
+        (searchBoxRef.current.contains(target) ||
+          (path && path.includes(searchBoxRef.current)));
+      const isInsideView =
+        !!viewBoxRef.current &&
+        (viewBoxRef.current.contains(target) ||
+          (path && path.includes(viewBoxRef.current)));
+
+      if (!isInsideSearch) setSearchOpen(false);
+      if (!isInsideView) setViewOpen(false);
+    };
+
+    document.addEventListener("mousedown", onClick, true);
+    document.addEventListener("touchstart", onClick, true);
+    return () => {
+      document.removeEventListener("mousedown", onClick, true);
+      document.removeEventListener("touchstart", onClick, true);
+    };
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="container-pad space-y-6 max-w-6xl mx-0 md:mx-auto"
+      className="container-pad space-y-4 sm:space-y-5 max-w-6xl mx-0 md:mx-auto"
     >
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Default Watchlist</h1>
-          <p className="text-[var(--text-muted)] mt-1">
+          <h1 className="text-xs sm:text-lg font-semibold">Default Watchlist</h1>
+          <p className="text-[var(--text-muted)] mt-1 text-[10px] sm:text-sm">
             Manage symbols shown for all users
           </p>
         </div>
-
-        <button
-          onClick={() => {
-            setAddOpen(true);
-            setCode("");
-            setFormError(null);
-          }}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Add Symbol
-        </button>
       </div>
 
-      {/* SEARCH */}
-      <div className="card-elevated p-4 flex items-center gap-3">
-        <Search size={16} className="text-[var(--text-muted)]" />
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Search symbol..."
-          className="input w-full"
-        />
+      {/* SEARCH + VIEW */}
+      <div className="flex flex-row items-center gap-2">
+        <div className="relative flex-1" ref={searchBoxRef}>
+          <div className="flex items-center">
+            <input
+              value={search}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setSearchOpen(true);
+              }}
+              placeholder="Search symbol..."
+              className="w-full rounded-xl bg-[var(--card-bg)] px-3 py-2 text-xs sm:text-sm text-[var(--text-main)] placeholder:text-[var(--text-muted)] border border-[var(--card-border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+            />
+          </div>
+
+          {searchOpen && search.trim().length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1.5 border border-[var(--card-border)] rounded-lg bg-[var(--card-bg)] max-h-52 sm:max-h-64 overflow-auto z-20">
+              {isSearching ? (
+                <div className="px-3 py-2 text-[11px] sm:text-xs text-[var(--text-muted)]">
+                  Searching...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="px-3 py-2 text-[11px] sm:text-xs text-[var(--text-muted)]">
+                  No results
+                </div>
+              ) : (
+                searchResults.map((item) => {
+                  const alreadyAdded = rows.some((r) => r.code === item.code);
+                  return (
+                    <button
+                      key={item.code}
+                      onClick={async () => {
+                        if (!alreadyAdded) {
+                          await addMutation.mutateAsync(item.code);
+                        }
+                        setSearch("");
+                        setSearchResults([]);
+                        setSearchOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-[var(--hover-bg)]"
+                      aria-disabled={alreadyAdded}
+                    >
+                      <span className="flex flex-col min-w-0">
+                        <span className="text-xs sm:text-sm font-semibold">
+                          {item.code}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-[var(--text-muted)] truncate">
+                          {item.name}
+                        </span>
+                      </span>
+                      {alreadyAdded ? (
+                        <span className="text-[10px] text-[var(--text-muted)]">
+                          Added
+                        </span>
+                      ) : (
+                        <span className="h-5 w-5 rounded-full border border-black/20 text-black text-[12px] leading-[18px] text-center">
+                          +
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={viewBoxRef}>
+          <button
+            onClick={() => setViewOpen((v) => !v)}
+            className="p-2 text-[var(--text-main)] hover:text-[var(--primary)]"
+            aria-label="Toggle columns"
+          >
+            <SlidersHorizontal size={16} />
+          </button>
+
+          {viewOpen && (
+            <>
+              <button
+                type="button"
+                className="fixed inset-0 z-20 cursor-default"
+                onClick={() => setViewOpen(false)}
+                aria-label="Close columns menu"
+              />
+              <div className="absolute right-0 mt-2 w-52 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] shadow-lg z-30">
+                <div className="px-3 py-2 text-[11px] sm:text-xs text-[var(--text-muted)] border-b border-[var(--card-border)]">
+                  Toggle columns
+                </div>
+                <div className="p-2 space-y-1">
+                  {[
+                    { key: "code", label: "Code" },
+                    { key: "bid", label: "Bid" },
+                    { key: "ask", label: "Ask" },
+                    { key: "open", label: "Open" },
+                    { key: "chg", label: "Chg" },
+                    { key: "lowHigh", label: "Low / High" },
+                    { key: "spread", label: "Spread" },
+                    { key: "remove", label: "Remove" },
+                  ].map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 px-2 py-1 text-xs sm:text-sm cursor-pointer border-b border-[var(--card-border)] hover:bg-[var(--hover-bg)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visibleCols[col.key as keyof typeof visibleCols]}
+                      onChange={() =>
+                        setVisibleCols((prev) => ({
+                          ...prev,
+                          [col.key]: !prev[col.key as keyof typeof prev],
+                        }))
+                      }
+                      className="h-4 w-4 rounded border border-[var(--card-border)] bg-transparent accent-black"
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* TABLE */}
-      <div className="card-elevated overflow-hidden">
-        <div className="relative overflow-x-auto">
-          <table className="table min-w-[800px]">
-           <thead>
+      <div className="card overflow-hidden shadow-none p-0">
+        <div className="relative overflow-x-auto sm:overflow-visible">
+          <table className="table w-full text-[9px] sm:text-[13px] p-0">
+            <thead style={{ background: "transparent" }}>
   <tr>
-    <th>Code</th>
-    <th>Name</th>
-    <th className="text-right">Bid</th>
-    <th className="text-right">Ask</th>
-    <th className="text-center">Low / High</th>
-    <th className="text-center">Spread</th>
-    <th className="text-center">Actions</th>
+    {visibleCols.code && (
+      <th className="border-y border-[var(--card-border)] py-0.5 px-0.5 text-[9px] sm:text-[12px]">Code</th>
+    )}
+    {visibleCols.bid && (
+      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Bid</th>
+    )}
+    {visibleCols.ask && (
+      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Ask</th>
+    )}
+    {visibleCols.open && (
+      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Open</th>
+    )}
+    {visibleCols.chg && (
+      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Chg</th>
+    )}
+    {visibleCols.lowHigh && (
+      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Low</th>
+    )}
+    {visibleCols.lowHigh && (
+      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">High</th>
+    )}
+    {visibleCols.spread && (
+      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Spread</th>
+    )}
+    {visibleCols.remove && (
+      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Remove</th>
+    )}
   </tr>
 </thead>
 
@@ -141,13 +339,19 @@ export default function MarketWatch() {
   <AnimatePresence>
     {listQuery.isLoading ? (
       <tr>
-        <td colSpan={7} className="py-12 text-center">
+        <td
+          colSpan={Object.values(visibleCols).filter(Boolean).length}
+          className="py-12 text-center"
+        >
           <GlobalLoader />
         </td>
       </tr>
     ) : paginated.length === 0 ? (
       <tr>
-        <td colSpan={7} className="py-12 text-center text-muted">
+        <td
+          colSpan={Object.values(visibleCols).filter(Boolean).length}
+          className="py-12 text-center text-muted"
+        >
           No symbols found
         </td>
       </tr>
@@ -158,6 +362,13 @@ export default function MarketWatch() {
         const bid = splitPrice(live?.bid ?? "--");
         const ask = splitPrice(live?.ask ?? "--");
         const spread = calcSpread(live?.bid, live?.ask);
+        const current = toNumber(live?.bid ?? live?.ask);
+        const open = toNumber(live?.open);
+        const delta = current !== null && open !== null ? current - open : null;
+        const pct =
+          current !== null && open !== null && open !== 0
+            ? (delta / open) * 100
+            : null;
 
         const bidColor =
           live?.bidDir === "up"
@@ -174,74 +385,153 @@ export default function MarketWatch() {
             : "text-[var(--text-main)]";
 
         return (
-          <motion.tr
-            key={row.code}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: idx * 0.03 }}
-          >
-            {/* CODE */}
-            <td className="font-mono font-semibold">{row.code}</td>
+          <Fragment key={row.code}>
+            <motion.tr
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.03 }}
+              className={`hover:bg-[var(--hover-bg)] ${
+                delta === null
+                  ? ""
+                  : delta > 0
+                  ? "bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent"
+                  : delta < 0
+                  ? "bg-gradient-to-r from-red-500/10 via-transparent to-transparent"
+                  : ""
+              }`}
+            >
+            {/* CODE + NAME */}
+            {visibleCols.code && (
+              <td className="font-mono font-semibold py-0.5 px-0.5">
+                <div className="flex flex-col">
+                  <span className="text-[11px] sm:text-[12px]">{row.code}</span>
+                  <span className="text-[8px] sm:text-[11px] font-normal text-[var(--text-muted)] truncate">
+                    {row.name}
+                  </span>
+                </div>
+              </td>
+            )}
 
-            {/* NAME */}
-            <td>{row.name}</td>
 
             {/* BID */}
-            <td className="text-right">
-              <div className={`font-semibold ${bidColor}`}>
-                {bid.int}.
-                <span className="text-lg">{bid.big}</span>
-                {bid.small && (
-                  <sup className="text-xs relative top-[-6px]">
-                    {bid.small}
-                  </sup>
-                )}
-              </div>
-              <div className="text-xs text-muted">
-                {live?.bidVolume ?? "--"}
-              </div>
-            </td>
+            {visibleCols.bid && (
+              <td className="text-right py-0.5 px-0.5">
+                <div className={`font-semibold ${bidColor} text-[10px] sm:text-[14px]`}>
+                  {bid.int}.
+                  <span className="text-[10px] sm:text-[15px]">{bid.big}</span>
+                  {bid.small && (
+                    <sup className="text-[8px] sm:text-[12px] relative top-[-5px]">
+                      {bid.small}
+                    </sup>
+                  )}
+                </div>
+                <div className="text-[8px] sm:text-[11px] text-muted hidden sm:block">
+                  {live?.bidVolume ?? "--"}
+                </div>
+              </td>
+            )}
 
             {/* ASK */}
-            <td className="text-right">
-              <div className={`font-semibold ${askColor}`}>
-                {ask.int}.
-                <span className="text-lg">{ask.big}</span>
-                {ask.small && (
-                  <sup className="text-xs relative top-[-6px]">
-                    {ask.small}
-                  </sup>
-                )}
-              </div>
-              <div className="text-xs text-muted">
-                {live?.askVolume ?? "--"}
-              </div>
-            </td>
+            {visibleCols.ask && (
+              <td className="text-right py-0.5 px-0.5">
+                <div className={`font-semibold ${askColor} text-[10px] sm:text-[14px]`}>
+                  {ask.int}.
+                  <span className="text-[10px] sm:text-[15px]">{ask.big}</span>
+                  {ask.small && (
+                    <sup className="text-[8px] sm:text-[12px] relative top-[-5px]">
+                      {ask.small}
+                    </sup>
+                  )}
+                </div>
+                <div className="text-[8px] sm:text-[11px] text-muted hidden sm:block">
+                  {live?.askVolume ?? "--"}
+                </div>
+              </td>
+            )}
+
+            {/* OPEN */}
+            {visibleCols.open && (
+              <td className="text-right py-0.5 px-0.5">
+                <div className="font-semibold text-[10px] sm:text-[14px]">
+                  {open === null ? "--" : open.toFixed(2)}
+                </div>
+              </td>
+            )}
+
+            {/* CHANGE */}
+            {visibleCols.chg && (
+              <td className="text-right py-0.5 px-0.5">
+                <div
+                  className={`font-semibold text-[10px] sm:text-[14px] ${
+                    delta === null
+                      ? "text-[var(--text-muted)]"
+                      : delta > 0
+                      ? "text-blue-600"
+                      : delta < 0
+                      ? "text-red-600"
+                      : "text-[var(--text-main)]"
+                  }`}
+                >
+                  {delta === null ? "--" : formatSigned(delta, 2)}
+                </div>
+                <div className="text-[8px] sm:text-[11px] text-muted flex items-center justify-end gap-1">
+                  {pct === null ? (
+                    "--"
+                  ) : (
+                    <>
+                      {pct > 0 ? (
+                        <ArrowUpRight size={10} className="text-emerald-500" />
+                      ) : pct < 0 ? (
+                        <ArrowDownRight size={10} className="text-red-500" />
+                      ) : (
+                        <Minus size={10} className="text-[var(--text-muted)]" />
+                      )}
+                      <span>{`${formatSigned(pct, 2)}%`}</span>
+                    </>
+                  )}
+                </div>
+              </td>
+            )}
 
             {/* LOW / HIGH */}
-            <td className="text-center text-sm">
-              <div>L: {live?.low ?? "--"}</div>
-              <div>H: {live?.high ?? "--"}</div>
-            </td>
+            {visibleCols.lowHigh && (
+              <td className="text-center text-[10px] sm:text-[12px] py-0.5 px-0.5">
+                <span className="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] sm:text-[12px] font-semibold text-red-600 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.15)]">
+                  {live?.low ?? "--"}
+                </span>
+              </td>
+            )}
+            {visibleCols.lowHigh && (
+              <td className="text-center text-[10px] sm:text-[12px] py-0.5 px-0.5">
+                <span className="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] sm:text-[12px] font-semibold text-emerald-600 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                  {live?.high ?? "--"}
+                </span>
+              </td>
+            )}
 
             {/* SPREAD */}
-            <td className="text-center font-mono">
-              {spread}
-            </td>
+            {visibleCols.spread && (
+              <td className="text-center font-mono text-[10px] sm:text-[13px] py-0.5 px-0.5">
+                {spread}
+              </td>
+            )}
 
             {/* ACTION */}
-            <td className="text-center">
-              <button
-                onClick={() => {
-                  setSelectedCode(row.code);
-                  setConfirmOpen(true);
-                }}
-                className="btn p-2 text-red-500"
-              >
-                <Trash2 size={14} />
-              </button>
-            </td>
-          </motion.tr>
+            {visibleCols.remove && (
+              <td className="text-center py-0.5 px-0.5">
+                <button
+                  onClick={() => {
+                    setSelectedCode(row.code);
+                    setConfirmOpen(true);
+                  }}
+                  className="p-1 text-red-500"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </td>
+            )}
+            </motion.tr>
+          </Fragment>
         );
       })
     )}
@@ -251,76 +541,6 @@ export default function MarketWatch() {
           </table>
         </div>
       </div>
-
-      {/* ADD MODAL */}
-      <AnimatePresence>
-        {addOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setAddOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="card-elevated w-full max-w-md"
-            >
-              <div className="flex items-center justify-between p-5 border-b">
-                <h3 className="text-lg font-bold">Add Symbol</h3>
-                <button onClick={() => setAddOpen(false)}>✕</button>
-              </div>
-
-              <div className="p-5 space-y-4">
-                <input
-                  value={code}
-                  onChange={(e) => {
-                    setCode(e.target.value.toUpperCase());
-                    setFormError(null);
-                  }}
-                  placeholder="BTCUSDT"
-                  className="input w-full"
-                />
-
-                {formError && (
-                  <div className="text-sm text-red-500">{formError}</div>
-                )}
-              </div>
-
-              <div className="p-5 border-t flex justify-end gap-3">
-                <button
-                  onClick={() => setAddOpen(false)}
-                  className="btn btn-ghost"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  disabled={!code || addMutation.isPending}
-                  onClick={async () => {
-                    try {
-                      await addMutation.mutateAsync(code);
-                      setAddOpen(false);
-                      setCode("");
-                    } catch (err: any) {
-                      setFormError(
-                        err?.response?.data?.message ||
-                          "Failed to add symbol"
-                      );
-                    }
-                  }}
-                  className="btn btn-primary"
-                >
-                  {addMutation.isPending ? "Adding..." : "Add"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* PAGINATION */}
       <Pagination
