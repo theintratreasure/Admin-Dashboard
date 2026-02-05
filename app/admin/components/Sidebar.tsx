@@ -203,10 +203,7 @@ export default function AdminSidebar() {
   const SidebarInner = () => (
     <div className="flex h-full flex-col px-4 py-5 text-sm">
 
-      {/* LOGO / TITLE */}
-      <div className="mb-6 text-lg font-semibold tracking-wide">
-        Admin Console
-      </div>
+      {/* LOGO / TITLE REMOVED */}
 
       {/* NAV */}
       <div

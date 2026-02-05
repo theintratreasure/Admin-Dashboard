@@ -26,7 +26,7 @@ const Topbar: React.FC = () => {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50 border-b border-[var(--card-border)] bg-[var(--card-bg)] shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+    <header className="w-full sticky top-0 z-50 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
       <div className="flex items-center justify-between px-4 md:px-6 py-3 flex-wrap gap-3">
 
         {/* Branding */}
@@ -59,12 +59,6 @@ const Topbar: React.FC = () => {
           >
             {theme === "light" ? <Moon size={18}  /> : <Sun size={18} />}
           </button>
-
-          {/* Profile */}
-          <div className="h-10 w-10 rounded-full flex items-center justify-center 
-            bg-[var(--primary)] text-black shadow-[0_0_12px_var(--glow)] hover:scale-105 transition-transform">
-            <User size={20} />
-          </div>
 
         </div>
 

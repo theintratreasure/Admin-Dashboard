@@ -77,6 +77,11 @@ export function useLiveQuotesBySymbols(
 
         });
 
+        // subscribe any symbols that were queued before socket was ready
+        subscribedRef.current.forEach((s) => {
+            socket.subscribe(s);
+        });
+
         return () => {
             socket.close();
             socketRef.current = null;
@@ -85,8 +90,6 @@ export function useLiveQuotesBySymbols(
 
     /* SYMBOL SYNC */
     useEffect(() => {
-        if (!socketRef.current) return;
-
         const next = new Set(symbols);
 
         symbols.forEach((s) => {
@@ -101,7 +104,7 @@ export function useLiveQuotesBySymbols(
                     bidDir: "same",
                     askDir: "same",
                 };
-                socketRef.current!.subscribe(s);
+                socketRef.current?.subscribe(s);
             }
         });
 
@@ -109,7 +112,7 @@ export function useLiveQuotesBySymbols(
             if (!next.has(s)) {
                 delete bufferRef.current[s];
                 subscribedRef.current.delete(s);
-                socketRef.current!.unsubscribe(s);
+                socketRef.current?.unsubscribe(s);
             }
         });
 

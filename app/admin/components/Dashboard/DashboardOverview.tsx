@@ -5,248 +5,256 @@ import {
   Activity,
   ShieldCheck,
   DollarSign,
-  TrendingUp,
-  TrendingDown,
+  LineChart,
 } from "lucide-react";
 
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-import { Bar } from "react-chartjs-2";
 import { motion } from "framer-motion";
-
-// REGISTER CHART MODULES
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
+import Link from "next/link";
+import { useTradeAdminSummary } from "@/hooks/useTradeAdminSummary";
+import { useDefaultWatchlist } from "@/queries/defaultWatchlist.queries";
+import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
+import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 
 // ================= MOCK DATA =================
-const mockStats = {
-  totalUsers: 1280,
-  liveTrades: 87,
-  totalKyc: 945,
-  totalProfit: 4523,
-  totalLoss: 1235,
-};
+
+// ================= ANIMATION =================
 
 const container = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.2 } },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12 },
+  },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 35 },
+  hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 },
 };
 
-export default function Overview() {
-  const netPnL = mockStats.totalProfit - mockStats.totalLoss;
-  const pnlColor = netPnL >= 0 ? "text-emerald-400" : "text-red-400";
+// ================= COMPONENT =================
 
-  // TOP CARD DATA
-  const features = [
+export default function Overview() {
+  const { data: summary, isLoading } = useTradeAdminSummary();
+  const token = getAccessTokenFromCookie();
+  const watchlistQuery = useDefaultWatchlist();
+
+  const safeSummary = summary ?? {
+    activePositions: 0,
+    activePendingOrders: 0,
+    activeUsers: 0,
+    activeTradingAccounts: 0,
+  };
+
+  // ================= KPI CARDS =================
+
+  const cards = [
     {
-      title: "Total Users",
-      value: mockStats.totalUsers.toLocaleString(),
+      title: "Active Users",
+      value: safeSummary.activeUsers,
       icon: Users,
-      color: "text-[var(--primary)]",
-      footer: "+32 new today",
+      color: "text-blue-400",
     },
     {
-      title: "Live Trades",
-      value: mockStats.liveTrades,
+      title: "Active Positions",
+      value: safeSummary.activePositions,
       icon: Activity,
       color: "text-emerald-400",
-      footer: "12 running now",
     },
     {
-      title: "KYC Completed",
-      value: mockStats.totalKyc.toLocaleString(),
+      title: "Active Accounts",
+      value: safeSummary.activeTradingAccounts,
       icon: ShieldCheck,
-      color: "text-sky-400",
-      footer: "24 pending",
+      color: "text-indigo-400",
     },
     {
-      isCustom: true,
+      title: "Pending Orders",
+      value: safeSummary.activePendingOrders,
       icon: DollarSign,
-      block: (
-        <div className="flex flex-col">
-          <span className="text-xs mt-3 opacity-70">Net P&L (Today)</span>
-          <span className={`text-xl font-semibold flex items-center gap-1 ${pnlColor}`}>
-            {netPnL >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
-            ${Math.abs(netPnL).toLocaleString()}
-          </span>
-          <span className="text-xs opacity-70 mt-1">
-            Profit: ${mockStats.totalProfit.toLocaleString()} · Loss: $
-            {mockStats.totalLoss.toLocaleString()}
-          </span>
-        </div>
-      ),
+      color: "text-amber-400",
     },
   ];
 
-  // SCREENSHOT CHART DATA
-  const buyData = {
-    labels: [ "Forex", "US Stocks", "Indices","Comex", "Crypto"],
-    datasets: [
-      {
-        label: "Buy Turnover",
-        data: [1400000, 350000, 120000, 100000, 800000,],
-        backgroundColor: "#f87171",
-        borderRadius: 10,
-      },
-    ],
-  };
+  const watchRows = watchlistQuery.data?.data ?? [];
+  const topRows = watchRows.slice(0, 5);
+  const symbols = topRows.map((r) => r.code);
+  const liveQuotes = useLiveQuotesBySymbols(token, symbols);
 
-  const sellData = {
-    labels: ["Forex", "US Stocks", "Indices","Comex", "Crypto"],
-    datasets: [
-      {
-        label: "Sell Turnover",
-        data: [1200000, 300000, 150000, 90000, 850000,],
-        backgroundColor: "#f87171",
-        borderRadius: 10,
-      },
-    ],
-  };
-
-  const totalData = {
-    labels: ["Forex", "US Stocks", "Indices","Comex","Crypto"],
-    datasets: [
-      {
-        label: "Total Turn Over",
-        data: [4, 3, 2, 1, 2,],
-        backgroundColor: "#60a5fa",
-        borderRadius: 10,
-      },
-    ],
-  };
-
-  const activeUserData = {
-    labels: ["Forex", "US Stocks", "Indices","Comex","Crypto"],
-    datasets: [
-      {
-        label: "Active Users",
-        data: [72, 70, 69, 70, 68],
-        backgroundColor: "#3b82f6",
-        borderRadius: 10,
-      },
-    ],
-  };
+  // ================= UI =================
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-
-      {/* ================= TOP FEATURE CARDS ================= */}
-      <motion.section
-  className="grid grid-cols-1 md:grid-cols-4 gap-6 px-4 sm:px-6 md:px-8 lg:px-0"
->
-  {features.map((stat, i) => (
     <motion.div
-      key={i}
-      variants={item}
-      whileHover={{ scale: 1.05, translateY: -6 }}
-      className="bg-[var(--card-bg)] border border-[var(--border)] p-5 rounded-xl shadow-sm hover:shadow-xl transition-all"
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-5 sm:space-y-8 pb-8 sm:pb-10"
     >
-      <div className="h-12 w-12 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center mb-2">
-        <stat.icon size={30} className={stat.color} />
+      {/* ================= HEADER ================= */}
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-3 sm:px-6 lg:px-0">
+
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+            Admin Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+            Trading system overview
+          </p>
+        </div>
+
+        {/* PNL CARD REMOVED */}
+
       </div>
 
-      {stat.isCustom ? (
-        stat.block
-      ) : (
-        <>
-          <p className="text-xs opacity-70">{stat.title}</p>
-          <p className={`text-2xl font-semibold mt-1 ${stat.color}`}>{stat.value}</p>
-          <p className="text-xs opacity-70 mt-1">{stat.footer}</p>
-        </>
+      {/* ================= LOADING ================= */}
+
+      {isLoading && (
+        <div className="px-4 sm:px-6 lg:px-0 text-sm opacity-70">
+          Loading summary...
+        </div>
       )}
-    </motion.div>
-  ))}
-</motion.section>
 
+      {/* ================= KPI GRID ================= */}
 
-      {/* ================= 4 GRID CHARTS ================= */}
-     <motion.section
-  className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 sm:px-6 md:px-8 lg:px-0"
-  variants={container}
->
+      <motion.section
+        variants={container}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 px-3 sm:px-6 lg:px-0"
+      >
+        {cards.map((card, i) => (
+          <motion.div
+            key={i}
+            variants={item}
+            whileHover={{ y: -6 }}
+            className="relative overflow-hidden bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-3.5 sm:p-5 ring-1 ring-white/5"
+          >
+            {/* Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-transparent pointer-events-none" />
 
-  {/* BUY */}
-  <motion.div variants={item} className="bg-[var(--card-bg)] border p-6 rounded-xl shadow-sm">
-    <p className="font-semibold">Buy Turn Over</p>
-    <p className="text-xs opacity-70">Buy turnover by market category</p>
-    <div className="h-72 mt-4">
-      <Bar data={buyData} options={{ responsive: true, maintainAspectRatio: false }} />
-    </div>
-  </motion.div>
+            <div className="flex items-center justify-between gap-3">
 
-  {/* SELL */}
-  <motion.div variants={item} className="bg-[var(--card-bg)] border p-6 rounded-xl shadow-sm">
-    <p className="font-semibold">Sell Turn Over</p>
-    <p className="text-xs opacity-70">Sell turnover by market category</p>
-    <div className="h-72 mt-4">
-      <Bar data={sellData} options={{ responsive: true, maintainAspectRatio: false }} />
-    </div>
-  </motion.div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-[var(--text-muted)] leading-tight">
+                  {card.title}
+                </p>
 
-  {/* TOTAL TURNOVER */}
-  <motion.div variants={item} className="bg-[var(--card-bg)] border p-6 rounded-xl shadow-sm">
-    <p className="font-semibold">Total Turn Over</p>
-    <p className="text-xs opacity-70">Total turnover by market category</p>
-    <div className="h-72 mt-4">
-      <Bar data={totalData} options={{ responsive: true, maintainAspectRatio: false }} />
-    </div>
-  </motion.div>
+                <p className="text-[15px] sm:text-2xl font-bold mt-0.5 leading-tight">
+                  {card.value.toLocaleString()}
+                </p>
+              </div>
 
-  {/* ACTIVE USERS */}
-  <motion.div variants={item} className="bg-[var(--card-bg)] border p-6 rounded-xl shadow-sm">
-    <p className="font-semibold">Active Users</p>
-    <p className="text-xs opacity-70">Active users by market category</p>
-    <div className="h-72 mt-4">
-      <Bar data={activeUserData} options={{ responsive: true, maintainAspectRatio: false }} />
-    </div>
-  </motion.div>
+              <div
+                className={`h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-black/5 flex items-center justify-center ${card.color}`}
+              >
+                <card.icon size={18} className="sm:hidden" />
+                <card.icon size={26} className="hidden sm:block" />
+              </div>
 
-</motion.section>
+            </div>
+          </motion.div>
+        ))}
+      </motion.section>
 
-      {/* ================= QUICK SUMMARY ================= */}
-      <motion.section variants={container} className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 sm:px-6 md:px-8 lg:px-0">
-
+      {/* ================= MARKET WATCH (TOP 5) ================= */}
+      <motion.section
+        variants={container}
+        className="px-3 sm:px-6 lg:px-0"
+      >
         <motion.div
           variants={item}
-          className="col-span-2 bg-[var(--card-bg)] border p-6 rounded-xl shadow-sm hover:shadow-xl"
+          className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4 sm:p-7 ring-1 ring-white/5"
         >
-          <p className="text-sm opacity-70 mb-4 font-semibold">Quick Summary</p>
+          <div className="flex items-start gap-3 mb-3 sm:mb-5">
+            <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] flex items-center justify-center">
+              <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] text-white flex items-center justify-center">
+                <LineChart size={14} className="sm:hidden" />
+                <LineChart size={16} className="hidden sm:block" />
+              </div>
+            </div>
+            <div>
+              <p className="text-base sm:text-lg font-semibold text-[var(--foreground)]">
+                Market Watchlist
+              </p>
+              <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+                Top 5 scripts from default watchlist
+              </p>
+            </div>
+          </div>
 
-          <ul className="text-sm space-y-3">
-            <li className="flex justify-between px-3 py-3 border rounded-lg hover:bg-[var(--primary)]/10 cursor-pointer">
-              <span>Active Users</span>
-              <span className="font-semibold">{mockStats.totalUsers - 120}</span>
-            </li>
+          <div className="grid grid-cols-[1.2fr_0.9fr_0.9fr] text-[9px] sm:text-xs uppercase tracking-wider text-[var(--text-muted)] px-1.5 sm:px-3 pb-2 sm:pb-3">
+            <div>Symbol</div>
+            <div className="text-right">Bid</div>
+            <div className="text-right">Ask</div>
+          </div>
 
-            <li className="flex justify-between px-3 py-3 border rounded-lg hover:bg-[var(--primary)]/10 cursor-pointer">
-              <span>KYC Pending</span>
-              <span className="font-semibold text-amber-400">24</span>
-            </li>
+          {watchlistQuery.isLoading ? (
+            <div className="text-sm text-[var(--text-muted)]">
+              Loading watchlist...
+            </div>
+          ) : topRows.length === 0 ? (
+            <div className="text-sm text-[var(--text-muted)]">
+              No symbols found
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:gap-3">
+              {topRows.map((row) => {
+                const live = liveQuotes[row.code];
+                const bidColor =
+                  live?.bidDir === "up"
+                    ? "text-emerald-500"
+                    : live?.bidDir === "down"
+                    ? "text-red-600"
+                    : "text-[var(--foreground)]";
+                const askColor =
+                  live?.askDir === "up"
+                    ? "text-emerald-500"
+                    : live?.askDir === "down"
+                    ? "text-red-600"
+                    : "text-[var(--foreground)]";
 
-            <li className="flex justify-between px-3 py-3 border rounded-lg hover:bg-[var(--primary)]/10 cursor-pointer">
-              <span>High Risk Accounts</span>
-              <span className="font-semibold text-red-400">5</span>
-            </li>
+                return (
+                  <div
+                    key={row.code}
+                    className="grid grid-cols-[1.2fr_0.9fr_0.9fr] items-center rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-0"
+                  >
+                    <div>
+                      <p className="text-xs sm:text-base font-semibold">
+                        {row.code}
+                      </p>
+                      <p className="text-[9px] sm:text-xs text-[var(--text-muted)]">
+                        {row.name}
+                      </p>
+                    </div>
 
-            <li className="flex justify-between px-3 py-3 border rounded-lg hover:bg-[var(--primary)]/10 cursor-pointer">
-              <span>Average Trade Size</span>
-              <span className="font-semibold">$18,500</span>
-            </li>
-          </ul>
+                    <div className="text-right">
+                      <p
+                        className={`text-[11px] sm:text-base font-semibold tracking-tight tabular-nums drop-shadow-[0_0_2px_rgba(0,0,0,0.18)] ${bidColor}`}
+                      >
+                        {live?.bid ?? "--"}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p
+                        className={`text-[11px] sm:text-base font-semibold tracking-tight tabular-nums drop-shadow-[0_0_2px_rgba(0,0,0,0.18)] ${askColor}`}
+                      >
+                        {live?.ask ?? "--"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-3 sm:mt-4 flex justify-end">
+            <Link
+              href="/admin/instruments/market-watch"
+              className="text-xs sm:text-sm font-semibold text-[var(--primary)] hover:underline"
+            >
+              View All →
+            </Link>
+          </div>
         </motion.div>
-
       </motion.section>
     </motion.div>
   );
