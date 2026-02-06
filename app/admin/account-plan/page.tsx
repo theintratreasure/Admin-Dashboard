@@ -38,18 +38,18 @@ export default function AccountPlansPage() {
   };
 
   return (
-    <div className="container-pad space-y-4 max-w-6xl overflow-hidden">
+    <div className="container-pad space-y-4 max-w-6xl overflow-hidden !p-0 sm:!p-[18px]">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-semibold">Account Plans</h1>
 
         <button
-          className="btn btn-primary"
+          className="btn border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-main)] hover:bg-[var(--hover-bg)]"
           onClick={() => {
             setEditing(null);
             setModalOpen(true);
           }}
         >
-          + Create Plan
+          Add Plan
         </button>
       </div>
 

@@ -1,138 +1,244 @@
 "use client";
-import { useState } from "react";
-import { SlidersHorizontal, Plus } from "lucide-react";
+
+import { useEffect, useState } from "react";
+import { Plus, MoreVertical, Eye, Search, ShieldCheck, Mail, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Pagination from "../../components/ui/pagination";
+import GlobalLoader from "../../components/ui/GlobalLoader";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
+import type { AdminUser } from "@/types/user";
 
-// ------------------ TYPES FIX ------------------
-type ColumnKey =
-  | "firstName"
-  | "lastName"
-  | "username"
-  | "ledger"
-  | "grossPL"
-  | "brokerage"
-  | "netPL"
-  | "admin"
-  | "demo"
-  | "status";
+type KycFilter = "ALL" | "NOT_STARTED" | "PENDING" | "VERIFIED" | "REJECTED";
+type MailFilter = "ALL" | "true" | "false";
+type FilterKey = "kyc" | "mail";
 
-export default function TradingClients() {
+const kycStyles: Record<string, string> = {
+  VERIFIED: "border-emerald-500/40 bg-emerald-500/5 text-emerald-600",
+  PENDING: "border-amber-500/40 bg-amber-500/5 text-amber-600",
+  NOT_STARTED: "border-slate-400/40 bg-slate-400/5 text-slate-600",
+  REJECTED: "border-red-500/40 bg-red-500/5 text-red-600",
+};
+
+function formatDate(value?: string) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export default function UsersPage() {
   const router = useRouter();
 
-  const [search, setSearch] = useState("");
-  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [kycStatus, setKycStatus] = useState<KycFilter>("ALL");
+  const [mailVerified, setMailVerified] = useState<MailFilter>("ALL");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);
 
-  // ------------------ COLUMNS ------------------
-  const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
-    firstName: true,
-    lastName: true,
-    username: true,
-    ledger: true,
-    grossPL: true,
-    brokerage: true,
-    netPL: true,
-    admin: true,
-    demo: true,
-    status: true,
-  });
-
-  const toggleColumn = (key: ColumnKey) => {
-    setColumns({ ...columns, [key]: !columns[key] });
-  };
-
-  const clients = [
-    { id: 1, first: "Trader", last: "Sam", email: "trader@user.com", ledger: "-", gross: "-", brokerage: "$145.187", net: "-", admin: "-", demo: "-" },
-    { id: 2, first: "Trader 2", last: "Dhyan", email: "trader2@user.com", ledger: "-", gross: "-", brokerage: "$0", net: "-", admin: "-", demo: "-" },
-    { id: 3, first: "My", last: "Trader", email: "satanianket@gmail.com", ledger: "-", gross: "-", brokerage: "$0", net: "-", admin: "-", demo: "-" },
+  const kycOptions: Array<{ value: KycFilter; label: string; dot: string }> = [
+    { value: "ALL", label: "All KYC", dot: "bg-slate-300" },
+    { value: "NOT_STARTED", label: "Not Started", dot: "bg-slate-400" },
+    { value: "PENDING", label: "Pending", dot: "bg-amber-500" },
+    { value: "VERIFIED", label: "Verified", dot: "bg-emerald-500" },
+    { value: "REJECTED", label: "Rejected", dot: "bg-red-500" },
   ];
 
-  const filtered = clients.filter((c) =>
-    c.first.toLowerCase().includes(search.toLowerCase()) ||
-    c.last.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const mailOptions: Array<{ value: MailFilter; label: string; dot: string }> = [
+    { value: "ALL", label: "All Mail", dot: "bg-slate-300" },
+    { value: "true", label: "Mail Verified", dot: "bg-emerald-500" },
+    { value: "false", label: "Mail Unverified", dot: "bg-amber-500" },
+  ];
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuery(searchInput.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [kycStatus, mailVerified, limit]);
+
+  useEffect(() => {
+    const onClick = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-user-actions]")) return;
+      if (target?.closest("[data-filter]")) return;
+      setOpenMenuId(null);
+      setOpenFilter(null);
+    };
+
+    document.addEventListener("mousedown", onClick, true);
+    document.addEventListener("touchstart", onClick, true);
+    return () => {
+      document.removeEventListener("mousedown", onClick, true);
+      document.removeEventListener("touchstart", onClick, true);
+    };
+  }, []);
+
+  const listQuery = useAdminUsers({
+    q: query || undefined,
+    kycStatus: kycStatus === "ALL" ? undefined : kycStatus,
+    isMailVerified:
+      mailVerified === "ALL" ? undefined : mailVerified === "true",
+    page,
+    limit,
+  });
+
+  const users = listQuery.data?.data ?? [];
+  const pagination = listQuery.data?.pagination;
+  const totalPages = pagination?.totalPages ?? 1;
+  const total = pagination?.total ?? users.length;
+  const isInitialLoading = listQuery.isLoading && !listQuery.data;
+  const isUpdating = listQuery.isFetching && !isInitialLoading;
 
   return (
-    <div className="p-8 text-[var(--foreground)]">
-
+    <div className="container-pad space-y-4 max-w-6xl text-[var(--foreground)]">
       {/* HEADER */}
-      <h1 className="text-3xl font-bold">Users</h1>
-      <p className="text-sm text-[var(--text-muted)] mb-6">
-        Manage Users and their accounts
-      </p>
-
-      {/* FILTER ROW */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-
-        {/* SEARCH */}
-        <input
-          placeholder="Filter clients..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-4 py-2 w-full sm:w-64 rounded-lg bg-[var(--input-bg)] 
-                     border border-[var(--input-border)] text-[var(--foreground)]
-                     focus:ring-2 focus:ring-[var(--primary)]"
-        />
-
-        {/* STATUS + DEMO BUTTONS */}
-        <div className="flex gap-3 w-full sm:w-auto">
-          <button className="px-4 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)]
-                             hover:bg-[var(--hover-bg)] flex-1 sm:flex-none">
-            + Status
-          </button>
-
-          <button className="px-4 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)]
-                             hover:bg-[var(--hover-bg)] flex-1 sm:flex-none">
-            + Demo
-          </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg sm:text-2xl font-semibold">Users</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+            Manage users, verification, and KYC status
+          </p>
         </div>
 
-        {/* ADD NEW USER */}
         <button
           onClick={() => router.push("/admin/users/users/clients")}
-          className="px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-dark)]
-                     text-white flex items-center gap-2 w-full sm:w-auto"
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)]
+                     bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-main)]
+                     hover:bg-[var(--hover-bg)] w-full sm:w-auto"
         >
-          <Plus size={18} /> Add New Trading Users
+          <Plus size={16} /> Create User
         </button>
+      </div>
 
-        {/* VIEW DROPDOWN */}
-        <div className="relative w-full sm:w-auto">
+      {/* FILTERS */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+        <div className="flex-1 relative">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+          />
+          <input
+            placeholder="Search by name, email or phone..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)]
+                       pl-9 pr-3 py-2 text-sm text-[var(--foreground)]
+                       focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+          />
+        </div>
+
+        <div className="relative w-full sm:w-[200px]" data-filter>
           <button
-            onClick={() => setShowViewMenu(!showViewMenu)}
-            className="px-4 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--hover-bg)]
-                       border border-[var(--card-border)] flex items-center gap-2 w-full sm:w-auto"
+            type="button"
+            onClick={() =>
+              setOpenFilter((prev) => (prev === "kyc" ? null : "kyc"))
+            }
+            className={`w-full rounded-lg border px-3 py-2 text-sm font-medium flex items-center justify-between ${
+              kycStatus === "VERIFIED"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                : kycStatus === "PENDING"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                : kycStatus === "NOT_STARTED"
+                ? "border-slate-400/40 bg-slate-100 text-slate-700"
+                : kycStatus === "REJECTED"
+                ? "border-red-500/40 bg-red-500/10 text-red-700"
+                : "border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)]"
+            }`}
           >
-            <SlidersHorizontal size={18} /> View
+            <span className="inline-flex items-center gap-2">
+              <ShieldCheck size={16} className="text-emerald-600" />
+              {kycOptions.find((opt) => opt.value === kycStatus)?.label}
+            </span>
+            <ChevronDown
+              size={14}
+              className={`text-[var(--text-muted)] transition-transform ${
+                openFilter === "kyc" ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
-          {showViewMenu && (
-            <div className="absolute left-0 sm:right-0 mt-2 w-full sm:w-56 p-3 
-                            bg-[var(--card-bg)] border border-[var(--card-border)]
-                            rounded-lg shadow-xl text-sm z-50">
-              <p className="text-[var(--text-muted)] text-xs mb-2">Toggle columns</p>
+          {openFilter === "kyc" && (
+            <div className="absolute z-20 mt-2 w-full rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] shadow-lg">
+              {kycOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-[var(--hover-bg)] ${
+                    opt.value === kycStatus ? "bg-[var(--hover-bg)]" : ""
+                  }`}
+                  onClick={() => {
+                    setKycStatus(opt.value);
+                    setOpenFilter(null);
+                  }}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${opt.dot}`} />
+                    {opt.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-              {[
-                { key: "firstName" as ColumnKey, label: "First Name" },
-                { key: "lastName" as ColumnKey, label: "Last Name" },
-                { key: "username" as ColumnKey, label: "Username" },
-                { key: "ledger" as ColumnKey, label: "Ledger Balance" },
-                { key: "grossPL" as ColumnKey, label: "Gross P/L" },
-                { key: "brokerage" as ColumnKey, label: "Brokerage" },
-                { key: "netPL" as ColumnKey, label: "Net P/L" },
-                { key: "admin" as ColumnKey, label: "Admin" },
-                { key: "demo" as ColumnKey, label: "Demo" },
-                { key: "status" as ColumnKey, label: "Status" },
-              ].map((col) => (
-                <label key={col.key} className="flex items-center gap-2 mb-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={columns[col.key]}
-                    onChange={() => toggleColumn(col.key)}
-                    className="accent-[var(--primary)]"
-                  />
-                  <span className="text-[var(--foreground)]">{col.label}</span>
-                </label>
+        <div className="relative w-full sm:w-[200px]" data-filter>
+          <button
+            type="button"
+            onClick={() =>
+              setOpenFilter((prev) => (prev === "mail" ? null : "mail"))
+            }
+            className={`w-full rounded-lg border px-3 py-2 text-sm font-medium flex items-center justify-between ${
+              mailVerified === "true"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                : mailVerified === "false"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                : "border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)]"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <Mail size={16} className="text-sky-600" />
+              {mailOptions.find((opt) => opt.value === mailVerified)?.label}
+            </span>
+            <ChevronDown
+              size={14}
+              className={`text-[var(--text-muted)] transition-transform ${
+                openFilter === "mail" ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {openFilter === "mail" && (
+            <div className="absolute z-20 mt-2 w-full rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] shadow-lg">
+              {mailOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-[var(--hover-bg)] ${
+                    opt.value === mailVerified ? "bg-[var(--hover-bg)]" : ""
+                  }`}
+                  onClick={() => {
+                    setMailVerified(opt.value);
+                    setOpenFilter(null);
+                  }}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${opt.dot}`} />
+                    {opt.label}
+                  </span>
+                </button>
               ))}
             </div>
           )}
@@ -140,71 +246,152 @@ export default function TradingClients() {
       </div>
 
       {/* TABLE */}
-      <div className="overflow-auto rounded-xl border border-[var(--card-border)] mt-4">
-        <table className="w-full min-w-[800px] text-left text-sm bg-[var(--card-bg)]">
-          <thead className="bg-[var(--input-bg)]">
-            <tr>
-              <th className="px-4 py-3">ID</th>
-              {columns.firstName && <th className="px-4 py-3">First Name</th>}
-              {columns.lastName && <th className="px-4 py-3">Last Name</th>}
-              {columns.username && <th className="px-4 py-3">Username</th>}
-              {columns.ledger && <th className="px-4 py-3">Ledger</th>}
-              {columns.grossPL && <th className="px-4 py-3">Gross P/L</th>}
-              {columns.brokerage && <th className="px-4 py-3">Brokerage</th>}
-              {columns.netPL && <th className="px-4 py-3">Net P/L</th>}
-              {columns.admin && <th className="px-4 py-3">Admin</th>}
-              {columns.demo && <th className="px-4 py-3">Demo</th>}
-              {columns.status && <th className="px-4 py-3">Status</th>}
-            </tr>
-          </thead>
+      <div className="overflow-hidden rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)]">
+        <div className="flex items-center justify-between border-b border-[var(--card-border)] px-4 py-3 text-xs text-[var(--text-muted)]">
+          <span className="flex items-center gap-2">
+            Total: {total}
+            {isUpdating && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                Updating
+              </span>
+            )}
+          </span>
+          <span>Page {page} of {totalPages}</span>
+        </div>
 
-          <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id} className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)] duration-200">
-                <td className="px-4 py-3">{c.id}</td>
-                {columns.firstName && <td className="px-4 py-3">{c.first}</td>}
-                {columns.lastName && <td className="px-4 py-3">{c.last}</td>}
-                {columns.username && <td className="px-4 py-3">{c.email}</td>}
-                {columns.ledger && <td className="px-4 py-3">{c.ledger}</td>}
-                {columns.grossPL && <td className="px-4 py-3">{c.gross}</td>}
-                {columns.brokerage && <td className="px-4 py-3">{c.brokerage}</td>}
-                {columns.netPL && <td className="px-4 py-3">{c.net}</td>}
-                {columns.admin && <td className="px-4 py-3">{c.admin}</td>}
-                {columns.demo && <td className="px-4 py-3">{c.demo}</td>}
-                {columns.status && <td className="px-4 py-3">-</td>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="bg-[var(--input-bg)] text-[var(--text-muted)] text-xs uppercase">
+              <tr>
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">User Type</th>
+                <th className="px-4 py-3">Mail</th>
+                <th className="px-4 py-3">KYC</th>
+                <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {isInitialLoading ? (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center">
+                    <GlobalLoader />
+                  </td>
+                </tr>
+              ) : listQuery.isError ? (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-sm text-[var(--danger)]">
+                    Failed to load users. Please try again.
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-sm text-[var(--text-muted)]">
+                    No users found.
+                  </td>
+                </tr>
+              ) : (
+                users.map((u: AdminUser, idx: number) => (
+                  <tr
+                    key={u._id}
+                    className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)] duration-150"
+                  >
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      {(page - 1) * limit + idx + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{u.name || "--"}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                          ID: {u._id.slice(0, 8)}...
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{u.email || "--"}</td>
+                    <td className="px-4 py-3">{u.phone || "--"}</td>
+                    <td className="px-4 py-3">{u.userType || "--"}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                          u.isMailVerified
+                            ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
+                            : "border-amber-500/40 bg-amber-500/5 text-amber-600"
+                        }`}
+                      >
+                        {u.isMailVerified ? "Verified" : "Unverified"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                          kycStyles[u.kycStatus] ||
+                          "border-[var(--border-subtle)] bg-[var(--chip-bg)] text-[var(--text-muted)]"
+                        }`}
+                      >
+                        {u.kycStatus || "UNKNOWN"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="relative inline-flex" data-user-actions>
+                        <button
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--hover-bg)]"
+                          aria-label="Row actions"
+                          onClick={() =>
+                            setOpenMenuId((prev) => (prev === u._id ? null : u._id))
+                          }
+                        >
+                          <MoreVertical size={14} />
+                        </button>
+
+                        {openMenuId === u._id && (
+                          <div className="absolute right-0 top-8 w-28 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] shadow-lg z-20">
+                            <button
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-[var(--hover-bg)] flex items-center justify-between"
+                              onClick={() => {
+                                const params = new URLSearchParams({
+                                  name: u.name ?? "",
+                                  email: u.email ?? "",
+                                  phone: u.phone ?? "",
+                                  kycStatus: u.kycStatus ?? "",
+                                  isMailVerified: String(Boolean(u.isMailVerified)),
+                                });
+                                router.push(
+                                  `/admin/users/users/view/${u._id}?${params.toString()}`
+                                );
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <span>View</span>
+                              <Eye size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* PAGINATION */}
-      <div className="flex flex-wrap justify-between items-center mt-4 gap-4 text-[var(--text-muted)]">
-        <div className="flex items-center gap-3">
-          <select className="bg-[var(--card-bg)] border border-[var(--card-border)] px-3 py-2 rounded-md">
-            <option>10</option>
-            <option>25</option>
-            <option>50</option>
-          </select>
-          <span>Rows per page</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span>Page 1 of 1</span>
-          {["<<", "<", "1", ">", ">>"].map((btn) => (
-            <button
-              key={btn}
-              className={`px-3 py-1 rounded-md border border-[var(--card-border)] ${
-                btn === "1"
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--card-bg)] hover:bg-[var(--hover-bg)]"
-              }`}
-            >
-              {btn}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(l) => {
+          setLimit(l);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

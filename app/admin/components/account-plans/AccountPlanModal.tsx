@@ -31,7 +31,7 @@ export default function AccountPlanModal({
             {initialData ? "Edit Account Plan" : "Create Account Plan"}
           </h2>
 
-          <button onClick={onClose} className="text-xl">
+          <button onClick={onClose} className="text-xl" aria-label="Close modal" title="Close">
             ✕
           </button>
         </div>

@@ -299,37 +299,37 @@ export default function MarketWatch() {
       </div>
 
       {/* TABLE */}
-      <div className="card overflow-hidden shadow-none p-0">
+      <div className="card overflow-hidden shadow-none p-0 border-0">
         <div className="relative overflow-x-auto sm:overflow-visible">
           <table className="table w-full text-[9px] sm:text-[13px] p-0">
             <thead style={{ background: "transparent" }}>
   <tr>
     {visibleCols.code && (
-      <th className="border-y border-[var(--card-border)] py-0.5 px-0.5 text-[9px] sm:text-[12px]">Code</th>
+      <th className="py-0.5 px-0.5 text-[9px] sm:text-[12px]">Code</th>
     )}
     {visibleCols.bid && (
-      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Bid</th>
+      <th className="text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Bid</th>
     )}
     {visibleCols.ask && (
-      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Ask</th>
+      <th className="text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Ask</th>
     )}
     {visibleCols.open && (
-      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Open</th>
+      <th className="text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Open</th>
     )}
     {visibleCols.chg && (
-      <th className="border-y border-[var(--card-border)] text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Chg</th>
+      <th className="text-right py-0.5 px-0.5 text-[9px] sm:text-[12px]">Chg</th>
     )}
     {visibleCols.lowHigh && (
-      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Low</th>
+      <th className="text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Low</th>
     )}
     {visibleCols.lowHigh && (
-      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">High</th>
+      <th className="text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">High</th>
     )}
     {visibleCols.spread && (
-      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Spread</th>
+      <th className="text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Spread</th>
     )}
     {visibleCols.remove && (
-      <th className="border-y border-[var(--card-border)] text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Remove</th>
+      <th className="text-center py-0.5 px-0.5 text-[9px] sm:text-[12px]">Remove</th>
     )}
   </tr>
 </thead>
@@ -367,7 +367,7 @@ export default function MarketWatch() {
         const delta = current !== null && open !== null ? current - open : null;
         const pct =
           current !== null && open !== null && open !== 0
-            ? (delta / open) * 100
+            ? ((current - open) / open) * 100
             : null;
 
         const bidColor =

@@ -5,8 +5,10 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
+  MoreVertical,
 } from "lucide-react";
 import { AccountPlan } from "@/types/accountPlan";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 interface Props {
   data: AccountPlan[];
@@ -15,28 +17,40 @@ interface Props {
 }
 
 export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
-  return (
-    <div className="card-elevated border border-[var(--border-subtle)] rounded-2xl bg-[var(--surface)] shadow-sm max-w-7xl">
-      {/* Header + count */}
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-4">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">
-            Account Plans
-          </h2>
-          <p className="text-xs text-[var(--text-muted)]">
-            Configure trading conditions, commission & leverage for each plan.
-          </p>
-        </div>
-        <span className="inline-flex items-center rounded-full bg-[var(--chip-bg)] px-3 py-1 text-xs font-medium text-[var(--text-muted)]">
-          Total plans: {data.length}
-        </span>
-      </div>
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const mobileTrackRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setActiveIndex(0);
+    if (mobileTrackRef.current) {
+      mobileTrackRef.current.scrollLeft = 0;
+    }
+  }, [data.length]);
+
+  const FieldRow = ({
+    label,
+    value,
+    valueClassName = "font-medium",
+  }: {
+    label: string;
+    value: ReactNode;
+    valueClassName?: string;
+  }) => (
+    <div className="flex items-center gap-2 py-2">
+      <span className="text-black whitespace-nowrap">{label}</span>
+      <span className="flex-1 h-[3px] bg-[radial-gradient(circle,_var(--card-border)_1.4px,_transparent_1.6px)] bg-[length:10px_3px] opacity-50" />
+      <span className={`text-right whitespace-nowrap ${valueClassName}`}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div className="rounded-2xl bg-[var(--surface)] max-w-7xl p-0" style={{ padding: 0 }}>
       {/* Desktop table wrapper */}
       <div className="hidden lg:block">
-        <div className="max-h-[520px] overflow-auto">
+        <div className="max-h-[520px] overflow-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]">
           <table className="min-w-full border-collapse text-sm">
-            <thead className="bg-[var(--table-header-bg)] text-[var(--text-muted)] text-xs uppercase sticky top-0 z-10">
+            <thead className="bg-[var(--table-header-bg)] text-[var(--text-muted)] text-xs uppercase sticky top-0 z-10 border-b border-[var(--border-subtle)]">
               <tr>
                 <th className="bg-[var(--table-header-bg)] px-4 py-3 text-left font-semibold">
                   Name
@@ -207,105 +221,125 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
         </div>
       </div>
 
-      {/* Mobile / tablet: card layout */}
-      <div className="block lg:hidden px-3 py-3 space-y-3 max-h-[520px] overflow-auto">
+            {/* Mobile / tablet: card layout */}
+      <div className="block lg:hidden p-2 text-[14px] text-black space-y-3">
         {data.length === 0 && (
           <div className="rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
             No account plans found.
           </div>
         )}
 
-        {data.map((p) => (
-          <div
-            key={p._id}
-            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold">{p.name}</h3>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Min Deposit: ${p.minDeposit.toLocaleString("en-IN")} · Min Lot:{" "}
-                  {p.minLotSize}
-                </p>
-              </div>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${
-                  p.isActive
-                    ? "bg-emerald-500/10 text-emerald-500"
-                    : "bg-[var(--danger-soft)] text-[var(--danger)]"
-                }`}
-              >
-                {p.isActive ? (
-                  <>
-                    <CheckCircle size={12} /> Active
-                  </>
-                ) : (
-                  <>
-                    <XCircle size={12} /> Inactive
-                  </>
-                )}
-              </span>
-            </div>
+        <div
+          ref={mobileTrackRef}
+          onScroll={() => {
+            const el = mobileTrackRef.current;
+            if (!el) return;
+            const index = Math.round(el.scrollLeft / el.clientWidth);
+            setActiveIndex(Math.min(data.length - 1, Math.max(0, index)));
+          }}
+          className="flex overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {data.map((p) => (
+            <div
+              key={p._id}
+              className="w-full shrink-0 snap-start rounded-lg border border-[var(--card-border)]/70 bg-[var(--surface-elevated)] p-3 my-2 mx-2 text-black"
+            >
+              <div className="flex items-center justify-between gap-2 pb-2 relative border-b border-[var(--card-border)]/70 -mx-3 px-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[13px] font-medium ${
+                      p.is_demo_allowed
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : "bg-[var(--chip-bg)] text-[var(--text-muted)]"
+                    }`}
+                  >
+                    {p.is_demo_allowed ? "Demo" : "Live"}
+                  </span>
+                  <span className="text-[15px] font-semibold break-words min-w-0">
+                    {p.name}
+                  </span>
+                </div>
+                <div className="relative">
+                  <button
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-[var(--chip-bg)] text-[var(--text-muted)]"
+                    aria-label="Plan options"
+                    onClick={() =>
+                      setOpenMenuId((prev) => (prev === p._id ? null : p._id))
+                    }
+                  >
+                    <MoreVertical size={16} />
+                  </button>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-[var(--text-muted)]">
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide">
-                  Spread
-                </span>
-                <span className="text-xs font-medium">
-                  {p.spreadPips} ({p.spread_type})
-                </span>
+                  {openMenuId === p._id && (
+                    <div className="absolute right-0 top-10 w-32 rounded-lg border border-[var(--border-subtle)] bg-[var(--card-bg)] shadow-lg z-30">
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--hover-bg)]"
+                        onClick={() => {
+                          onEdit(p);
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                        onClick={() => {
+                          onDelete(p._id);
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide">
-                  Commission
-                </span>
-                <span className="text-xs font-medium">
-                  {p.commission} / {p.commission_per_lot} per lot
-                </span>
-              </div>
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide">
-                  Leverage
-                </span>
-                <span className="text-xs font-medium">
-                  {p.max_leverage ? `1:${p.max_leverage}` : "Unlimited"}
-                </span>
-              </div>
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide">
-                  Demo / Swap
-                </span>
-                <span className="text-xs font-medium">
-                  {p.is_demo_allowed ? "Demo allowed" : "Demo off"} ·{" "}
-                  {p.swap_enabled ? "Swap on" : "Swap off"}
-                </span>
-              </div>
-            </div>
 
-            {p.guidance && (
-              <p className="mt-3 text-xs text-[var(--text-muted)] line-clamp-2">
-                {p.guidance}
-              </p>
-            )}
+              <div className="mt-2 text-[13px]">
+                <FieldRow
+                  label="Min Deposit"
+                  value={`$${p.minDeposit.toLocaleString("en-IN")}`}
+                />
+                <FieldRow label="Min Lot" value={p.minLotSize} />
+                <FieldRow label="Spread" value={`${p.spreadPips} (${p.spread_type})`} />
+                <FieldRow
+                  label="Commission"
+                  value={`${p.commission} / ${p.commission_per_lot}`}
+                />
+                <FieldRow label="Commission / Lot" value={p.commission_per_lot} />
+                <FieldRow
+                  label="Leverage"
+                  value={p.max_leverage ? `1:${p.max_leverage}` : "Unlimited"}
+                />
+                <FieldRow
+                  label="Demo"
+                  value={p.is_demo_allowed ? "Allowed" : "Off"}
+                />
+                <FieldRow
+                  label="Swap"
+                  value={p.swap_enabled ? "On" : "Off"}
+                />
+                <FieldRow
+                  label="Status"
+                  value={p.isActive ? "Active" : "Inactive"}
+                  valueClassName={`font-medium ${p.isActive ? "text-emerald-600" : "text-[var(--danger)]"}`}
+                />
+              </div>
 
-            <div className="mt-3 flex items-center justify-end gap-1.5">
-              <button
-                className="inline-flex items-center gap-1 rounded-full bg-[var(--chip-bg)] px-3 py-1.5 text-[11px] font-medium text-[var(--text)]"
-                onClick={() => onEdit(p)}
-              >
-                <Pencil size={13} /> Edit
-              </button>
-              <button
-                className="inline-flex items-center gap-1 rounded-full bg-[var(--danger-soft)] px-3 py-1.5 text-[11px] font-medium text-[var(--danger)]"
-                onClick={() => onDelete(p._id)}
-              >
-                <Trash2 size={13} /> Delete
-              </button>
+              {/* actions handled in the 3-dot menu */}
             </div>
+          ))}
+        </div>
+
+        {data.length > 1 && (
+          <div className="flex items-center justify-center pt-2 text-[11px] text-[var(--text-muted)]">
+            {activeIndex + 1} / {data.length}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
 }
+
+
+

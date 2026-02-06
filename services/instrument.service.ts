@@ -53,3 +53,31 @@ export const searchInstruments = async (params: {
     [];
   return Array.isArray(list) ? list : [];
 };
+
+export type SymbolListItem = {
+  _id: string;
+  name: string;
+  code: string;
+  category?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export const getSymbolList = async (params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  isActive?: boolean;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}): Promise<SymbolListItem[]> => {
+  const { data } = await api.get("/symbol/list", { params });
+  const list =
+    (data?.data?.symbols as SymbolListItem[]) ||
+    (data?.data?.data as SymbolListItem[]) ||
+    (data?.data as SymbolListItem[]) ||
+    [];
+  return Array.isArray(list) ? list : [];
+};

@@ -32,23 +32,28 @@ export default function Pagination({
           Rows
         </span>
 
-        <select
-          value={limit}
-          onChange={(e) => onLimitChange(Number(e.target.value))}
-          className="
-            rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium
-            bg-[var(--input-bg)]
-            border border-[var(--input-border)]
-            focus:outline-none
-            focus:ring-2 focus:ring-[var(--primary)]/30
-          "
-        >
-          {[10, 20, 50].map((n) => (
-            <option key={n} value={n}>
-              {n} / page
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+            className="
+              appearance-none rounded-lg px-2.5 py-1.5 pr-8 text-xs sm:text-sm font-medium
+              bg-[var(--input-bg)]
+              border border-[var(--input-border)]
+              focus:outline-none
+              focus:ring-2 focus:ring-[var(--primary)]/30
+            "
+          >
+            {[10, 20, 50].map((n) => (
+              <option key={n} value={n}>
+                {n} / page
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+            ▾
+          </span>
+        </div>
       </div>
 
       {/* RIGHT - PAGINATION */}

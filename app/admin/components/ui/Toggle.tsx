@@ -1,7 +1,9 @@
 "use client";
 
+import React from "react";
+
 interface ToggleProps {
-  label: string;
+  label: React.ReactNode;
   value: boolean;
   onChange: (value: boolean) => void;
 }
