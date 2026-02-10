@@ -10,6 +10,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  FlaskConical,
   Globe,
   KeyRound,
   Copy,
@@ -17,6 +18,7 @@ import {
   Mail,
   Pencil,
   Phone,
+  Rocket,
   ShieldCheck,
   User,
   Users,
@@ -34,6 +36,8 @@ import { useAdminUserAccounts } from "@/hooks/useAdminUserAccounts";
 import { useAdminUserTransactions } from "@/hooks/useAdminUserTransactions";
 import { useUpdateAdminUser } from "@/hooks/useUpdateAdminUser";
 import { useChangeAdminUserPassword } from "@/hooks/useChangeAdminUserPassword";
+import { useUpdateAdminUserAccount } from "@/hooks/useUpdateAdminUserAccount";
+import type { AdminAccount, AdminAccountUpdatePayload } from "@/types/account";
 import type { AdminUserUpdatePayload } from "@/types/user";
 import type { AdminTransaction } from "@/types/transaction";
 
@@ -59,6 +63,67 @@ const txTypeStyles: Record<string, string> = {
   BONUS: "border-purple-500/40 bg-purple-500/10 text-purple-700",
   ADJUSTMENT: "border-slate-500/40 bg-slate-500/10 text-slate-700",
 };
+
+const getAccountTypeMeta = (accountType?: string) => {
+  const normalizedType = (accountType ?? "").toLowerCase();
+
+  if (normalizedType === "demo") {
+    return {
+      label: "DEMO",
+      icon: FlaskConical,
+      className: "border-slate-500/40 bg-slate-500/10 text-slate-700",
+      cardClassName: "border-slate-400/60 bg-slate-500/[0.04]",
+    };
+  }
+
+  if (normalizedType === "live") {
+    return {
+      label: "LIVE",
+      icon: Rocket,
+      className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700",
+      cardClassName: "border-emerald-500/30 bg-emerald-500/[0.04]",
+    };
+  }
+
+  if (normalizedType) {
+    return {
+      label: normalizedType.toUpperCase(),
+      icon: Globe,
+      className: "border-sky-500/40 bg-sky-500/10 text-sky-700",
+      cardClassName: "border-sky-400/40 bg-sky-500/[0.04]",
+    };
+  }
+
+  return {
+    label: "--",
+    icon: Hash,
+    className: "border-[var(--card-border)] bg-[var(--chip-bg)] text-[var(--text-muted)]",
+    cardClassName: "border-[var(--card-border)] bg-[var(--input-bg)]",
+  };
+};
+
+type AccountEditForm = {
+  leverage: string;
+  spread_enabled: "true" | "false";
+  spread_pips: string;
+  commission_per_lot: string;
+  swap_enabled: "true" | "false";
+  swap_charge: string;
+  status: "active" | "disabled";
+};
+
+const buildAccountEditForm = (account: AdminAccount): AccountEditForm => ({
+  leverage: String(account.leverage ?? 0),
+  spread_enabled: account.spread_enabled === false ? "false" : "true",
+  spread_pips: String(account.spread_pips ?? 0),
+  commission_per_lot: String(account.commission_per_lot ?? 0),
+  swap_enabled: account.swap_enabled === false ? "false" : "true",
+  swap_charge: String(account.swap_charge ?? 0),
+  status:
+    (account.status ?? "active").toLowerCase() === "disabled"
+      ? "disabled"
+      : "active",
+});
 
 const FieldControl = ({
   icon: Icon,
@@ -195,10 +260,24 @@ export default function UserViewPage() {
   const userQuery = useAdminUser(userId);
   const updateMutation = useUpdateAdminUser();
   const changePasswordMutation = useChangeAdminUserPassword();
+  const updateAccountMutation = useUpdateAdminUserAccount();
 
   const [editOpen, setEditOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [accountViewOpen, setAccountViewOpen] = useState(false);
+  const [accountEditOpen, setAccountEditOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<AdminAccount | null>(null);
+  const [accountFormError, setAccountFormError] = useState("");
+  const [accountForm, setAccountForm] = useState<AccountEditForm>({
+    leverage: "0",
+    spread_enabled: "true",
+    spread_pips: "0",
+    commission_per_lot: "0",
+    swap_enabled: "true",
+    swap_charge: "0",
+    status: "active",
+  });
   const [toast, setToast] = useState("");
   const [touched, setTouched] = useState<Partial<Record<keyof AdminUserUpdatePayload, boolean>>>({});
   const [activeTab, setActiveTab] = useState("Fund History");
@@ -265,15 +344,18 @@ export default function UserViewPage() {
     return { name, email, phone, kycStatus, isMailVerified };
   }, [searchParams]);
 
-  const accountsQuery = useAdminUserAccounts({
-    userId,
-    page: 1,
-    limit: 50,
-  });
+	  const accountsQuery = useAdminUserAccounts({
+	    userId,
+	    page: 1,
+	    limit: 50,
+	  });
+	  const accountList = useMemo(
+	    () => accountsQuery.data?.data ?? [],
+	    [accountsQuery.data?.data]
+	  );
 
-  const accountOptions = useMemo<SelectOption[]>(() => {
-    const list = accountsQuery.data?.data ?? [];
-    if (!list.length) {
+	  const accountOptions = useMemo<SelectOption[]>(() => {
+	    if (!accountList.length) {
       return [
         {
           value: "",
@@ -285,7 +367,7 @@ export default function UserViewPage() {
 
     return [
       { value: "", label: "All Accounts", dotClass: "bg-slate-300" },
-      ...list.map((account) => {
+	      ...accountList.map((account) => {
         const typeLabel =
           account.account_type?.toLowerCase() === "demo" ? "Demo" : "Live";
         const planLabel = account.plan_name ? ` • ${account.plan_name}` : "";
@@ -299,9 +381,30 @@ export default function UserViewPage() {
         };
       }),
     ];
-  }, [accountsQuery.data?.data, accountsQuery.isLoading]);
+	  }, [accountList, accountsQuery.isLoading]);
 
-  const transactionsQuery = useAdminUserTransactions({
+	  const nonDemoAccounts = useMemo(
+	    () =>
+	      accountList.filter(
+	        (account) => (account.account_type ?? "").toLowerCase() !== "demo"
+	      ),
+	    [accountList]
+	  );
+
+	  const accountSummary = useMemo(
+	    () =>
+	      nonDemoAccounts.reduce(
+	        (acc, account) => ({
+	          totalBalance: acc.totalBalance + (account.balance ?? 0),
+	          totalHoldBalance: acc.totalHoldBalance + (account.hold_balance ?? 0),
+	          totalEquity: acc.totalEquity + (account.equity ?? 0),
+	        }),
+	        { totalBalance: 0, totalHoldBalance: 0, totalEquity: 0 }
+	      ),
+	    [nonDemoAccounts]
+	  );
+
+	  const transactionsQuery = useAdminUserTransactions({
     userId,
     page: txPage,
     limit: txLimit,
@@ -385,6 +488,11 @@ export default function UserViewPage() {
 
   const displayName = localProfile.name || "User";
   const displayEmail = localProfile.email || "--";
+  const selectedAccountTypeMeta = useMemo(
+    () => getAccountTypeMeta(selectedAccount?.account_type),
+    [selectedAccount?.account_type]
+  );
+  const SelectedAccountTypeIcon = selectedAccountTypeMeta.icon;
 
   const kycBadgeClass =
     kycStyles[localProfile.kycStatus ?? ""] ||
@@ -467,6 +575,86 @@ export default function UserViewPage() {
     }
   };
 
+  const openAccountView = (account: AdminAccount) => {
+    setSelectedAccount(account);
+    setAccountViewOpen(true);
+  };
+
+  const openAccountEdit = (account: AdminAccount) => {
+    setSelectedAccount(account);
+    setAccountForm(buildAccountEditForm(account));
+    setAccountFormError("");
+    setAccountEditOpen(true);
+  };
+
+  const closeAccountEdit = () => {
+    setAccountEditOpen(false);
+    setAccountFormError("");
+  };
+
+  const handleAccountFormField =
+    <K extends keyof AccountEditForm>(key: K) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setAccountForm((prev) => ({
+        ...prev,
+        [key]: event.target.value as AccountEditForm[K],
+      }));
+    };
+
+  const handleAccountUpdateSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedAccount?._id) return;
+
+    setAccountFormError("");
+
+    const leverage = Number(accountForm.leverage);
+    const spreadPips = Number(accountForm.spread_pips);
+    const commissionPerLot = Number(accountForm.commission_per_lot);
+    const swapCharge = Number(accountForm.swap_charge);
+
+    const numericValues = [leverage, spreadPips, commissionPerLot, swapCharge];
+    const invalidNumber = numericValues.some(
+      (value) => Number.isNaN(value) || !Number.isFinite(value) || value < 0
+    );
+
+    if (invalidNumber) {
+      setAccountFormError("Please enter valid numeric values (0 or greater).");
+      return;
+    }
+
+    const payload: AdminAccountUpdatePayload = {
+      leverage,
+      spread_enabled: accountForm.spread_enabled === "true",
+      spread_pips: spreadPips,
+      commission_per_lot: commissionPerLot,
+      swap_enabled: accountForm.swap_enabled === "true",
+      swap_charge: swapCharge,
+      status: accountForm.status,
+    };
+
+    updateAccountMutation.mutate(
+      { accountId: selectedAccount._id, payload },
+      {
+        onSuccess: (updatedAccount) => {
+          if (updatedAccount) {
+            setSelectedAccount(updatedAccount);
+          }
+          setToast("Account updated successfully.");
+          setAccountEditOpen(false);
+        },
+        onError: (error) => {
+          const err = error as {
+            response?: { data?: { message?: string } };
+            message?: string;
+          };
+          setAccountFormError(
+            err?.response?.data?.message || err?.message || "Failed to update account."
+          );
+        },
+      }
+    );
+  };
+
   const handlePasswordSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!userId) return;
@@ -512,8 +700,8 @@ export default function UserViewPage() {
   };
 
   return (
-    <div className="container-pad space-y-5 text-[var(--foreground)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="container-pad w-full max-w-full min-w-0 overflow-x-hidden space-y-5 text-[var(--foreground)]">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
@@ -521,7 +709,7 @@ export default function UserViewPage() {
           <ChevronLeft size={16} /> Back
         </button>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <button className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]">
             <span className="h-7 w-7 rounded-md bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center">
               <Download size={14} />
@@ -554,11 +742,11 @@ export default function UserViewPage() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+            <div className="min-w-0 flex-1">
               <h2 className="text-lg sm:text-xl font-semibold">{displayName}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-1.5">
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
+                <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5 break-all">
                   <Mail size={14} />
                   {displayEmail}
                   {displayEmail && displayEmail !== "--" && (
@@ -572,7 +760,7 @@ export default function UserViewPage() {
                     </button>
                   )}
                 </span>
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5 break-all">
                   <Phone size={14} />
                   {localProfile.phone || "--"}
                   {localProfile.phone && localProfile.phone !== "--" && (
@@ -604,22 +792,22 @@ export default function UserViewPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
               <button
                 onClick={() => setViewOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
+                className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
               >
                 <Eye size={16} /> View Details
               </button>
               <button
                 onClick={() => setEditOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
+                className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
               >
                 <Pencil size={16} /> Update
               </button>
               <button
                 onClick={() => setPasswordOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
+                className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
               >
                 <KeyRound size={16} /> Change Password
               </button>
@@ -628,8 +816,8 @@ export default function UserViewPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {["Fund History", "Active Trades", "Closed Trades", "Pending Trades"].map(
+	      <div className="flex flex-wrap gap-2">
+	        {["Fund History", "Accounts", "Active Trades", "Closed Trades", "Pending Trades"].map(
           (tab) => (
             <button
               key={tab}
@@ -646,8 +834,8 @@ export default function UserViewPage() {
         )}
       </div>
 
-      {activeTab === "Fund History" && (
-        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-5">
+	      {activeTab === "Fund History" && (
+	        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-lg font-semibold">Fund - Withdrawal & Deposits</h3>
@@ -935,15 +1123,495 @@ export default function UserViewPage() {
               setTxPage(1);
             }}
           />
-        </div>
+	        </div>
+	      )}
+
+	      {activeTab === "Accounts" && (
+	        <div className="w-full max-w-full overflow-x-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-5">
+	          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+	            <div>
+	              <h3 className="text-lg font-semibold">Accounts Overview</h3>
+	              <p className="text-xs text-[var(--text-muted)] mt-1">
+	                View all user accounts, balances and trading settings
+	              </p>
+	            </div>
+	            <span className="inline-flex items-center rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-main)]">
+	              Total Live Accounts: {nonDemoAccounts.length}
+	            </span>
+	          </div>
+
+	          {accountsQuery.isLoading ? (
+	            <div className="py-10">
+	              <GlobalLoader />
+	            </div>
+	          ) : accountsQuery.isError ? (
+	            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+	              Failed to load account details.
+	            </div>
+	          ) : accountList.length === 0 ? (
+	            <div className="mt-4 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
+	              No accounts found for this user.
+	            </div>
+	          ) : (
+	            <>
+	              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+	                    Total Balance
+	                  </p>
+	                  <p className="mt-1 text-lg font-semibold text-emerald-600">
+	                    ${formatAmount(accountSummary.totalBalance)}
+	                  </p>
+	                </div>
+	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+	                    Total Hold Balance
+	                  </p>
+	                  <p className="mt-1 text-lg font-semibold text-amber-600">
+	                    ${formatAmount(accountSummary.totalHoldBalance)}
+	                  </p>
+	                </div>
+	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+	                    Total Equity
+	                  </p>
+	                  <p className="mt-1 text-lg font-semibold text-sky-600">
+	                    ${formatAmount(accountSummary.totalEquity)}
+	                  </p>
+	                </div>
+	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+	                    Active Accounts
+	                  </p>
+	                  <p className="mt-1 text-lg font-semibold text-[var(--text-main)]">
+	                    {
+	                      nonDemoAccounts.filter(
+	                        (account) => (account.status ?? "").toLowerCase() === "active"
+	                      ).length
+	                    }
+	                  </p>
+	                </div>
+	              </div>
+
+	              <div className="mt-4 space-y-3 md:hidden">
+	                {accountList.map((account) => {
+	                  const statusValue = (account.status ?? "unknown").toUpperCase();
+	                  const statusClass =
+	                    statusValue === "ACTIVE"
+	                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+	                      : statusValue === "INACTIVE"
+	                      ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+	                      : "border-[var(--card-border)] bg-[var(--chip-bg)] text-[var(--text-muted)]";
+	                  const typeMeta = getAccountTypeMeta(account.account_type);
+	                  const TypeIcon = typeMeta.icon;
+
+	                  return (
+	                    <div
+	                      key={account._id}
+	                      className={`rounded-lg border p-3 ${typeMeta.cardClassName}`}
+	                    >
+	                      <div className="flex items-center justify-between gap-2">
+	                        <p className="font-mono text-xs font-semibold">
+	                          {account.account_number ?? account._id}
+	                        </p>
+	                        <span
+	                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${statusClass}`}
+	                        >
+	                          {statusValue}
+	                        </span>
+	                      </div>
+	                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+	                        <p><span className="text-[var(--text-muted)]">Plan:</span> {account.plan_name ?? "--"}</p>
+	                        <p className="inline-flex items-center gap-1.5">
+	                          <span className="text-[var(--text-muted)]">Type:</span>
+	                          <span
+	                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${typeMeta.className}`}
+	                          >
+	                            <TypeIcon size={11} />
+	                            {typeMeta.label}
+	                          </span>
+	                        </p>
+	                        <p><span className="text-[var(--text-muted)]">Balance:</span> <span className="font-semibold text-emerald-600">${formatAmount(account.balance)}</span></p>
+	                        <p><span className="text-[var(--text-muted)]">Hold:</span> <span className="font-semibold text-amber-600">${formatAmount(account.hold_balance)}</span></p>
+	                        <p><span className="text-[var(--text-muted)]">Equity:</span> <span className="font-semibold text-sky-600">${formatAmount(account.equity)}</span></p>
+	                        <p><span className="text-[var(--text-muted)]">Currency:</span> {account.currency ?? "--"}</p>
+	                        <p><span className="text-[var(--text-muted)]">Leverage:</span> {account.leverage ? `x${account.leverage}` : "--"}</p>
+	                        <p><span className="text-[var(--text-muted)]">Commission:</span> {account.commission_per_lot ?? "--"}</p>
+	                      </div>
+	                      <div className="mt-3 flex items-center gap-2">
+	                        <button
+	                          type="button"
+	                          onClick={() => openAccountView(account)}
+	                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
+	                        >
+	                          <Eye size={13} />
+	                          View
+	                        </button>
+	                        <button
+	                          type="button"
+	                          onClick={() => openAccountEdit(account)}
+	                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
+	                        >
+	                          <Pencil size={13} />
+	                          Edit
+	                        </button>
+	                      </div>
+	                    </div>
+	                  );
+	                })}
+	              </div>
+
+	              <div className="mt-4 hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
+	                <table className="w-full table-auto text-left text-sm">
+	                  <thead className="bg-[var(--input-bg)] text-[var(--text-muted)] text-xs uppercase">
+	                    <tr>
+	                      <th className="px-4 py-3">Account</th>
+	                      <th className="px-4 py-3">Plan</th>
+	                      <th className="px-4 py-3">Type</th>
+	                      <th className="px-4 py-3">Leverage</th>
+	                      <th className="px-4 py-3">Spread</th>
+	                      <th className="px-4 py-3">Commission/Lot</th>
+	                      <th className="px-4 py-3">Swap</th>
+	                      <th className="px-4 py-3">Balance</th>
+	                      <th className="px-4 py-3">Hold</th>
+	                      <th className="px-4 py-3">Equity</th>
+	                      <th className="px-4 py-3">Currency</th>
+	                      <th className="px-4 py-3">Status</th>
+	                      <th className="px-4 py-3">First Deposit</th>
+	                      <th className="px-4 py-3">Created</th>
+	                      <th className="px-4 py-3">Updated</th>
+	                      <th className="px-4 py-3">Actions</th>
+	                    </tr>
+	                  </thead>
+	                  <tbody>
+	                    {accountList.map((account) => {
+	                      const statusValue = (account.status ?? "unknown").toUpperCase();
+	                      const statusClass =
+	                        statusValue === "ACTIVE"
+	                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+	                          : statusValue === "INACTIVE"
+	                          ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+	                          : "border-[var(--card-border)] bg-[var(--chip-bg)] text-[var(--text-muted)]";
+	                      const typeMeta = getAccountTypeMeta(account.account_type);
+	                      const TypeIcon = typeMeta.icon;
+	                      const rowToneClass =
+	                        typeMeta.label === "DEMO"
+	                          ? "bg-slate-500/[0.03]"
+	                          : typeMeta.label === "LIVE"
+	                          ? "bg-emerald-500/[0.02]"
+	                          : "";
+
+	                      return (
+	                        <tr
+	                          key={account._id}
+	                          className={`border-t border-[var(--card-border)] ${rowToneClass}`}
+	                        >
+	                          <td className="px-4 py-3 font-mono">
+	                            {account.account_number ?? account._id}
+	                          </td>
+	                          <td className="px-4 py-3">{account.plan_name ?? "--"}</td>
+	                          <td className="px-4 py-3">
+	                            <span
+	                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${typeMeta.className}`}
+	                            >
+	                              <TypeIcon size={11} />
+	                              {typeMeta.label}
+	                            </span>
+	                          </td>
+	                          <td className="px-4 py-3">
+	                            {account.leverage ? `x${account.leverage}` : "--"}
+	                          </td>
+	                          <td className="px-4 py-3">
+	                            {account.spread_enabled === false
+	                              ? "Disabled"
+	                              : `${account.spread_pips ?? 0} pips`}
+	                          </td>
+	                          <td className="px-4 py-3">{account.commission_per_lot ?? "--"}</td>
+	                          <td className="px-4 py-3">
+	                            {account.swap_enabled === false
+	                              ? "Disabled"
+	                              : `${account.swap_charge ?? "--"}`}
+	                          </td>
+	                          <td className="px-4 py-3 font-medium text-emerald-600">
+	                            ${formatAmount(account.balance)}
+	                          </td>
+	                          <td className="px-4 py-3 font-medium text-amber-600">
+	                            ${formatAmount(account.hold_balance)}
+	                          </td>
+	                          <td className="px-4 py-3 font-medium text-sky-600">
+	                            ${formatAmount(account.equity)}
+	                          </td>
+	                          <td className="px-4 py-3 uppercase">{account.currency ?? "--"}</td>
+	                          <td className="px-4 py-3">
+	                            <span
+	                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusClass}`}
+	                            >
+	                              {statusValue}
+	                            </span>
+	                          </td>
+	                          <td className="px-4 py-3">
+	                            <span
+	                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+	                                account.first_deposit
+	                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+	                                  : "border-slate-400/40 bg-slate-500/10 text-slate-700"
+	                              }`}
+	                            >
+	                              {account.first_deposit ? "Yes" : "No"}
+	                            </span>
+	                          </td>
+	                          <td className="px-4 py-3">{formatDateTime(account.createdAt)}</td>
+	                          <td className="px-4 py-3">{formatDateTime(account.updatedAt)}</td>
+	                          <td className="px-4 py-3">
+	                            <div className="flex items-center gap-2">
+	                              <button
+	                                type="button"
+	                                onClick={() => openAccountView(account)}
+	                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
+	                              >
+	                                <Eye size={12} />
+	                                View
+	                              </button>
+	                              <button
+	                                type="button"
+	                                onClick={() => openAccountEdit(account)}
+	                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
+	                              >
+	                                <Pencil size={12} />
+	                                Edit
+	                              </button>
+	                            </div>
+	                          </td>
+	                        </tr>
+	                      );
+	                    })}
+	                  </tbody>
+	                </table>
+	              </div>
+	            </>
+	          )}
+	        </div>
+	      )}
+	
+	
+	      {activeTab !== "Fund History" && activeTab !== "Accounts" && (
+	        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-muted)]">
+	          No data available for {activeTab}.
+	        </div>
       )}
 
+      <Modal
+        title="Account Details"
+        open={accountViewOpen}
+        onClose={() => setAccountViewOpen(false)}
+        size="md"
+      >
+        {!selectedAccount ? (
+          <p className="text-sm text-[var(--text-muted)]">No account selected.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-sm font-semibold">
+                  {selectedAccount.account_number ?? selectedAccount._id}
+                </p>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                    selectedAccountTypeMeta.className
+                  }`}
+                >
+                  <SelectedAccountTypeIcon size={11} />
+                  {selectedAccountTypeMeta.label}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Plan: {selectedAccount.plan_name ?? "--"}
+              </p>
+            </div>
 
-      {activeTab !== "Fund History" && (
-        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-muted)]">
-          No data available for {activeTab}.
-        </div>
-      )}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Balance</p>
+                <p className="mt-1 font-semibold text-emerald-600">
+                  ${formatAmount(selectedAccount.balance)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Hold</p>
+                <p className="mt-1 font-semibold text-amber-600">
+                  ${formatAmount(selectedAccount.hold_balance)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Equity</p>
+                <p className="mt-1 font-semibold text-sky-600">
+                  ${formatAmount(selectedAccount.equity)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Status</p>
+                <p className="mt-1 font-semibold uppercase text-[var(--text-main)]">
+                  {selectedAccount.status ?? "--"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Leverage</p>
+                <p className="mt-1 font-semibold text-[var(--text-main)]">
+                  {selectedAccount.leverage ? `x${selectedAccount.leverage}` : "--"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Currency</p>
+                <p className="mt-1 font-semibold uppercase text-[var(--text-main)]">
+                  {selectedAccount.currency ?? "--"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title="Edit Account Settings"
+        open={accountEditOpen}
+        onClose={closeAccountEdit}
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeAccountEdit}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="edit-account-form"
+              disabled={updateAccountMutation.isPending || !selectedAccount}
+              className="rounded-md bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-dark)] disabled:opacity-60"
+            >
+              {updateAccountMutation.isPending ? "Updating..." : "Update Account"}
+            </button>
+          </div>
+        }
+      >
+        <form id="edit-account-form" onSubmit={handleAccountUpdateSubmit} className="space-y-4">
+          {accountFormError && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {accountFormError}
+            </div>
+          )}
+
+          {!selectedAccount ? (
+            <p className="text-sm text-[var(--text-muted)]">No account selected.</p>
+          ) : (
+            <>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3 text-sm">
+                <p className="font-mono font-semibold">
+                  {selectedAccount.account_number ?? selectedAccount._id}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Configure account trading parameters and status.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Leverage</label>
+                  <FieldControl icon={Rocket}>
+                    <input
+                      type="number"
+                      min={0}
+                      value={accountForm.leverage}
+                      onChange={handleAccountFormField("leverage")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Spread Enabled</label>
+                  <FieldControl icon={Globe}>
+                    <select
+                      value={accountForm.spread_enabled}
+                      onChange={handleAccountFormField("spread_enabled")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    >
+                      <option value="true">Enabled</option>
+                      <option value="false">Disabled</option>
+                    </select>
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Spread Pips</label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={accountForm.spread_pips}
+                      onChange={handleAccountFormField("spread_pips")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Commission Per Lot</label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={accountForm.commission_per_lot}
+                      onChange={handleAccountFormField("commission_per_lot")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Swap Enabled</label>
+                  <FieldControl icon={Globe}>
+                    <select
+                      value={accountForm.swap_enabled}
+                      onChange={handleAccountFormField("swap_enabled")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    >
+                      <option value="true">Enabled</option>
+                      <option value="false">Disabled</option>
+                    </select>
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Swap Charge</label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={accountForm.swap_charge}
+                      onChange={handleAccountFormField("swap_charge")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-medium text-[var(--text-muted)]">Status</label>
+                  <FieldControl icon={ShieldCheck}>
+                    <select
+                      value={accountForm.status}
+                      onChange={handleAccountFormField("status")}
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    >
+                      <option value="active">Active</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
+                  </FieldControl>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
 
       <Modal
         title="User Details"

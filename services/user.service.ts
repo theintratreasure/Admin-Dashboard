@@ -6,7 +6,11 @@ import type {
   UserListParams,
 } from "@/types/user";
 import type { AdminTransactionListResponse } from "@/types/transaction";
-import type { AdminAccountListResponse } from "@/types/account";
+import type {
+  AdminAccount,
+  AdminAccountListResponse,
+  AdminAccountUpdatePayload,
+} from "@/types/account";
 
 type ApiEnvelope<T> = {
   success?: boolean;
@@ -103,7 +107,7 @@ export async function fetchAdminUserTransactions(
   if (params.type) query.type = params.type;
   if (params.status) query.status = params.status;
   if (params.referenceId) query.referenceId = params.referenceId;
-  if (params.account) query.account = params.account;
+  if (params.account) query.accountId = params.account;
   if (params.sortBy) query.sortBy = params.sortBy;
   if (params.sortDir) query.sortDir = params.sortDir;
 
@@ -129,6 +133,18 @@ export async function fetchAdminUserAccounts(
   );
 
   return unwrapList<AdminAccountListResponse>(data);
+}
+
+export async function updateAdminUserAccount(
+  accountId: string,
+  payload: AdminAccountUpdatePayload
+): Promise<AdminAccount> {
+  const { data } = await api.patch<ApiEnvelope<AdminAccount>>(
+    `/accounts/admin/${accountId}`,
+    payload
+  );
+
+  return unwrapApi<AdminAccount>(data);
 }
 
 export async function changeAdminUserPassword(

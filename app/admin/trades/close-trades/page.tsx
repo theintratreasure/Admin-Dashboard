@@ -1,161 +1,906 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Calendar,
+  Clock3,
+  Coins,
+  Copy,
+  DollarSign,
+  Hash,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  User,
+  Wallet,
+} from "lucide-react";
+import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
+import Pagination from "@/app/admin/components/ui/pagination";
+import { useTradeAdminClosedTrades } from "@/hooks/useTradeAdminClosedTrades";
+import type {
+  TradeAdminClosedTrade,
+  TradeOrderKind,
+  TradeOrderType,
+  TradeSide,
+  TradeSortDir,
+  TradeTimeField,
+} from "@/services/tradeAdmin.service";
 
-const INITIAL_COLUMNS = {
-  id: true,
-  scrip: true,
-  segment: true,
-  userId: true,
-  buyRate: true,
-  sellRate: true,
-  lots: true,
-  profitLoss: true,
-  timeDiff: true,
-  boughtAt: true,
+type ClosedTradeFilters = {
+  userId: string;
+  accountId: string;
+  symbol: string;
+  positionId: string;
+  side: "" | TradeSide;
+  orderType: "" | TradeOrderType;
+  orderKind: "" | TradeOrderKind;
+  from: string;
+  to: string;
+  timeField: TradeTimeField;
+  sortBy: TradeTimeField;
+  sortDir: TradeSortDir;
 };
 
-type ColumnKey = keyof typeof INITIAL_COLUMNS;
+function getDefaultFromDate() {
+  const date = new Date();
+  date.setDate(date.getDate() - 7);
+  return date.toISOString().slice(0, 10);
+}
 
-export default function ClosedTrades() {
-  const [filter, setFilter] = useState("");
-  const [openMenu, setOpenMenu] = useState(false);
-  const [columns, setColumns] = useState(INITIAL_COLUMNS);
+function getDefaultToDate() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const toggleColumn = (key: ColumnKey) => {
-    setColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+function getDefaultFilters(): ClosedTradeFilters {
+  return {
+    userId: "",
+    accountId: "",
+    symbol: "",
+    positionId: "",
+    side: "",
+    orderType: "",
+    orderKind: "",
+    from: getDefaultFromDate(),
+    to: getDefaultToDate(),
+    timeField: "closeTime",
+    sortBy: "closeTime",
+    sortDir: "desc",
   };
+}
 
-  // Close dropdown if click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenu(false);
-      }
+function formatDateTime(value?: string) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatNumber(value?: number, digits = 2) {
+  if (value === undefined || value === null || Number.isNaN(value)) return "--";
+  return value.toLocaleString("en-IN", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatTradeDuration(openTime?: string, closeTime?: string) {
+  if (!openTime || !closeTime) return "--";
+  const openedAt = new Date(openTime).getTime();
+  const closedAt = new Date(closeTime).getTime();
+  if (Number.isNaN(openedAt) || Number.isNaN(closedAt) || closedAt < openedAt) {
+    return "--";
+  }
+
+  let totalSeconds = Math.floor((closedAt - openedAt) / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  totalSeconds %= 86400;
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds %= 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  parts.push(`${seconds}s`);
+  return parts.join(" ");
+}
+
+function getSideMeta(side?: string) {
+  const normalizedSide = (side ?? "").toUpperCase();
+
+  if (normalizedSide === "BUY") {
+    return {
+      label: "BUY",
+      Icon: ArrowUpRight,
+      className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700",
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }
 
-  const data: any[] = []; // Your future DB values here
+  if (normalizedSide === "SELL") {
+    return {
+      label: "SELL",
+      Icon: ArrowDownRight,
+      className: "border-rose-500/40 bg-rose-500/10 text-rose-700",
+    };
+  }
 
-  const filtered = data.filter(
-    (item) =>
-      item.scrip?.toLowerCase().includes(filter.toLowerCase()) ||
-      item.userId?.toLowerCase().includes(filter.toLowerCase())
+  return {
+    label: normalizedSide || "--",
+    Icon: Hash,
+    className: "border-slate-500/40 bg-slate-500/10 text-slate-700",
+  };
+}
+
+function getOrderTypeClass(orderType?: string) {
+  const normalized = (orderType ?? "").toUpperCase();
+  if (normalized === "MARKET")
+    return "border-violet-500/40 bg-violet-500/10 text-violet-700";
+  if (normalized.includes("LIMIT"))
+    return "border-sky-500/40 bg-sky-500/10 text-sky-700";
+  if (normalized.includes("STOP"))
+    return "border-amber-500/40 bg-amber-500/10 text-amber-700";
+  return "border-slate-500/40 bg-slate-500/10 text-slate-700";
+}
+
+export default function ClosedTradesPage() {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [copyToast, setCopyToast] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const [draftFilters, setDraftFilters] = useState<ClosedTradeFilters>(
+    getDefaultFilters
+  );
+  const [filters, setFilters] = useState<ClosedTradeFilters>(getDefaultFilters);
+
+  const closedTradesQuery = useTradeAdminClosedTrades({
+    page,
+    limit,
+    userId: filters.userId || undefined,
+    accountId: filters.accountId || undefined,
+    symbol: filters.symbol || undefined,
+    positionId: filters.positionId || undefined,
+    side: filters.side || undefined,
+    orderType: filters.orderType || undefined,
+    orderKind: filters.orderType ? undefined : filters.orderKind || undefined,
+    from: filters.from || undefined,
+    to: filters.to || undefined,
+    timeField: filters.timeField || undefined,
+    sortBy: filters.sortBy || filters.timeField || undefined,
+    sortDir: filters.sortDir || undefined,
+  });
+
+  const rows = useMemo(
+    () => closedTradesQuery.data?.data ?? [],
+    [closedTradesQuery.data?.data]
+  );
+  const pagination = closedTradesQuery.data?.pagination;
+  const total = pagination?.total ?? rows.length;
+  const totalPages =
+    pagination?.totalPages ?? Math.max(1, Math.ceil(total / Math.max(limit, 1)));
+
+  const summary = useMemo(
+    () =>
+      rows.reduce(
+        (acc, row) => ({
+          spread: acc.spread + (row.spread ?? 0),
+          commission: acc.commission + (row.commission ?? 0),
+          swap: acc.swap + (row.swap ?? 0),
+          realizedPnL: acc.realizedPnL + (row.realizedPnL ?? 0),
+        }),
+        { spread: 0, commission: 0, swap: 0, realizedPnL: 0 }
+      ),
+    [rows]
   );
 
+  const applyFilters = () => {
+    setFilters({
+      ...draftFilters,
+      symbol: draftFilters.symbol.trim().toUpperCase(),
+      userId: draftFilters.userId.trim(),
+      accountId: draftFilters.accountId.trim(),
+      positionId: draftFilters.positionId.trim(),
+    });
+    setPage(1);
+  };
+
+  const resetFilters = () => {
+    const next = getDefaultFilters();
+    setDraftFilters(next);
+    setFilters(next);
+    setPage(1);
+  };
+
+  const handleCopy = async (value: string, label: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyToast(`${label} copied`);
+      setTimeout(() => setCopyToast(""), 1800);
+    } catch {
+      setCopyToast("Copy failed");
+      setTimeout(() => setCopyToast(""), 1800);
+    }
+  };
+
   return (
-    <div className="p-6 space-y-6 text-[var(--foreground)]">
-      {/* PAGE TITLE */}
-      <h1 className="text-2xl font-semibold">Closed Trades</h1>
+    <div className="container-pad max-w-full space-y-4 text-[var(--foreground)] sm:space-y-5">
+      <div className="rounded-2xl border border-[var(--card-border)] bg-gradient-to-br from-[var(--card-bg)] via-[var(--card-bg)] to-sky-500/5 p-4 sm:p-5">
+        <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+          <Sparkles size={12} />
+          Trade Analytics
+        </div>
+        <h1 className="mt-2 text-xl font-semibold sm:text-2xl">Closed Trades</h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          Filter by user, account, symbol, side, order type, and date range.
+        </p>
 
-      {/* FILTER + VIEW MENU */}
-      <div className="flex justify-between items-center flex-wrap gap-3">
-        <input
-          placeholder="Filter..."
-          onChange={(e) => setFilter(e.target.value)}
-          className="bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md p-3 w-full sm:w-64 outline-none"
-        />
+        <button
+          type="button"
+          onClick={() => setMobileFiltersOpen((prev) => !prev)}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)] md:hidden"
+        >
+          <SlidersHorizontal size={14} />
+          {mobileFiltersOpen ? "Hide Filters" : "Show Filters"}
+        </button>
 
-        {/* DROPDOWN WRAPPER */}
-        <div className="relative ml-auto" ref={menuRef}>
+        <div
+          className={`mt-4 grid grid-cols-1 gap-3 md:grid md:grid-cols-2 xl:grid-cols-4 ${
+            mobileFiltersOpen ? "grid" : "hidden md:grid"
+          }`}
+        >
+          <InputField
+            icon={<User size={14} />}
+            placeholder="User ID"
+            value={draftFilters.userId}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, userId: value }))
+            }
+          />
+          <InputField
+            icon={<Wallet size={14} />}
+            placeholder="Account ID"
+            value={draftFilters.accountId}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, accountId: value }))
+            }
+          />
+          <InputField
+            icon={<Search size={14} />}
+            placeholder="Symbol (e.g. BTCUSD)"
+            value={draftFilters.symbol}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, symbol: value }))
+            }
+          />
+          <InputField
+            icon={<Hash size={14} />}
+            placeholder="Position ID"
+            value={draftFilters.positionId}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, positionId: value }))
+            }
+          />
+
+          <SelectField
+            icon={<ArrowUpRight size={13} />}
+            value={draftFilters.side}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                side: value as ClosedTradeFilters["side"],
+              }))
+            }
+            options={[
+              { value: "", label: "All Side" },
+              { value: "BUY", label: "BUY" },
+              { value: "SELL", label: "SELL" },
+            ]}
+          />
+          <SelectField
+            icon={<BarChart3 size={13} />}
+            value={draftFilters.orderType}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                orderType: value as ClosedTradeFilters["orderType"],
+              }))
+            }
+            options={[
+              { value: "", label: "All Order Type" },
+              { value: "MARKET", label: "MARKET" },
+              { value: "BUY_LIMIT", label: "BUY_LIMIT" },
+              { value: "SELL_LIMIT", label: "SELL_LIMIT" },
+              { value: "BUY_STOP", label: "BUY_STOP" },
+              { value: "SELL_STOP", label: "SELL_STOP" },
+            ]}
+          />
+          <SelectField
+            icon={<SlidersHorizontal size={13} />}
+            value={draftFilters.orderKind}
+            disabled={Boolean(draftFilters.orderType)}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                orderKind: value as ClosedTradeFilters["orderKind"],
+              }))
+            }
+            options={[
+              { value: "", label: "All Order Kind" },
+              { value: "MARKET", label: "MARKET" },
+              { value: "LIMIT", label: "LIMIT" },
+              { value: "STOP", label: "STOP" },
+            ]}
+          />
+          <SelectField
+            icon={<Calendar size={13} />}
+            value={draftFilters.timeField}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                timeField: value as ClosedTradeFilters["timeField"],
+              }))
+            }
+            options={[
+              { value: "closeTime", label: "timeField: closeTime" },
+              { value: "openTime", label: "timeField: openTime" },
+              { value: "createdAt", label: "timeField: createdAt" },
+            ]}
+          />
+
+          <InputField
+            icon={<Calendar size={14} />}
+            type="date"
+            value={draftFilters.from}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, from: value }))
+            }
+          />
+          <InputField
+            icon={<Calendar size={14} />}
+            type="date"
+            value={draftFilters.to}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({ ...prev, to: value }))
+            }
+          />
+          <SelectField
+            icon={<Calendar size={13} />}
+            value={draftFilters.sortBy}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                sortBy: value as ClosedTradeFilters["sortBy"],
+              }))
+            }
+            options={[
+              { value: "closeTime", label: "sortBy: closeTime" },
+              { value: "openTime", label: "sortBy: openTime" },
+              { value: "createdAt", label: "sortBy: createdAt" },
+            ]}
+          />
+          <SelectField
+            icon={<SlidersHorizontal size={13} />}
+            value={draftFilters.sortDir}
+            onChange={(value) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                sortDir: value as ClosedTradeFilters["sortDir"],
+              }))
+            }
+            options={[
+              { value: "desc", label: "sortDir: desc" },
+              { value: "asc", label: "sortDir: asc" },
+            ]}
+          />
+        </div>
+
+        <div
+          className={`mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center ${
+            mobileFiltersOpen ? "grid" : "hidden md:flex"
+          }`}
+        >
           <button
-            onClick={() => setOpenMenu(!openMenu)}
-            className="flex items-center gap-2 bg-[var(--card-bg)] 
-            border border-[var(--card-border)] px-4 py-2 rounded-md 
-            hover:bg-[var(--hover-bg)] transition"
+            type="button"
+            onClick={applyFilters}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-1)] hover:bg-[var(--primary-dark)] sm:w-auto"
           >
-            <SlidersHorizontal size={16} /> View
+            <SlidersHorizontal size={14} />
+            Apply Filters
           </button>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)] sm:w-auto"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
 
-          {openMenu && (
-            <div
-              className="absolute right-0 top-full mt-2 w-56 bg-[var(--card-bg)]
-              border border-[var(--card-border)] rounded-md shadow-xl p-3 
-              z-[9999]"
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <MetricCard
+          label="Records"
+          value={String(total)}
+          icon={<Hash size={13} />}
+          tone="slate"
+        />
+        <MetricCard
+          label="Spread Total"
+          value={formatNumber(summary.spread, 4)}
+          icon={<BarChart3 size={13} />}
+          tone="sky"
+        />
+        <MetricCard
+          label="Commission Total"
+          value={formatNumber(summary.commission, 4)}
+          icon={<DollarSign size={13} />}
+          tone="violet"
+        />
+        <MetricCard
+          label="Swap Total"
+          value={formatNumber(summary.swap, 4)}
+          icon={<Coins size={13} />}
+          tone="amber"
+        />
+        <MetricCard
+          label="Realized PnL"
+          value={formatNumber(summary.realizedPnL)}
+          icon={<DollarSign size={13} />}
+          tone={summary.realizedPnL >= 0 ? "emerald" : "rose"}
+          valueClassName={
+            summary.realizedPnL >= 0 ? "text-emerald-600" : "text-rose-600"
+          }
+        />
+      </div>
+
+      <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4 sm:p-5">
+        {closedTradesQuery.isLoading ? (
+          <div className="py-8">
+            <GlobalLoader />
+          </div>
+        ) : closedTradesQuery.isError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
+            Failed to load closed trades.
+            <button
+              type="button"
+              onClick={() => closedTradesQuery.refetch()}
+              className="ml-3 rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-red-100"
             >
-              <p className="text-[var(--text-muted)] text-sm mb-2">
-                Toggle Columns
-              </p>
+              Retry
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-10 text-center text-sm text-[var(--text-muted)]">
+            No closed trades found for selected filters.
+          </div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[1500px] w-full text-left text-sm">
+                <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
+                  <tr>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <BarChart3 size={12} /> Symbol
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <ArrowUpRight size={12} /> Side
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <SlidersHorizontal size={12} /> Order Type
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Hash size={12} /> Volume
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <DollarSign size={12} /> Open Price
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <DollarSign size={12} /> Close Price
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Coins size={12} /> Spread
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Coins size={12} /> Commission
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Coins size={12} /> Swap
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <DollarSign size={12} /> Realized PnL
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar size={12} /> Open Time
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar size={12} /> Close Time
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 size={12} /> Duration
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <User size={12} /> User ID
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Wallet size={12} /> Account ID
+                      </span>
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Hash size={12} /> Position ID
+                      </span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((trade) => (
+                    <tr
+                      key={trade._id}
+                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold">{trade.symbol || "--"}</td>
+                      <td className="px-4 py-3">
+                        <SideBadge side={trade.side} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <OrderTypeBadge orderType={trade.orderType} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.volume, 4)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.openPrice, 5)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.closePrice, 5)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.spread, 4)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.commission, 4)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatNumber(trade.swap, 4)}</td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 font-semibold ${
+                          (trade.realizedPnL ?? 0) >= 0
+                            ? "text-emerald-600"
+                            : "text-rose-600"
+                        }`}
+                      >
+                        {formatNumber(trade.realizedPnL)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {formatDateTime(trade.openTime)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {formatDateTime(trade.closeTime)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs font-semibold text-sky-700">
+                        {formatTradeDuration(trade.openTime, trade.closeTime)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                        <div className="inline-flex items-center gap-1.5">
+                          {trade.userId}
+                          <CopyBtn
+                            onClick={() => handleCopy(trade.userId, "User ID")}
+                          />
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                        <div className="inline-flex items-center gap-1.5">
+                          {trade.accountId}
+                          <CopyBtn
+                            onClick={() => handleCopy(trade.accountId, "Account ID")}
+                          />
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                        <div className="inline-flex items-center gap-1.5">
+                          {trade.positionId}
+                          <CopyBtn
+                            onClick={() => handleCopy(trade.positionId, "Position ID")}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-              {Object.keys(columns).map((col) => (
-                <label
-                  key={col}
-                  className="flex items-center gap-2 cursor-pointer py-1 text-sm hover:text-[var(--primary)]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={columns[col as ColumnKey]}
-                    onChange={() => toggleColumn(col as ColumnKey)}
-                    className="accent-[var(--primary)]"
-                  />
-                  {col.charAt(0).toUpperCase() + col.slice(1)}
-                </label>
+            <div className="space-y-3 md:hidden">
+              {rows.map((trade) => (
+                <MobileTradeCard
+                  key={`mobile-${trade._id}`}
+                  trade={trade}
+                  onCopy={handleCopy}
+                />
               ))}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
-      {/* TABLE */}
-      <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 overflow-x-auto text-sm">
-        <table className="w-full min-w-[900px]">
-          <thead className="bg-[var(--input-bg)] border-b text-[var(--text-muted)]">
-            <tr>
-              {columns.id && <th className="p-3 text-left">ID</th>}
-              {columns.scrip && <th className="p-3 text-left">Scrip</th>}
-              {columns.segment && <th className="p-3 text-left">Segment</th>}
-              {columns.userId && <th className="p-3 text-left">User ID</th>}
-              {columns.buyRate && <th className="p-3 text-left">Avg Buy Rate</th>}
-              {columns.sellRate && <th className="p-3 text-left">Avg Sell Rate</th>}
-              {columns.lots && <th className="p-3 text-left">Lots</th>}
-              {columns.profitLoss && <th className="p-3 text-left">Profit/Loss</th>}
-              {columns.timeDiff && <th className="p-3 text-left">Time Diff</th>}
-              {columns.boughtAt && <th className="p-3 text-left">Bought At</th>}
-            </tr>
-          </thead>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(nextLimit) => {
+          setLimit(nextLimit);
+          setPage(1);
+        }}
+      />
 
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  className="text-center py-10 text-[var(--text-muted)]"
-                  colSpan={Object.values(columns).filter(Boolean).length}
-                >
-                  No results.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-
-      {/* PAGINATION */}
-      <div className="flex justify-between mt-4 flex-wrap gap-4 text-[var(--text-muted)]">
-        <div className="flex items-center gap-3">
-          <select className="bg-[var(--card-bg)] border border-[var(--card-border)] px-3 py-2 rounded-md">
-            <option>10</option>
-            <option>25</option>
-            <option>50</option>
-          </select>
-          Rows per page
+      {copyToast ? (
+        <div className="fixed bottom-5 right-5 z-50 rounded-md bg-[var(--foreground)] px-3 py-1.5 text-xs font-semibold text-white shadow-lg">
+          {copyToast}
         </div>
-
-        <div className="flex items-center gap-2">
-          Page 1 of 1
-          <button className="px-3 py-1 border rounded-md">{`<<`}</button>
-          <button className="px-3 py-1 border rounded-md">{`<`}</button>
-          <button className="px-3 py-1 bg-[var(--primary)] text-black rounded-md">
-            1
-          </button>
-          <button className="px-3 py-1 border rounded-md">{`>`}</button>
-          <button className="px-3 py-1 border rounded-md">{`>>`}</button>
-        </div>
-      </div>
+      ) : null}
     </div>
+  );
+}
+
+function InputField({
+  value,
+  onChange,
+  placeholder = "",
+  type = "text",
+  icon,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: "text" | "date";
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {icon ? (
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+          {icon}
+        </span>
+      ) : null}
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className={`w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-[var(--primary)]/20 sm:text-sm ${
+          icon ? "pl-9" : "pl-3"
+        }`}
+      />
+    </div>
+  );
+}
+
+function SelectField({
+  value,
+  onChange,
+  options,
+  disabled = false,
+  icon,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {icon ? (
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+          {icon}
+        </span>
+      ) : null}
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className={`w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm ${
+          icon ? "pl-9" : "pl-3"
+        }`}
+      >
+        {options.map((option) => (
+          <option key={option.value || option.label} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  icon,
+  tone,
+  valueClassName = "",
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tone: "slate" | "sky" | "violet" | "amber" | "emerald" | "rose";
+  valueClassName?: string;
+}) {
+  const toneClasses: Record<typeof tone, string> = {
+    slate: "border-slate-400/30 bg-slate-500/[0.04]",
+    sky: "border-sky-400/30 bg-sky-500/[0.05]",
+    violet: "border-violet-400/30 bg-violet-500/[0.05]",
+    amber: "border-amber-400/30 bg-amber-500/[0.05]",
+    emerald: "border-emerald-400/30 bg-emerald-500/[0.05]",
+    rose: "border-rose-400/30 bg-rose-500/[0.05]",
+  };
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClasses[tone]}`}>
+      <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        {label}
+      </p>
+      <div className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--card-bg)] text-[var(--text-muted)]">
+        {icon}
+      </div>
+      <p className={`mt-1 text-lg font-semibold text-[var(--foreground)] ${valueClassName}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function MobileTradeCard({
+  trade,
+  onCopy,
+}: {
+  trade: TradeAdminClosedTrade;
+  onCopy: (value: string, label: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--card-border)] bg-gradient-to-br from-[var(--input-bg)] via-[var(--input-bg)] to-sky-500/[0.04] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="inline-flex items-center gap-1 text-sm font-semibold">
+          <BarChart3 size={14} className="text-sky-600" />
+          {trade.symbol || "--"}
+        </p>
+        <SideBadge side={trade.side} />
+      </div>
+
+      <div className="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+        <SmallField label="Order" value={trade.orderType || "--"} />
+        <SmallField label="Volume" value={formatNumber(trade.volume, 4)} />
+        <SmallField label="Open" value={formatNumber(trade.openPrice, 5)} />
+        <SmallField label="Close" value={formatNumber(trade.closePrice, 5)} />
+        <SmallField label="Spread" value={formatNumber(trade.spread, 4)} />
+        <SmallField label="Commission" value={formatNumber(trade.commission, 4)} />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between text-xs">
+        <span className="text-[var(--text-muted)]">Realized PnL</span>
+        <span
+          className={`font-semibold ${
+            (trade.realizedPnL ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"
+          }`}
+        >
+          {formatNumber(trade.realizedPnL)}
+        </span>
+      </div>
+
+      <p className="mt-2 flex items-start gap-1 text-[11px] text-[var(--text-muted)]">
+        <span className="break-all">User: {trade.userId}</span>
+        <CopyBtn onClick={() => onCopy(trade.userId, "User ID")} />
+      </p>
+      <p className="flex items-start gap-1 text-[11px] text-[var(--text-muted)]">
+        <span className="break-all">Account: {trade.accountId}</span>
+        <CopyBtn onClick={() => onCopy(trade.accountId, "Account ID")} />
+      </p>
+      <p className="flex items-start gap-1 text-[11px] text-[var(--text-muted)]">
+        <span className="break-all">Position: {trade.positionId}</span>
+        <CopyBtn onClick={() => onCopy(trade.positionId, "Position ID")} />
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <Calendar size={11} />
+          Open: {formatDateTime(trade.openTime)}
+        </span>
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <Calendar size={11} />
+          Close: {formatDateTime(trade.closeTime)}
+        </span>
+      </p>
+      <p className="mt-1 text-[11px] font-semibold text-sky-700">
+        <span className="inline-flex items-center gap-1">
+          <Clock3 size={11} />
+          Duration: {formatTradeDuration(trade.openTime, trade.closeTime)}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function SmallField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-2 py-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xs font-semibold text-[var(--foreground)]">{value}</p>
+    </div>
+  );
+}
+
+function SideBadge({ side }: { side?: string }) {
+  const meta = getSideMeta(side);
+  const Icon = meta.Icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${meta.className}`}
+    >
+      <Icon size={11} />
+      {meta.label}
+    </span>
+  );
+}
+
+function OrderTypeBadge({ orderType }: { orderType?: string }) {
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getOrderTypeClass(
+        orderType
+      )}`}
+    >
+      {orderType || "--"}
+    </span>
+  );
+}
+
+function CopyBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+      aria-label="Copy value"
+      title="Copy"
+    >
+      <Copy size={10} />
+    </button>
   );
 }

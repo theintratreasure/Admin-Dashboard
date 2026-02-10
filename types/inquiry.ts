@@ -9,6 +9,7 @@ export type Inquiry = {
   description: string;
   ip: string;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type GetInquiryResponse = {

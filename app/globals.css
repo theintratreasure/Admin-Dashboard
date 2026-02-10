@@ -125,6 +125,16 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+/* page-level shadow reset */
+.no-shadow,
+.no-shadow *,
+.no-shadow *::before,
+.no-shadow *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
 /* horizontal container spacing helper */
 .container-pad { padding: 18px; }
 
@@ -195,6 +205,7 @@ body {
   border-bottom: 1px solid var(--card-border);
   color: var(--foreground);
 }
+
 
 .table tbody tr:hover {
   background: var(--card-bg);

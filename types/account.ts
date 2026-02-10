@@ -21,6 +21,16 @@ export type AdminAccount = {
   updatedAt?: string;
 };
 
+export type AdminAccountUpdatePayload = {
+  leverage: number;
+  spread_enabled: boolean;
+  spread_pips: number;
+  commission_per_lot: number;
+  swap_enabled: boolean;
+  swap_charge: number;
+  status: "active" | "disabled";
+};
+
 export type AdminAccountPagination = {
   page: number;
   limit: number;

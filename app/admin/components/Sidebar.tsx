@@ -22,8 +22,6 @@ import {
   Wallet,
   FileText,
   UserCheck,
-  CalendarDays,
-  HeartPlusIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -74,6 +72,11 @@ const navSections: {
             { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
             { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
             { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
+            {
+              href: "/admin/trades/brokerage-commission",
+              label: "Brokerage & Commission",
+              icon: <DollarSign size={14} />,
+            },
           ],
         },
         { href: "/admin/account-plan", label: "Account Plans", icon: <Gift size={18} /> },
@@ -108,13 +111,11 @@ const navSections: {
           icon: <CreditCard size={18} />,
           children: [
             { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <DollarSign size={14} /> },
-            { href: "/admin/transactions/deposit-request", label: "Deposit Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
-            { href: "/admin/transactions/all-deposit", label: "All Deposits", icon: <FileText size={14} /> },
+            { href: "/admin/transactions/all-deposit", label: "Deposit Requests", icon: <FileText size={14} /> },
           ],
         },
         { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
-        { href: "/admin/holidays", label: "Market Holidays", icon: <CalendarDays size={18} /> }, // ✅ ADDED
       ],
     },
     {
@@ -122,7 +123,6 @@ const navSections: {
       items: [
         { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
         { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
-        { href: "/admin/health", label: "Health", icon: <HeartPlusIcon size={18} /> },
         { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
         {
           label: "Admin Config",
@@ -132,7 +132,13 @@ const navSections: {
         {
           label: "Account Security",
           icon: <Lock size={18} />,
-          children: [{ href: "/admin/account-security/change-password", label: "Change Password", icon: <Lock size={14} /> }],
+          children: [
+            {
+              href: "/admin/account-security/change-login-password",
+              label: "Reset Admin Password",
+              icon: <Lock size={14} />,
+            },
+          ],
         },
       ],
     },
@@ -352,7 +358,7 @@ export default function AdminSidebar() {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 420, damping: 35 }} // 🚀 FAST
+              transition={{ type: "spring", stiffness: 420, damping: 35 }} // ðŸš€ FAST
               className="fixed inset-y-0 left-0 z-[1200] w-[260px] bg-[var(--card-bg)]"
             >
               <SidebarInner />
