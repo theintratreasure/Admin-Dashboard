@@ -89,8 +89,7 @@ export default function ChangeLoginPasswordPage() {
       { userId: adminId, newPassword: password },
       {
         onSuccess: (response) => {
-          const message =
-            response?.message || response?.data?.message || "Password reset successfully.";
+          const message = response?.message || "Password reset successfully.";
           setToast(message);
           setNewPassword("");
           setConfirmPassword("");

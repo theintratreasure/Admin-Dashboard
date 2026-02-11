@@ -426,7 +426,7 @@ export default function AllDeposit() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelected(d);
-                              setEditAmount(d.amount);
+                              setEditAmount(d.amount ?? 0);
                               setEditOpen(true);
                             }}
                             className="p-2 text-[var(--primary)]"

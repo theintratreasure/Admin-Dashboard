@@ -22,6 +22,7 @@ import {
   Wallet,
   FileText,
   UserCheck,
+  Clock3,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -71,6 +72,7 @@ const navSections: {
           children: [
             { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
             { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
+            { href: "/admin/trades/pending-orders", label: "Pending Orders", icon: <Clock3 size={14} /> },
             { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
             {
               href: "/admin/trades/brokerage-commission",

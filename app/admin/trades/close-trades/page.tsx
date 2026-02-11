@@ -86,6 +86,16 @@ function formatDateTime(value?: string) {
   });
 }
 
+function normalizeDateTime(value: string, kind: "start" | "end") {
+  if (!value) return value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return kind === "start"
+      ? `${value}T00:00:00.000Z`
+      : `${value}T23:59:59.999Z`;
+  }
+  return value;
+}
+
 function formatNumber(value?: number, digits = 2) {
   if (value === undefined || value === null || Number.isNaN(value)) return "--";
   return value.toLocaleString("en-IN", {
@@ -176,8 +186,8 @@ export default function ClosedTradesPage() {
     side: filters.side || undefined,
     orderType: filters.orderType || undefined,
     orderKind: filters.orderType ? undefined : filters.orderKind || undefined,
-    from: filters.from || undefined,
-    to: filters.to || undefined,
+    from: filters.from ? normalizeDateTime(filters.from, "start") : undefined,
+    to: filters.to ? normalizeDateTime(filters.to, "end") : undefined,
     timeField: filters.timeField || undefined,
     sortBy: filters.sortBy || filters.timeField || undefined,
     sortDir: filters.sortDir || undefined,

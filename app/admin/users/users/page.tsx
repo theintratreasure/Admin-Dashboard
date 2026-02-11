@@ -1,7 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, MoreVertical, Eye, Search, ShieldCheck, Mail, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Plus,
+  Search,
+  ShieldCheck,
+  Mail,
+  ChevronDown,
+  Sparkles,
+  Users,
+  Clock3,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Pagination from "../../components/ui/pagination";
 import GlobalLoader from "../../components/ui/GlobalLoader";
@@ -39,7 +49,6 @@ export default function UsersPage() {
   const [mailVerified, setMailVerified] = useState<MailFilter>("ALL");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);
 
   const kycOptions: Array<{ value: KycFilter; label: string; dot: string }> = [
@@ -72,9 +81,7 @@ export default function UsersPage() {
   useEffect(() => {
     const onClick = (event: Event) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-user-actions]")) return;
       if (target?.closest("[data-filter]")) return;
-      setOpenMenuId(null);
       setOpenFilter(null);
     };
 
@@ -102,45 +109,84 @@ export default function UsersPage() {
   const isInitialLoading = listQuery.isLoading && !listQuery.data;
   const isUpdating = listQuery.isFetching && !isInitialLoading;
 
+  const summary = useMemo(
+    () =>
+      users.reduce(
+        (acc, user) => {
+          if (user.kycStatus === "VERIFIED") acc.kycVerified += 1;
+          else if (user.kycStatus === "PENDING") acc.kycPending += 1;
+          else if (user.kycStatus === "REJECTED") acc.kycRejected += 1;
+          else if (user.kycStatus === "NOT_STARTED") acc.kycNotStarted += 1;
+          if (user.isMailVerified) acc.mailVerified += 1;
+          else acc.mailUnverified += 1;
+          return acc;
+        },
+        {
+          kycVerified: 0,
+          kycPending: 0,
+          kycRejected: 0,
+          kycNotStarted: 0,
+          mailVerified: 0,
+          mailUnverified: 0,
+        }
+      ),
+    [users]
+  );
+
+  const navigateToUser = (user: AdminUser) => {
+    const params = new URLSearchParams({
+      name: user.name ?? "",
+      email: user.email ?? "",
+      phone: user.phone ?? "",
+      kycStatus: user.kycStatus ?? "",
+      isMailVerified: String(Boolean(user.isMailVerified)),
+    });
+    router.push(`/admin/users/users/view/${user._id}?${params.toString()}`);
+  };
+
   return (
-    <div className="container-pad space-y-4 max-w-6xl text-[var(--foreground)]">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-2xl font-semibold">Users</h1>
-          <p className="text-xs sm:text-sm text-[var(--text-muted)]">
-            Manage users, verification, and KYC status
-          </p>
+    <div className="container-pad space-y-4 max-w-full text-[var(--foreground)] sm:space-y-5">
+      <div className="rounded-2xl border border-[var(--card-border)] bg-gradient-to-br from-[var(--card-bg)] via-[var(--card-bg)] to-sky-500/5 p-4 sm:p-5">
+        <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+          <Sparkles size={12} />
+          User Directory
         </div>
 
-        <button
-          onClick={() => router.push("/admin/users/users/clients")}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--card-border)]
-                     bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-main)]
-                     hover:bg-[var(--hover-bg)] w-full sm:w-auto"
-        >
-          <Plus size={16} /> Create User
-        </button>
-      </div>
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold">Users</h1>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+              Manage users, verification, and KYC status
+            </p>
+          </div>
 
-      {/* FILTERS */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-2">
-        <div className="flex-1 relative">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-          />
-          <input
-            placeholder="Search by name, email or phone..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)]
-                       pl-9 pr-3 py-2 text-sm text-[var(--foreground)]
-                       focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
-          />
+          <button
+            onClick={() => router.push("/admin/users/users/clients")}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--card-border)]
+                       bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-main)]
+                       hover:bg-[var(--hover-bg)] w-full sm:w-auto"
+          >
+            <Plus size={16} /> Create User
+          </button>
         </div>
 
-        <div className="relative w-full sm:w-[200px]" data-filter>
+        <div className="mt-4 flex flex-col lg:flex-row lg:items-center gap-2">
+          <div className="flex-1 relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+            />
+            <input
+              placeholder="Search by name, email or phone..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)]
+                         pl-9 pr-3 py-2 text-sm text-[var(--foreground)]
+                         focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+            />
+          </div>
+
+          <div className="relative w-full sm:w-[200px]" data-filter>
           <button
             type="button"
             onClick={() =>
@@ -194,7 +240,7 @@ export default function UsersPage() {
           )}
         </div>
 
-        <div className="relative w-full sm:w-[200px]" data-filter>
+          <div className="relative w-full sm:w-[200px]" data-filter>
           <button
             type="button"
             onClick={() =>
@@ -243,6 +289,51 @@ export default function UsersPage() {
             </div>
           )}
         </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+        <span>Counts based on current page results</span>
+        <span>Total users: {total}</span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <MetricCard
+          label="Total Users"
+          value={String(total)}
+          icon={<Users size={13} />}
+          tone="slate"
+        />
+        <MetricCard
+          label="KYC Verified"
+          value={String(summary.kycVerified)}
+          icon={<ShieldCheck size={13} />}
+          tone="emerald"
+        />
+        <MetricCard
+          label="KYC Pending"
+          value={String(summary.kycPending)}
+          icon={<Clock3 size={13} />}
+          tone="amber"
+        />
+        <MetricCard
+          label="KYC Rejected"
+          value={String(summary.kycRejected)}
+          icon={<XCircle size={13} />}
+          tone="rose"
+        />
+        <MetricCard
+          label="Mail Verified"
+          value={String(summary.mailVerified)}
+          icon={<Mail size={13} />}
+          tone="sky"
+        />
+        <MetricCard
+          label="Mail Unverified"
+          value={String(summary.mailUnverified)}
+          icon={<Mail size={13} />}
+          tone="violet"
+        />
       </div>
 
       {/* TABLE */}
@@ -272,25 +363,24 @@ export default function UsersPage() {
                 <th className="px-4 py-3">Mail</th>
                 <th className="px-4 py-3">KYC</th>
                 <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {isInitialLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center">
+                  <td colSpan={8} className="py-10 text-center">
                     <GlobalLoader />
                   </td>
                 </tr>
               ) : listQuery.isError ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-sm text-[var(--danger)]">
+                  <td colSpan={8} className="py-10 text-center text-sm text-[var(--danger)]">
                     Failed to load users. Please try again.
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-sm text-[var(--text-muted)]">
+                  <td colSpan={8} className="py-10 text-center text-sm text-[var(--text-muted)]">
                     No users found.
                   </td>
                 </tr>
@@ -298,7 +388,16 @@ export default function UsersPage() {
                 users.map((u: AdminUser, idx: number) => (
                   <tr
                     key={u._id}
-                    className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)] duration-150"
+                    className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)] duration-150 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigateToUser(u)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigateToUser(u);
+                      }
+                    }}
                   >
                     <td className="px-4 py-3 text-[var(--text-muted)]">
                       {(page - 1) * limit + idx + 1}
@@ -336,43 +435,6 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="relative inline-flex" data-user-actions>
-                        <button
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--hover-bg)]"
-                          aria-label="Row actions"
-                          onClick={() =>
-                            setOpenMenuId((prev) => (prev === u._id ? null : u._id))
-                          }
-                        >
-                          <MoreVertical size={14} />
-                        </button>
-
-                        {openMenuId === u._id && (
-                          <div className="absolute right-0 top-8 w-28 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] shadow-lg z-20">
-                            <button
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-[var(--hover-bg)] flex items-center justify-between"
-                              onClick={() => {
-                                const params = new URLSearchParams({
-                                  name: u.name ?? "",
-                                  email: u.email ?? "",
-                                  phone: u.phone ?? "",
-                                  kycStatus: u.kycStatus ?? "",
-                                  isMailVerified: String(Boolean(u.isMailVerified)),
-                                });
-                                router.push(
-                                  `/admin/users/users/view/${u._id}?${params.toString()}`
-                                );
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <span>View</span>
-                              <Eye size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 ))
               )}
@@ -392,6 +454,41 @@ export default function UsersPage() {
           setPage(1);
         }}
       />
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tone: "slate" | "sky" | "violet" | "amber" | "emerald" | "rose";
+}) {
+  const toneClasses: Record<typeof tone, string> = {
+    slate: "border-slate-400/30 bg-slate-500/[0.04]",
+    sky: "border-sky-400/30 bg-sky-500/[0.05]",
+    violet: "border-violet-400/30 bg-violet-500/[0.05]",
+    amber: "border-amber-400/30 bg-amber-500/[0.05]",
+    emerald: "border-emerald-400/30 bg-emerald-500/[0.05]",
+    rose: "border-rose-400/30 bg-rose-500/[0.05]",
+  };
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClasses[tone]}`}>
+      <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        {label}
+      </p>
+      <div className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--card-bg)] text-[var(--text-muted)]">
+        {icon}
+      </div>
+      <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+        {value}
+      </p>
     </div>
   );
 }
