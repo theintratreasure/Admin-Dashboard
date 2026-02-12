@@ -14,9 +14,11 @@ import {
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
+  ArrowLeftRight,
   ChevronLeft,
   ChevronDown,
   Download,
+  DollarSign,
   Eye,
   EyeOff,
   FlaskConical,
@@ -50,6 +52,7 @@ import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 import { useUpdateAdminUser } from "@/hooks/useUpdateAdminUser";
 import { useChangeAdminUserPassword } from "@/hooks/useChangeAdminUserPassword";
 import { useUpdateAdminUserAccount } from "@/hooks/useUpdateAdminUserAccount";
+import { useAdminInternalTransfer } from "@/hooks/useAdminInternalTransfer";
 import {
   useResetAccountTradePassword,
   useResetAccountWatchPassword,
@@ -349,6 +352,7 @@ export default function UserViewPage() {
   const updateMutation = useUpdateAdminUser();
   const changePasswordMutation = useChangeAdminUserPassword();
   const updateAccountMutation = useUpdateAdminUserAccount();
+  const internalTransferMutation = useAdminInternalTransfer();
   const resetTradePasswordMutation = useResetAccountTradePassword();
   const resetWatchPasswordMutation = useResetAccountWatchPassword();
   const modifyPendingMutation = useTradeAdminModifyPendingOrder();
@@ -361,7 +365,7 @@ export default function UserViewPage() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [accountViewOpen, setAccountViewOpen] = useState(false);
   const [accountEditOpen, setAccountEditOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<AdminAccount | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [accountFormError, setAccountFormError] = useState("");
   const [accountForm, setAccountForm] = useState<AccountEditForm>({
     leverage: "0",
@@ -480,6 +484,11 @@ export default function UserViewPage() {
   const [showAccountPasswordConfirm, setShowAccountPasswordConfirm] =
     useState(false);
   const [accountPasswordError, setAccountPasswordError] = useState("");
+  const [internalTransferOpen, setInternalTransferOpen] = useState(false);
+  const [internalTransferFrom, setInternalTransferFrom] = useState("");
+  const [internalTransferTo, setInternalTransferTo] = useState("");
+  const [internalTransferAmount, setInternalTransferAmount] = useState("");
+  const [internalTransferError, setInternalTransferError] = useState("");
 
   const profileFromParams = useMemo(() => {
     const name = searchParams.get("name") ?? "";
@@ -500,15 +509,19 @@ export default function UserViewPage() {
     kycStatus: profile.kycStatus ?? "NOT_STARTED",
   };
 
-	  const accountsQuery = useAdminUserAccounts({
-	    userId,
-	    page: 1,
-	    limit: 50,
-	  });
+  const accountsQuery = useAdminUserAccounts({
+    userId,
+    page: 1,
+    limit: 50,
+  });
   const accountList = useMemo(
     () => accountsQuery.data?.data ?? [],
     [accountsQuery.data?.data]
   );
+  const selectedAccount = useMemo(() => {
+    if (!selectedAccountId) return null;
+    return accountList.find((account) => account._id === selectedAccountId) ?? null;
+  }, [accountList, selectedAccountId]);
   const accountIds = useMemo(
     () => accountList.map((account) => account._id).filter(Boolean),
     [accountList]
@@ -625,6 +638,30 @@ export default function UserViewPage() {
     ];
 	  }, [accountList, accountsQuery.isLoading]);
 
+  const internalTransferAccountOptions = useMemo<SelectOption[]>(() => {
+    return accountList
+      .filter((account) => (account.account_type ?? "").toLowerCase() !== "demo")
+      .map((account) => {
+      const typeLabel =
+        account.account_type?.toLowerCase() === "demo" ? "Demo" : "Live";
+      const planLabel = account.plan_name ? ` • ${account.plan_name}` : "";
+      return {
+        value: account._id,
+        label: `${account.account_number ?? account._id} • ${typeLabel}${planLabel}`,
+        dotClass:
+          account.account_type?.toLowerCase() === "demo"
+            ? "bg-slate-500"
+            : "bg-emerald-500",
+      };
+    });
+  }, [accountList]);
+
+  const internalTransferToOptions = useMemo<SelectOption[]>(() => {
+    return internalTransferAccountOptions.filter(
+      (opt) => opt.value && opt.value !== internalTransferFrom
+    );
+  }, [internalTransferAccountOptions, internalTransferFrom]);
+
 	  const nonDemoAccounts = useMemo(
 	    () =>
 	      accountList.filter(
@@ -632,6 +669,24 @@ export default function UserViewPage() {
 	      ),
 	    [accountList]
 	  );
+
+    const internalFromAccount = useMemo(
+      () =>
+        nonDemoAccounts.find((account) => account._id === internalTransferFrom) ??
+        null,
+      [nonDemoAccounts, internalTransferFrom]
+    );
+
+    const internalFromBalance = internalFromAccount?.balance ?? 0;
+    const internalFromHold = internalFromAccount?.hold_balance ?? 0;
+    const internalFromEquity = internalFromAccount?.equity ?? internalFromBalance;
+    const internalAvailableBalance = Math.max(0, internalFromBalance - internalFromHold);
+    const internalMaxTransferable = Math.max(
+      0,
+      Math.min(internalAvailableBalance, internalFromEquity)
+    );
+    const internalMaxTransferableRounded =
+      Math.round(internalMaxTransferable * 100) / 100;
 
 	  const accountSummary = useMemo(
 	    () =>
@@ -1173,15 +1228,126 @@ export default function UserViewPage() {
   };
 
   const openAccountView = (account: AdminAccount) => {
-    setSelectedAccount(account);
+    setSelectedAccountId(account._id);
     setAccountViewOpen(true);
   };
 
   const openAccountEdit = (account: AdminAccount) => {
-    setSelectedAccount(account);
+    setSelectedAccountId(account._id);
     setAccountForm(buildAccountEditForm(account));
     setAccountFormError("");
     setAccountEditOpen(true);
+  };
+
+  const openInternalTransfer = (fromAccountId?: string) => {
+    const resolvedFrom =
+      fromAccountId ?? nonDemoAccounts[0]?._id ?? "";
+    const resolvedTo =
+      nonDemoAccounts.find((acc) => acc._id !== resolvedFrom)?._id ?? "";
+
+    setInternalTransferFrom(resolvedFrom);
+    setInternalTransferTo(resolvedTo);
+    setInternalTransferAmount("");
+    setInternalTransferError("");
+    setInternalTransferOpen(true);
+  };
+
+  const closeInternalTransfer = () => {
+    setInternalTransferOpen(false);
+    setInternalTransferError("");
+  };
+
+  const internalTransferAmountValue = parseNullableNumber(internalTransferAmount);
+  const internalTransferCanSubmit =
+    nonDemoAccounts.length >= 2 &&
+    Boolean(internalTransferFrom) &&
+    Boolean(internalTransferTo) &&
+    internalTransferFrom !== internalTransferTo &&
+    internalTransferAmountValue !== null &&
+    internalTransferAmountValue > 0 &&
+    internalTransferAmountValue <= internalMaxTransferableRounded &&
+    internalMaxTransferableRounded > 0;
+
+  const handleInternalTransferSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setInternalTransferError("");
+
+    if (!internalTransferFrom) {
+      setInternalTransferError("Please select a From account.");
+      return;
+    }
+
+    if (!internalTransferTo) {
+      setInternalTransferError("Please select a To account.");
+      return;
+    }
+
+    if (internalTransferFrom === internalTransferTo) {
+      setInternalTransferError("From and To accounts must be different.");
+      return;
+    }
+
+    const fromAccount = nonDemoAccounts.find(
+      (account) => account._id === internalTransferFrom
+    );
+    if (!fromAccount) {
+      setInternalTransferError("From account not found.");
+      return;
+    }
+
+    const toAccount = nonDemoAccounts.find(
+      (account) => account._id === internalTransferTo
+    );
+    if (!toAccount) {
+      setInternalTransferError("To account not found.");
+      return;
+    }
+
+    const amount = parseNullableNumber(internalTransferAmount);
+    if (amount === null || amount <= 0) {
+      setInternalTransferError("Please enter a valid amount.");
+      return;
+    }
+
+    const balance = fromAccount.balance ?? 0;
+    const hold = fromAccount.hold_balance ?? 0;
+    const equity = fromAccount.equity ?? balance;
+
+    if (equity <= 0) {
+      setInternalTransferError("From account equity must be greater than 0.");
+      return;
+    }
+
+    const availableBalance = Math.max(0, balance - hold);
+    const maxTransferable = Math.max(
+      0,
+      Math.min(availableBalance, equity)
+    );
+
+    if (amount > maxTransferable) {
+      setInternalTransferError(
+        `Amount cannot exceed available funds (${formatAmount(maxTransferable)}).`
+      );
+      return;
+    }
+
+    try {
+      const resp = await internalTransferMutation.mutateAsync({
+        fromAccount: internalTransferFrom,
+        toAccount: internalTransferTo,
+        amount,
+      });
+
+      setToast(extractMessage(resp) || "Internal transfer created.");
+      closeInternalTransfer();
+      setInternalTransferFrom("");
+      setInternalTransferTo("");
+      setInternalTransferAmount("");
+    } catch (err: unknown) {
+      setInternalTransferError(
+        extractMessage(err) || "Internal transfer failed. Please try again."
+      );
+    }
   };
 
   const closeAccountEdit = () => {
@@ -1338,7 +1504,7 @@ export default function UserViewPage() {
 
   const handleAccountUpdateSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedAccount?._id) return;
+    if (!selectedAccountId) return;
 
     setAccountFormError("");
 
@@ -1368,12 +1534,9 @@ export default function UserViewPage() {
     };
 
     updateAccountMutation.mutate(
-      { accountId: selectedAccount._id, payload },
+      { accountId: selectedAccountId, payload },
       {
-        onSuccess: (updatedAccount) => {
-          if (updatedAccount) {
-            setSelectedAccount(updatedAccount);
-          }
+        onSuccess: () => {
           setToast("Account updated successfully.");
           setAccountEditOpen(false);
         },
@@ -1922,9 +2085,20 @@ export default function UserViewPage() {
 	                View all user accounts, balances and trading settings
 	              </p>
 	            </div>
-	            <span className="inline-flex items-center rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-main)]">
-	              Total Live Accounts: {nonDemoAccounts.length}
-	            </span>
+              <div className="flex flex-wrap items-center gap-2">
+	              <span className="inline-flex items-center rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-main)]">
+	                Total Live Accounts: {nonDemoAccounts.length}
+	              </span>
+                <button
+                  type="button"
+                  onClick={() => openInternalTransfer()}
+                  disabled={nonDemoAccounts.length < 2}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--hover-bg)] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <ArrowLeftRight size={14} />
+                  Internal Transfer
+                </button>
+              </div>
 	          </div>
 
 	          {accountsQuery.isLoading ? (
@@ -2847,6 +3021,170 @@ export default function UserViewPage() {
             </div>
 
           </div>
+        )}
+      </Modal>
+
+      <Modal
+        title="Internal Transfer"
+        open={internalTransferOpen}
+        onClose={closeInternalTransfer}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeInternalTransfer}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="internal-transfer-form"
+              disabled={internalTransferMutation.isPending || !internalTransferCanSubmit}
+              className="rounded-md bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-dark)] disabled:opacity-60"
+            >
+              {internalTransferMutation.isPending ? "Transferring..." : "Transfer"}
+            </button>
+          </div>
+        }
+      >
+        {nonDemoAccounts.length < 2 ? (
+          <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-4 text-sm text-[var(--text-muted)]">
+            Internal transfer requires at least two live accounts.
+          </div>
+        ) : (
+          <form
+            id="internal-transfer-form"
+            onSubmit={handleInternalTransferSubmit}
+            className="space-y-4"
+          >
+            {internalTransferError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {internalTransferError}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+                  From account
+                </label>
+                <CustomSelect
+                  value={internalTransferFrom}
+                  onChange={(value) => {
+                    setInternalTransferFrom(value);
+                    setInternalTransferTo((prev) => {
+                      if (prev && prev !== value) return prev;
+                      return nonDemoAccounts.find((acc) => acc._id !== value)?._id ?? "";
+                    });
+                    setInternalTransferError("");
+                  }}
+                  placeholder="Select account"
+                  toneClass="border-slate-300/70"
+                  options={internalTransferAccountOptions}
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+                  To account
+                </label>
+                <CustomSelect
+                  value={internalTransferTo}
+                  onChange={(value) => {
+                    setInternalTransferTo(value);
+                    setInternalTransferError("");
+                  }}
+                  placeholder="Select account"
+                  toneClass="border-slate-300/70"
+                  options={internalTransferToOptions}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] p-3 text-xs">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  Balance
+                </p>
+                <p className="mt-1 font-semibold text-emerald-700">
+                  ${formatAmount(internalFromBalance)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  Hold
+                </p>
+                <p className="mt-1 font-semibold text-amber-700">
+                  ${formatAmount(internalFromHold)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  Equity
+                </p>
+                <p className="mt-1 font-semibold text-sky-700">
+                  ${formatAmount(internalFromEquity)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  Max transferable
+                </p>
+                <p className="mt-1 font-semibold text-[var(--text-main)]">
+                  ${formatAmount(internalMaxTransferableRounded)}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+                Amount
+              </label>
+              <FieldControl
+                icon={DollarSign}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInternalTransferAmount(String(internalMaxTransferableRounded));
+                      setInternalTransferError("");
+                    }}
+                    disabled={internalMaxTransferableRounded <= 0}
+                    className="text-xs font-semibold text-[var(--primary)] disabled:opacity-50"
+                  >
+                    Max
+                  </button>
+                }
+              >
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max={internalMaxTransferableRounded || undefined}
+                  step="0.01"
+                  value={internalTransferAmount}
+                  onChange={(event) => {
+                    setInternalTransferAmount(event.target.value);
+                    setInternalTransferError("");
+                  }}
+                  placeholder="Enter amount"
+                  className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted)]"
+                />
+              </FieldControl>
+              {internalMaxTransferableRounded <= 0 ? (
+                <p className="mt-2 text-xs text-rose-600">
+                  Transfer not allowed: equity must be greater than 0 and amount must be within available balance.
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  Amount must be greater than 0 and less than or equal to{" "}
+                  <span className="font-semibold">${formatAmount(internalMaxTransferableRounded)}</span>.
+                </p>
+              )}
+            </div>
+          </form>
         )}
       </Modal>
 

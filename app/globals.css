@@ -138,13 +138,15 @@ body {
 /* horizontal container spacing helper */
 .container-pad { padding: 18px; }
 
-/* Inputs */
-.input {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: var(--foreground);
+@layer components {
+  /* Inputs */
+  .input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--foreground);
+  }
 }
 
 /* Buttons (primary + subtle) */

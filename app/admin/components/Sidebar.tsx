@@ -133,7 +133,14 @@ const navSections: {
       items: [
         { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
         { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
-        { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
+        {
+          label: "Referral",
+          icon: <Gift size={18} />,
+          children: [
+            { href: "/admin/referral", label: "Referral", icon: <Gift size={14} /> },
+            { href: "/admin/bonus", label: "Bonus", icon: <DollarSign size={14} /> },
+          ],
+        },
         {
           label: "Account Security",
           icon: <Lock size={18} />,

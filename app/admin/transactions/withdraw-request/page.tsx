@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -13,6 +13,9 @@ import {
   Wallet,
   UserCheck,
   Check,
+  CalendarDays,
+  Clock3,
+  ChevronDown,
   Bitcoin,
   Banknote,
   Smartphone,
@@ -28,12 +31,21 @@ import Pagination from "../../components/ui/pagination";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import type {
+  WithdrawalMethod,
+  WithdrawalSortBy,
+  WithdrawalStatus,
+  SortDir,
+} from "@/services/adminWithdrawal.service";
 
 type WithdrawalRow = {
   _id: string;
   amount?: number;
   method?: string;
-  status?: "PENDING" | "COMPLETED" | "REJECTED" | string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  actionAt?: string;
   user?: {
     _id?: string;
     id?: string;
@@ -78,28 +90,94 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const formatDate = (value?: string) => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (value?: string) => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function AllWithdrawals() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [status, setStatus] = useState<
-    "PENDING" | "COMPLETED" | "REJECTED" | undefined
-  >();
-  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(20);
+  const [status, setStatus] = useState<WithdrawalStatus | undefined>();
+  const [searchInput, setSearchInput] = useState("");
+  const [q, setQ] = useState("");
+  const [method, setMethod] = useState<WithdrawalMethod | "">("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [sortBy, setSortBy] = useState<WithdrawalSortBy>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<WithdrawalRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const { data, isLoading, refetch } =
-    useAdminWithdrawals({ page, limit, status, search });
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setQ(searchInput.trim());
+      setPage(1);
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useAdminWithdrawals({
+    page,
+    limit,
+    status,
+    q: q || undefined,
+    method: method || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    sortBy,
+    sortDir,
+  });
 
   const approve = useApproveWithdrawal();
   const reject = useRejectWithdrawal();
 
-  const withdrawals: WithdrawalRow[] = data?.items ?? [];
-  const totalPages = data?.pagination?.totalPages ?? 1;
+  const withdrawals: WithdrawalRow[] = (data?.data as WithdrawalRow[]) ?? [];
+  const totalPages = Math.max(
+    1,
+    data?.totalPages ?? Math.ceil((data?.total || 0) / limit) ?? 1
+  );
+
+  const emptyStateMessage = (() => {
+    if (!status) return "No withdrawals found";
+    if (status === "PENDING") return "No pending withdrawals found";
+    if (status === "APPROVED" || status === "COMPLETED") return "No approved withdrawals found";
+    if (status === "REJECTED") return "No rejected withdrawals found";
+    return "No withdrawals found";
+  })();
 
   const handleStatusFilter = useCallback((nextStatus: typeof status) => {
     setStatus(nextStatus);
+    setPage(1);
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSearchInput("");
+    setQ("");
+    setStatus(undefined);
+    setMethod("");
+    setFromDate("");
+    setToDate("");
+    setSortBy("createdAt");
+    setSortDir("desc");
     setPage(1);
   }, []);
 
@@ -193,21 +271,125 @@ export default function AllWithdrawals() {
       </div>
 
       {/* FILTERS & SEARCH */}
-      <div className="card-elevated shadow-none flex flex-col lg:flex-row gap-4 !p-0 sm:!p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
-          <div className="relative flex-1 w-full sm:max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search withdrawals..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input w-full pl-10 pr-4"
-            />
+      <div className="card-elevated shadow-none space-y-4 !p-4 sm:!p-6">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by user / account / plan / withdrawal ID"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="input w-full !pl-10 pr-4"
+              />
+            </div>
+
+            <div className="relative w-full sm:w-[200px]">
+              <HandCoins className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={method}
+                onChange={(event) => {
+                  setMethod(event.target.value as WithdrawalMethod | "");
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+              >
+                <option value="">All methods</option>
+                <option value="UPI">UPI</option>
+                <option value="BANK">BANK</option>
+                <option value="CRYPTO">CRYPTO</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="btn btn-ghost w-full lg:w-auto"
+            >
+              <X size={14} />
+              Reset
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(event) => {
+                  setFromDate(event.target.value);
+                  setPage(1);
+                }}
+                className="input w-full !pl-10 pr-4"
+                aria-label="From date"
+              />
+            </div>
+
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(event) => {
+                  setToDate(event.target.value);
+                  setPage(1);
+                }}
+                className="input w-full !pl-10 pr-4"
+                aria-label="To date"
+              />
+            </div>
+
+            <div className="relative">
+              <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(event.target.value as WithdrawalSortBy);
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+                aria-label="Sort by"
+              >
+                <option value="createdAt">Sort: createdAt</option>
+                <option value="updatedAt">Sort: updatedAt</option>
+                <option value="actionAt">Sort: actionAt</option>
+                <option value="amount">Sort: amount</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
+
+            <div className="relative">
+              <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={sortDir}
+                onChange={(event) => {
+                  setSortDir(event.target.value as SortDir);
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+                aria-label="Sort direction"
+              >
+                <option value="desc">Dir: desc</option>
+                <option value="asc">Dir: asc</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center flex-nowrap justify-between gap-1 w-full rounded-full bg-[var(--hover-bg)] p-0.5 sm:w-auto sm:flex-wrap sm:justify-start sm:gap-2 sm:p-1.5">
+        <div className="flex items-center flex-nowrap justify-between gap-1 w-full rounded-full bg-[var(--hover-bg)] p-0.5 overflow-x-auto sm:flex-wrap sm:justify-start sm:gap-2 sm:p-1.5 sm:overflow-visible">
           <button
             onClick={() => handleStatusFilter(undefined)}
             aria-label="All withdrawals"
@@ -240,16 +422,16 @@ export default function AllWithdrawals() {
 
           <button
             onClick={() => handleStatusFilter("COMPLETED")}
-            aria-label="Completed withdrawals"
+            aria-label="Approved withdrawals"
             className={`whitespace-nowrap px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all sm:px-4 sm:py-2 sm:text-sm ${
-              status === "COMPLETED"
+              status === "COMPLETED" || status === "APPROVED"
                 ? "bg-[var(--success)]/15 text-[var(--success)] border border-[color-mix(in_srgb,var(--success)_35%,transparent)]"
                 : "text-[var(--text-muted)] hover:bg-white/70"
             }`}
           >
             <span className="inline-flex items-center gap-1.5">
-              <Check size={12} />
-              <span className="hidden sm:inline">Completed</span>
+              <UserCheck size={12} />
+              <span className="hidden sm:inline">Approved</span>
             </span>
           </button>
 
@@ -272,6 +454,19 @@ export default function AllWithdrawals() {
 
       {/* TABLE */}
       <div className="card-elevated shadow-none">
+        <div className="flex flex-col gap-1 px-1 pb-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[10px] sm:text-xs text-[var(--text-muted)]">
+            {isLoading
+              ? "Loading..."
+              : `${data?.total ?? withdrawals.length} result${(data?.total ?? withdrawals.length) === 1 ? "" : "s"}`}
+          </p>
+          {isFetching && !isLoading && (
+            <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs text-[var(--text-muted)]">
+              <span className="w-3.5 h-3.5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+              Updating...
+            </span>
+          )}
+        </div>
         <div className="overflow-x-auto">
           <table className="table w-full text-[11px] sm:text-[13px]">
             <thead>
@@ -296,6 +491,12 @@ export default function AllWithdrawals() {
                     Amount
                   </span>
                 </th>
+                <th className="font-semibold text-[var(--foreground)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays size={13} />
+                    Date
+                  </span>
+                </th>
                 <th className="font-semibold text-[var(--foreground)] method-status-head">
                   <span className="inline-flex items-center gap-1.5">
                     <FileText size={13} />
@@ -315,19 +516,37 @@ export default function AllWithdrawals() {
               <AnimatePresence>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center">
+                    <td colSpan={9} className="py-12 text-center">
                       <div className="flex items-center justify-center gap-2 text-[var(--text-muted)]">
                         <div className="w-5 h-5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
                         Loading withdrawals...
                       </div>
                     </td>
                   </tr>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={9} className="py-16 text-center">
+                      <div className="text-[var(--text-muted)] space-y-2">
+                        <AlertCircle className="w-12 h-12 mx-auto opacity-60 text-orange-500" />
+                        <p className="font-medium text-[var(--foreground)]">
+                          {getErrorMessage(error, "Unable to load withdrawals")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => refetch()}
+                          className="btn btn-ghost mx-auto"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ) : withdrawals.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center">
+                    <td colSpan={9} className="py-16 text-center">
                       <div className="text-[var(--text-muted)] space-y-2">
                         <Search className="w-12 h-12 mx-auto opacity-50" />
-                        <p>No withdrawals found</p>
+                        <p>{emptyStateMessage}</p>
                       </div>
                     </td>
                   </tr>
@@ -383,6 +602,22 @@ export default function AllWithdrawals() {
                         </td>
 
                         <td>
+                          <div className="inline-flex items-center gap-2">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[var(--input-bg)] text-[var(--text-muted)]">
+                              <Clock3 size={14} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[var(--foreground)] leading-5">
+                                {formatDate(w.createdAt)}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)] leading-4">
+                                {formatTime(w.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td>
                           <span className="pill method-status-pill bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50">
                             <span className="inline-flex items-center gap-1.5">
                               {getMethodIcon(w.method)}
@@ -394,11 +629,13 @@ export default function AllWithdrawals() {
                         <td>
                           <span
                             className={`pill method-status-pill !rounded-md font-semibold ${
-                              w.status === "COMPLETED"
+                              w.status === "COMPLETED" || w.status === "APPROVED"
                                 ? "pill-success"
-                                : w.status === "REJECTED"
+                                : w.status === "REJECTED" || w.status === "FAILED"
                                   ? "pill-danger"
-                                  : "pill-accent"
+                                  : w.status === "PROCESSING"
+                                    ? "pill-muted"
+                                    : "pill-accent"
                             }`}
                           >
                             {w.status ?? "--"}
@@ -510,11 +747,13 @@ export default function AllWithdrawals() {
                       </span>
                       <span
                         className={`pill method-status-pill !rounded-md mt-1 inline-flex items-center font-semibold ${
-                          selected.status === "COMPLETED"
+                          selected.status === "COMPLETED" || selected.status === "APPROVED"
                             ? "pill-success"
-                            : selected.status === "REJECTED"
+                            : selected.status === "REJECTED" || selected.status === "FAILED"
                               ? "pill-danger"
-                              : "pill-accent"
+                              : selected.status === "PROCESSING"
+                                ? "pill-muted"
+                                : "pill-accent"
                         }`}
                       >
                         {selected.status ?? "--"}

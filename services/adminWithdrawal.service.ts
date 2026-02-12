@@ -1,52 +1,32 @@
 import api from "@/api/axios";
 
-export type DepositStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type DepositMethod = "UPI" | "BANK" | "CRYPTO" | "MANUAL";
-export type DepositSortBy = "createdAt" | "updatedAt" | "actionAt" | "amount";
+export type WithdrawalStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
+
+export type WithdrawalMethod = "UPI" | "BANK" | "CRYPTO";
+export type WithdrawalSortBy = "createdAt" | "updatedAt" | "actionAt" | "amount";
 export type SortDir = "asc" | "desc";
 
-export interface GetDepositsParams {
+export interface GetWithdrawalsParams {
   page?: number;
   limit?: number;
   q?: string;
-  status?: DepositStatus;
-  method?: DepositMethod;
+  status?: WithdrawalStatus;
+  method?: WithdrawalMethod;
   userId?: string;
   accountId?: string;
   fromDate?: string;
   toDate?: string;
-  sortBy?: DepositSortBy;
+  sortBy?: WithdrawalSortBy;
   sortDir?: SortDir;
 }
 
-export interface CreateAdminDepositPayload {
-  accountId: string;
-  amount: number;
-  method: string;
-}
-
-export interface CreateAdminDepositData {
-  user: string;
-  account: string;
-  amount: number;
-  method: string;
-  status: string;
-  rejectionReason?: string;
-  actionBy?: string;
-  actionAt?: string;
-  ipAddress?: string;
-  _id: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateAdminDepositResponse {
-  success: boolean;
-  message: string;
-  data: CreateAdminDepositData;
-}
-
-export type AdminDepositsListPayload = {
+export type AdminWithdrawalsListPayload = {
   data: unknown[];
   total: number;
   page?: number;
@@ -58,7 +38,7 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function normalizeDepositListResponse(payload: unknown): AdminDepositsListPayload {
+function normalizeWithdrawalListResponse(payload: unknown): AdminWithdrawalsListPayload {
   const root = payload as Record<string, unknown> | null | undefined;
   const rootData = root && typeof root === "object" ? (root as { data?: unknown }).data : undefined;
   const node =
@@ -70,10 +50,10 @@ function normalizeDepositListResponse(payload: unknown): AdminDepositsListPayloa
       ? (node as { data: unknown[] }).data
       : undefined) ??
     (node && Array.isArray((node as { items?: unknown }).items)
-      ? ((node as { items: unknown[] }).items)
+      ? (node as { items: unknown[] }).items
       : undefined) ??
     (node && Array.isArray((node as { list?: unknown }).list)
-      ? ((node as { list: unknown[] }).list)
+      ? (node as { list: unknown[] }).list
       : undefined) ??
     [];
 
@@ -109,9 +89,9 @@ function normalizeDepositListResponse(payload: unknown): AdminDepositsListPayloa
   };
 }
 
-export const getAdminDeposits = async (
-  params: GetDepositsParams
-): Promise<AdminDepositsListPayload> => {
+export const getAdminWithdrawals = async (
+  params: GetWithdrawalsParams
+): Promise<AdminWithdrawalsListPayload> => {
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(100, Math.max(1, params.limit ?? 20));
   const q = params.q?.trim() || undefined;
@@ -123,7 +103,7 @@ export const getAdminDeposits = async (
     [fromDate, toDate] = [toDate, fromDate];
   }
 
-  const res = await api.get("/deposits/admin/search", {
+  const res = await api.get("/withdrawals/admin/search", {
     params: {
       page,
       limit,
@@ -134,58 +114,13 @@ export const getAdminDeposits = async (
       accountId: params.accountId,
       fromDate,
       toDate,
+      from: fromDate,
+      to: toDate,
       sortBy: params.sortBy,
       sortDir: params.sortDir,
     },
   });
 
-  return normalizeDepositListResponse(res.data);
+  return normalizeWithdrawalListResponse(res.data);
 };
 
-export const createAdminDeposit = async (
-  payload: CreateAdminDepositPayload
-) : Promise<CreateAdminDepositResponse> => {
-  const res = await api.post<CreateAdminDepositResponse>(
-    "/deposits/admin-deposit",
-    payload
-  );
-  return res.data;
-};
-
-export const approveDeposit = async (depositId: string) => {
-  try {
-    const res = await api.patch(
-      `/deposits/${depositId}/approve`,
-      { status: "APPROVED" }
-    );
-    return res.data;
-  } catch (error: unknown) {
-    const statusCode = (error as { response?: { status?: number } }).response?.status;
-    if (statusCode === 400 || statusCode === 422) {
-      const fallbackRes = await api.patch(`/deposits/${depositId}/approve`);
-      return fallbackRes.data;
-    }
-    throw error;
-  }
-};
-
-export const rejectDeposit = async (
-  depositId: string,
-  reason: string
-) => {
-  const res = await api.patch(
-    `/deposits/${depositId}/reject`,
-    { status: "REJECTED", rejectionReason: reason }
-  );
-  return res.data;
-};
-export const editDepositAmount = async (
-  depositId: string,
-  newAmount: number
-) => {
-  const res = await api.patch(
-    `/deposits/${depositId}/edit-amount`,
-    { newAmount }
-  );
-  return res.data;
-};

@@ -1,21 +1,15 @@
-import { getWithdrawals } from "@/services/withdrawal.service";
 import { useQuery } from "@tanstack/react-query";
+import {
+  getAdminWithdrawals,
+  type AdminWithdrawalsListPayload,
+  type GetWithdrawalsParams,
+} from "@/services/adminWithdrawal.service";
 
-interface AdminWithdrawalsParams {
-  page?: number;
-  limit?: number;
-  status?: string;
-  search?: string;
-}
-
-export const useAdminWithdrawals = ({
-  page,
-  limit,
-  status,
-  search,
-}: AdminWithdrawalsParams) =>
-  useQuery({
-    queryKey: ["admin-withdrawals", page, limit, status, search],
-    queryFn: () =>
-      getWithdrawals({ page, limit, status, search }),
+export const useAdminWithdrawals = (params: GetWithdrawalsParams) => {
+  return useQuery<AdminWithdrawalsListPayload>({
+    queryKey: ["admin-withdrawals", params],
+    queryFn: () => getAdminWithdrawals(params),
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: false,
   });
+};

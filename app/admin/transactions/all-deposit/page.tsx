@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,9 @@ import {
   Plus,
   FileText,
   User,
+  CalendarDays,
+  Clock3,
+  ChevronDown,
   Wallet,
   UserCheck,
   Pencil,
@@ -25,6 +28,7 @@ import { useAdminDeposits } from "@/hooks/deposit/useAdminDeposits";
 import { useApproveDeposit, useRejectDeposit } from "@/hooks/deposit/useDepositActions";
 import Pagination from "../../components/ui/pagination";
 import { useEditDepositAmount } from "@/hooks/deposit/useEditDepositAmount";
+import type { DepositMethod, DepositSortBy, SortDir } from "@/services/adminDeposit.service";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -34,6 +38,8 @@ type DepositRow = {
   amount?: number;
   method?: string;
   status?: "PENDING" | "APPROVED" | "REJECTED" | string;
+  createdAt?: string;
+  updatedAt?: string;
   user?: {
     _id?: string;
     id?: string;
@@ -72,32 +78,87 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const formatDate = (value?: string) => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (value?: string) => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function AllDeposit() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(20);
   const [status, setStatus] = useState<"PENDING" | "APPROVED" | "REJECTED" | undefined>();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [q, setQ] = useState("");
+  const [method, setMethod] = useState<DepositMethod | "">("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [sortBy, setSortBy] = useState<DepositSortBy>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<DepositRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editAmount, setEditAmount] = useState<number>(0);
   const editMutation = useEditDepositAmount();
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setQ(searchInput.trim());
+      setPage(1);
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
   const { data, isLoading, refetch } = useAdminDeposits({
     page,
     limit,
     status,
-    // search,
+    q: q || undefined,
+    method: method || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    sortBy,
+    sortDir,
   });
 
   const approve = useApproveDeposit();
   const reject = useRejectDeposit();
 
-  const deposits: DepositRow[] = data?.data ?? [];
-  const totalPages = Math.ceil((data?.total || 0) / limit);
+  const deposits: DepositRow[] = (data?.data as DepositRow[]) ?? [];
+  const totalPages =
+    data?.totalPages ?? Math.max(1, Math.ceil((data?.total || 0) / limit));
 
   const handleStatusFilter = useCallback((newStatus: typeof status) => {
     setStatus(newStatus);
+    setPage(1);
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSearchInput("");
+    setQ("");
+    setStatus(undefined);
+    setMethod("");
+    setFromDate("");
+    setToDate("");
+    setSortBy("createdAt");
+    setSortDir("desc");
     setPage(1);
   }, []);
 
@@ -199,21 +260,126 @@ export default function AllDeposit() {
       </div>
 
       {/* FILTERS & SEARCH */}
-      <div className="card-elevated shadow-none flex flex-col lg:flex-row gap-4 !p-0 sm:!p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
-          <div className="relative flex-1 w-full sm:max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search deposits..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input w-full pl-10 pr-4"
-            />
+      <div className="card-elevated shadow-none space-y-4 !p-4 sm:!p-6">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by user / account / plan / deposit ID"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="input w-full !pl-10 pr-4"
+              />
+            </div>
+
+            <div className="relative w-full sm:w-[200px]">
+              <HandCoins className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={method}
+                onChange={(event) => {
+                  setMethod(event.target.value as DepositMethod | "");
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+              >
+                <option value="">All methods</option>
+                <option value="UPI">UPI</option>
+                <option value="BANK">BANK</option>
+                <option value="CRYPTO">CRYPTO</option>
+                <option value="MANUAL">MANUAL</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="btn btn-ghost w-full lg:w-auto"
+            >
+              <X size={14} />
+              Reset
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(event) => {
+                  setFromDate(event.target.value);
+                  setPage(1);
+                }}
+                className="input w-full !pl-10 pr-4"
+                aria-label="From date"
+              />
+            </div>
+
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(event) => {
+                  setToDate(event.target.value);
+                  setPage(1);
+                }}
+                className="input w-full !pl-10 pr-4"
+                aria-label="To date"
+              />
+            </div>
+
+            <div className="relative">
+              <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(event.target.value as DepositSortBy);
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+                aria-label="Sort by"
+              >
+                <option value="createdAt">Sort: createdAt</option>
+                <option value="updatedAt">Sort: updatedAt</option>
+                <option value="actionAt">Sort: actionAt</option>
+                <option value="amount">Sort: amount</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
+
+            <div className="relative">
+              <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
+              <select
+                value={sortDir}
+                onChange={(event) => {
+                  setSortDir(event.target.value as SortDir);
+                  setPage(1);
+                }}
+                className="input w-full appearance-none !pl-10 !pr-9"
+                aria-label="Sort direction"
+              >
+                <option value="desc">Dir: desc</option>
+                <option value="asc">Dir: asc</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center flex-nowrap justify-between gap-1 w-full rounded-full bg-[var(--hover-bg)] p-0.5 sm:w-auto sm:flex-wrap sm:justify-start sm:gap-2 sm:p-1.5">
+        <div className="flex items-center flex-nowrap justify-between gap-1 w-full rounded-full bg-[var(--hover-bg)] p-0.5 sm:flex-wrap sm:justify-start sm:gap-2 sm:p-1.5">
           <button
             onClick={() => handleStatusFilter(undefined)}
             aria-label="All deposits"
@@ -297,6 +463,12 @@ export default function AllDeposit() {
                     Amount
                   </span>
                 </th>
+                <th className="font-semibold text-[var(--foreground)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays size={13} />
+                    Date
+                  </span>
+                </th>
                 <th className="font-semibold text-[var(--foreground)] method-status-head">
                   <span className="inline-flex items-center gap-1.5">
                     <FileText size={13} />
@@ -321,7 +493,7 @@ export default function AllDeposit() {
               <AnimatePresence>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center">
+                    <td colSpan={7} className="py-12 text-center">
                       <div className="flex items-center justify-center gap-2 text-[var(--text-muted)]">
                         <div className="w-5 h-5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
                         Loading deposits...
@@ -330,7 +502,7 @@ export default function AllDeposit() {
                   </tr>
                 ) : deposits.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center">
+                    <td colSpan={7} className="py-16 text-center">
                       <div className="text-[var(--text-muted)] space-y-2">
                         <Search className="w-12 h-12 mx-auto opacity-50" />
                         <p>No deposits found</p>
@@ -380,6 +552,23 @@ export default function AllDeposit() {
                       <td>
                         <div className="font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
                           ${d.amount?.toLocaleString()}
+                        </div>
+                      </td>
+
+                      {/* DATE */}
+                      <td>
+                        <div className="inline-flex items-center gap-2">
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[var(--input-bg)] text-[var(--text-muted)]">
+                            <Clock3 size={14} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[var(--foreground)] leading-5">
+                              {formatDate(d.createdAt)}
+                            </p>
+                            <p className="text-xs text-[var(--text-muted)] leading-4">
+                              {formatTime(d.createdAt)}
+                            </p>
+                          </div>
                         </div>
                       </td>
 
@@ -528,6 +717,27 @@ export default function AllDeposit() {
                       >
                         {selected.status ?? "--"}
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Created</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {formatDate(selected.createdAt)}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {formatTime(selected.createdAt)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Updated</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {formatDate(selected.updatedAt)}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {formatTime(selected.updatedAt)}
+                      </p>
                     </div>
                   </div>
 

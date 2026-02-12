@@ -33,3 +33,47 @@ export const logoutService = async (refreshToken: string) => {
   });
   return res.data;
 };
+
+export type AdminSignupProfilePayload = {
+  date_of_birth: string;
+  gender: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pincode: string;
+};
+
+export type AdminSignupPayload = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  name: string;
+  phone: string;
+  isMailVerified: boolean;
+  kycStatus: string;
+  profile: AdminSignupProfilePayload;
+};
+
+export type AdminSignupResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    user_id: string;
+    message?: string;
+  };
+};
+
+export const adminSignupService = async (
+  payload: AdminSignupPayload
+): Promise<AdminSignupResponse> => {
+  const res = await api.post<AdminSignupResponse>("/auth/admin/signup", payload);
+
+  if (res.data && typeof res.data === "object" && res.data.success === false) {
+    const message = res.data.message || res.data.data?.message || "Request failed.";
+    throw new Error(message);
+  }
+
+  return res.data;
+};
