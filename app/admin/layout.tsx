@@ -20,7 +20,10 @@ export default function AdminLayout({
   useEffect(() => {
     if (!isError) return;
 
-    const status = (error as any)?.response?.status;
+    const status =
+      typeof error === "object" && error !== null
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
 
     if (status === 401) {
       localStorage.removeItem("accessToken");

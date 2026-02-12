@@ -1,6 +1,14 @@
 "use client";
 
-import React, { JSX, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  JSX,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   LayoutDashboard,
   CandlestickChart,
@@ -17,12 +25,12 @@ import {
   MessageSquare,
   LogOut,
   ChevronDown,
-  X,
   Activity,
   Wallet,
   FileText,
   UserCheck,
   Clock3,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -70,7 +78,7 @@ const navSections: {
           label: "Trades",
           icon: <ShoppingCart size={18} />,
           children: [
-            { href: "/admin/trades/live", label: "Trades List", icon: <FileText size={14} /> },
+            { href: "/admin/trades/live/create", label: "Create Trade", icon: <Plus size={14} /> },
             { href: "/admin/trades/active-positions", label: "Active Positions", icon: <Activity size={14} /> },
             { href: "/admin/trades/pending-orders", label: "Pending Orders", icon: <Clock3 size={14} /> },
             { href: "/admin/trades/close-trades", label: "Closed Trades", icon: <UserCheck size={14} /> },
@@ -127,11 +135,6 @@ const navSections: {
         { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
         { href: "/admin/referral", label: "Referral", icon: <Gift size={18} /> },
         {
-          label: "Admin Config",
-          icon: <Settings size={18} />,
-          children: [{ href: "/admin/settings", label: "Settings", icon: <Settings size={14} /> }],
-        },
-        {
           label: "Account Security",
           icon: <Lock size={18} />,
           children: [
@@ -155,32 +158,47 @@ export default function AdminSidebar() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrollTopRef = useRef(0);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [pinnedDropdown, setPinnedDropdown] = useState<string | null>(null);
 
   const normalize = (p: string) => p.replace(/\/+$/, "");
   const currentPath = normalize(pathname);
 
-  const isExactActive = (href?: string) => {
-    if (!href) return false;
-    return currentPath === href;
-  };
+  const isExactActive = useCallback(
+    (href?: string) => {
+      if (!href) return false;
+      return currentPath === href;
+    },
+    [currentPath]
+  );
 
-  const isNestedActive = (href?: string) => {
-    if (!href) return false;
-    return currentPath === href || currentPath.startsWith(href + "/");
-  };
+  const isNestedActive = useCallback(
+    (href?: string) => {
+      if (!href) return false;
+      return currentPath === href || currentPath.startsWith(href + "/");
+    },
+    [currentPath]
+  );
 
-  useEffect(() => {
-    navSections.forEach(section =>
-      section.items.forEach(item =>
-        item.children?.forEach(child => {
-          if (isNestedActive(child.href)) {
-            setOpenDropdown(item.label);
+  const activeDropdown = useMemo(() => {
+    let nextDropdown: string | null = null;
+
+    navSections.forEach((section) =>
+      section.items.forEach((item) =>
+        item.children?.forEach((child) => {
+          const href = child.href;
+          if (!href) return;
+          if (currentPath === href || currentPath.startsWith(href + "/")) {
+            nextDropdown = item.label;
           }
-        }),
-      ),
+        })
+      )
     );
-  }, [pathname]);
+
+    return nextDropdown;
+  }, [currentPath]);
+
+  const openDropdown = pinnedDropdown ?? activeDropdown;
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollTopRef.current;
@@ -208,7 +226,7 @@ export default function AdminSidebar() {
     }
   };
 
-  const SidebarInner = () => (
+  const renderSidebarInner = () => (
     <div className="flex h-full flex-col px-4 py-5 text-sm">
 
       {/* LOGO / TITLE REMOVED */}
@@ -235,7 +253,9 @@ export default function AdminSidebar() {
                           scrollTopRef.current = scrollRef.current.scrollTop;
                         }
 
-                        setOpenDropdown(v => (v === item.label ? null : item.label));
+                        setPinnedDropdown((v) =>
+                          v === item.label ? null : item.label
+                        );
                       }}
                       className="group flex w-full items-center justify-between rounded-xl px-3 py-2
                       hover:bg-[var(--hover-bg)]"
@@ -349,7 +369,7 @@ export default function AdminSidebar() {
 
       {/* DESKTOP */}
       <aside className="fixed left-0 top-[var(--topbar-height)] hidden h-[calc(100vh-var(--topbar-height))] w-[260px] bg-[var(--card-bg)] border-r border-[color-mix(in_srgb,var(--card-border)_70%,transparent)] lg:block">
-        <SidebarInner />
+        {renderSidebarInner()}
       </aside>
 
       {/* MOBILE */}
@@ -363,7 +383,7 @@ export default function AdminSidebar() {
               transition={{ type: "spring", stiffness: 420, damping: 35 }} // ðŸš€ FAST
               className="fixed inset-y-0 left-0 z-[1200] w-[260px] bg-[var(--card-bg)]"
             >
-              <SidebarInner />
+              {renderSidebarInner()}
             </motion.aside>
 
             <motion.div

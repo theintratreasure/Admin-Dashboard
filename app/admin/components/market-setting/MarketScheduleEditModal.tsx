@@ -7,7 +7,7 @@ import PremiumInput from "../ui/PremiumInput";
 import Toggle from "../ui/Toggle";
 
 import { useUpdateMarketSchedule } from "@/queries/marketSchedule.queries";
-import { MarketSegment } from "@/services/marketSchedule.service";
+import type { MarketSchedule, MarketSegment } from "@/services/marketSchedule.service";
 
 const DAYS = [
   "MONDAY",
@@ -26,7 +26,7 @@ export default function MarketScheduleEditModal({
   onSaved,
 }: {
   segment: MarketSegment;
-  data: any;
+  data: MarketSchedule;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -47,7 +47,16 @@ export default function MarketScheduleEditModal({
 
   const [dateOverrides, setDateOverrides] = useState<
     Record<string, { closeTime: string }>
-  >(data.dateOverrides || {});
+  >(() => {
+    const incoming = data.dateOverrides ?? {};
+    return Object.keys(incoming).reduce(
+      (acc, date) => {
+        acc[date] = { closeTime: incoming[date]?.closeTime ?? "" };
+        return acc;
+      },
+      {} as Record<string, { closeTime: string }>
+    );
+  });
 
   const [newHoliday, setNewHoliday] = useState("");
   const [newDate, setNewDate] = useState("");

@@ -39,6 +39,7 @@ export default function AccountPlanModal({
         {/* 🔹 Scrollable form area */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <AccountPlanForm
+            key={initialData?._id ?? "new"}
             initialData={initialData}
             onSubmit={onSubmit}
             loading={loading}

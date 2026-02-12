@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import {
   Trash2,
-  Search,
   SlidersHorizontal,
   ArrowUpRight,
   ArrowDownRight,
@@ -24,8 +23,6 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 import GlobalLoader from "../../components/ui/GlobalLoader";
 import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 
-
-type PriceDirection = "up" | "down" | "same";
 
 function splitPrice(price: string) {
   const [intPart, decimalPart = ""] = price.split(".");

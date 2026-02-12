@@ -18,6 +18,8 @@ import GlobalLoader from "../../components/ui/GlobalLoader";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import type { AdminUser } from "@/types/user";
 
+const EMPTY_USERS: AdminUser[] = [];
+
 type KycFilter = "ALL" | "NOT_STARTED" | "PENDING" | "VERIFIED" | "REJECTED";
 type MailFilter = "ALL" | "true" | "false";
 type FilterKey = "kyc" | "mail";
@@ -75,10 +77,6 @@ export default function UsersPage() {
   }, [searchInput]);
 
   useEffect(() => {
-    setPage(1);
-  }, [kycStatus, mailVerified, limit]);
-
-  useEffect(() => {
     const onClick = (event: Event) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("[data-filter]")) return;
@@ -102,7 +100,7 @@ export default function UsersPage() {
     limit,
   });
 
-  const users = listQuery.data?.data ?? [];
+  const users = listQuery.data?.data ?? EMPTY_USERS;
   const pagination = listQuery.data?.pagination;
   const totalPages = pagination?.totalPages ?? 1;
   const total = pagination?.total ?? users.length;
@@ -227,6 +225,7 @@ export default function UsersPage() {
                   }`}
                   onClick={() => {
                     setKycStatus(opt.value);
+                    setPage(1);
                     setOpenFilter(null);
                   }}
                 >
@@ -277,6 +276,7 @@ export default function UsersPage() {
                   }`}
                   onClick={() => {
                     setMailVerified(opt.value);
+                    setPage(1);
                     setOpenFilter(null);
                   }}
                 >

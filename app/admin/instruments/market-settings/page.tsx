@@ -3,20 +3,19 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, Bitcoin, Landmark, Layers, CandlestickChart } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { useMarketSchedule } from "@/queries/marketSchedule.queries";
-import { MarketSegment } from "@/services/marketSchedule.service";
+import type { MarketSegment } from "@/services/marketSchedule.service";
 
 import GlobalLoader from "../../components/ui/GlobalLoader";
-import ConfirmModal from "../../components/ui/ConfirmModal";
 import { Toast } from "../../components/ui/Toast";
-import Toggle from "../../components/ui/Toggle";
 import MarketScheduleEditModal from "../../components/market-setting/MarketScheduleEditModal";
 
 
 const SEGMENTS: MarketSegment[] = ["forex", "metal", "crypto", "indexes"];
 
-const SEGMENT_META: Record<MarketSegment, { label: string; color: string; Icon: any }> = {
+const SEGMENT_META: Record<MarketSegment, { label: string; color: string; Icon: LucideIcon }> = {
   forex: { label: "Forex", color: "text-blue-600", Icon: Landmark },
   metal: { label: "Metal", color: "text-emerald-600", Icon: Layers },
   crypto: { label: "Crypto", color: "text-amber-600", Icon: Bitcoin },

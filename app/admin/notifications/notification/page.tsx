@@ -1,12 +1,9 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useState } from "react";
 import {
   Plus,
-  Trash2,
-  BadgeCheck,
-  XCircle,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { useGetAdminNotifications } from "@/hooks/notification/useGetAdminNotifications";
 import { useBroadcastNotification } from "@/hooks/notification/useBroadcastNotification";
@@ -32,13 +29,12 @@ export default function NotificationsPage() {
   const [search, setSearch] = useState("");
   const [openModal, setOpenModal] = useState(false);
 
-  const { data, isLoading, refetch } = useGetAdminNotifications({ page, limit });
-  const broadcastMutation = useBroadcastNotification();
+  const { data, isLoading } = useGetAdminNotifications({ page, limit });
 
-  const notifications: TransformedNotification[] = useMemo(() => {
-    if (!data?.list || data.list.length === 0) return [];
+  const list = data?.list ?? [];
 
-    return data.list.map((item: Notification, index: number) => ({
+  const notifications: TransformedNotification[] = list.map(
+    (item: Notification, index: number) => ({
       id: `${item._id}-${index}`,
       _id: item._id,
       title: item.title,
@@ -54,18 +50,19 @@ export default function NotificationsPage() {
         minute: "2-digit",
       }),
       sentBy: "Admin",
-    }));
-  }, [data?.list]);
+    })
+  );
 
-  const filteredNotifications: TransformedNotification[] = useMemo(() => {
-    if (!search.trim()) return notifications;
+  const filteredNotifications: TransformedNotification[] = (() => {
+    const searchTerm = search.trim().toLowerCase();
+    if (!searchTerm) return notifications;
 
     return notifications.filter((n: TransformedNotification) =>
-      n.title.toLowerCase().includes(search.toLowerCase()) ||
-      n.message.toLowerCase().includes(search.toLowerCase()) ||
-      n.type.toLowerCase().includes(search.toLowerCase())
+      n.title.toLowerCase().includes(searchTerm) ||
+      n.message.toLowerCase().includes(searchTerm) ||
+      n.type.toLowerCase().includes(searchTerm)
     );
-  }, [notifications, search]);
+  })();
 
 
 

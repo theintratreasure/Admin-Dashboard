@@ -42,7 +42,6 @@ export default function CreateTradingClient() {
 
   const [autoCloseLossPercent, setAutoCloseLossPercent] = useState("90");
   const [minTimeToBookProfitSeconds, setMinTimeToBookProfitSeconds] = useState("120");
-  const [notifyLossPercent, setNotifyLossPercent] = useState("70");
 
   const handleCreate = () => {
     alert("Create User Triggered!");

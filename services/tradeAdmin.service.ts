@@ -115,6 +115,68 @@ export type TradeAdminClosedTradesParams = {
   sortDir?: TradeSortDir;
 };
 
+export type TradeAdminOpenTrade = {
+  _id: string;
+  userId: string;
+  accountId: string;
+  ipAddress?: string;
+  positionId: string;
+  symbol: string;
+  side: TradeSide | string;
+  orderType: TradeOrderType | string;
+  status?: string;
+  volume: number;
+  contractSize: number;
+  leverage: number;
+  openPrice: number;
+  entryPrice: number;
+  closePrice?: number | null;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+  marginUsed?: number;
+  grossPnL?: number;
+  commission?: number;
+  spread?: number;
+  swap?: number;
+  realizedPnL?: number;
+  openTime?: string;
+  closeTime?: string | null;
+  closeReason?: string | null;
+  engineVersion?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TradeAdminOpenTradesPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export type TradeAdminOpenTradesResponse = {
+  success?: boolean;
+  data: TradeAdminOpenTrade[];
+  pagination?: TradeAdminOpenTradesPagination;
+};
+
+export type TradeAdminOpenTradesParams = {
+  page: number;
+  limit: number;
+  userId?: string;
+  accountId?: string;
+  symbol?: string;
+  positionId?: string;
+  side?: TradeSide;
+  orderType?: TradeOrderType;
+  orderKind?: TradeOrderKind;
+  from?: string;
+  to?: string;
+  timeField?: "openTime" | "createdAt" | "updatedAt";
+  sortBy?: "openTime" | "createdAt" | "updatedAt";
+  sortDir?: TradeSortDir;
+};
+
 export type TradeAdminPendingOrderStatus =
   | "PENDING"
   | "EXECUTED"
@@ -176,6 +238,23 @@ export type TradeAdminPendingOrdersParams = {
   sortDir?: TradeSortDir;
 };
 
+export type TradeAdminPendingOpenParams = {
+  page: number;
+  limit: number;
+  userId?: string;
+  accountId?: string;
+  orderId?: string;
+  symbol?: string;
+  side?: TradeSide;
+  orderType?: TradeOrderType;
+  orderKind?: TradeOrderKind;
+  from?: string;
+  to?: string;
+  timeField?: "createdAt" | "updatedAt" | "expireAt";
+  sortBy?: "createdAt" | "updatedAt" | "expireAt";
+  sortDir?: TradeSortDir;
+};
+
 export type TradeAdminActionResponse<T = unknown> = {
   success?: boolean;
   message?: string;
@@ -215,6 +294,7 @@ export type TradeAdminPendingModifyPayload = {
 export type TradeAdminPendingCancelPayload = {
   accountId: string;
   orderId: string;
+  userId?: string;
 };
 
 export type TradeAdminPositionModifyPayload = {
@@ -280,6 +360,34 @@ export const getTradeAdminClosedTrades = async (
   return res.data as TradeAdminClosedTradesResponse;
 };
 
+export const getTradeAdminOpenTrades = async (
+  params: TradeAdminOpenTradesParams
+): Promise<TradeAdminOpenTradesResponse> => {
+  const query: Record<string, string | number> = {
+    page: params.page,
+    limit: Math.min(Math.max(params.limit, 1), 100),
+  };
+
+  if (params.userId?.trim()) query.userId = params.userId.trim();
+  if (params.accountId?.trim()) query.accountId = params.accountId.trim();
+  if (params.symbol?.trim()) query.symbol = params.symbol.trim().toUpperCase();
+  if (params.positionId?.trim()) query.positionId = params.positionId.trim();
+  if (params.side) query.side = params.side;
+  if (params.orderType) {
+    query.orderType = params.orderType;
+  } else if (params.orderKind) {
+    query.orderKind = params.orderKind;
+  }
+  if (params.from) query.from = params.from;
+  if (params.to) query.to = params.to;
+  if (params.timeField) query.timeField = params.timeField;
+  if (params.sortBy) query.sortBy = params.sortBy;
+  if (params.sortDir) query.sortDir = params.sortDir;
+
+  const res = await api.get("/trade-admin/trades/open", { params: query });
+  return res.data as TradeAdminOpenTradesResponse;
+};
+
 export const getTradeAdminPendingOrders = async (
   params: TradeAdminPendingOrdersParams
 ): Promise<TradeAdminPendingOrdersResponse> => {
@@ -309,6 +417,34 @@ export const getTradeAdminPendingOrders = async (
   if (params.sortDir) query.sortDir = params.sortDir;
 
   const res = await api.get("/trade-admin/orders/pending/history", { params: query });
+  return res.data as TradeAdminPendingOrdersResponse;
+};
+
+export const getTradeAdminPendingOpenOrders = async (
+  params: TradeAdminPendingOpenParams
+): Promise<TradeAdminPendingOrdersResponse> => {
+  const query: Record<string, string | number> = {
+    page: params.page,
+    limit: Math.min(Math.max(params.limit, 1), 100),
+  };
+
+  if (params.symbol?.trim()) query.symbol = params.symbol.trim().toUpperCase();
+  if (params.userId?.trim()) query.userId = params.userId.trim();
+  if (params.accountId?.trim()) query.accountId = params.accountId.trim();
+  if (params.orderId?.trim()) query.orderId = params.orderId.trim();
+  if (params.side) query.side = params.side;
+  if (params.orderType) {
+    query.orderType = params.orderType;
+  } else if (params.orderKind) {
+    query.orderKind = params.orderKind;
+  }
+  if (params.from) query.from = params.from;
+  if (params.to) query.to = params.to;
+  if (params.timeField) query.timeField = params.timeField;
+  if (params.sortBy) query.sortBy = params.sortBy;
+  if (params.sortDir) query.sortDir = params.sortDir;
+
+  const res = await api.get("/trade-admin/orders/pending/open", { params: query });
   return res.data as TradeAdminPendingOrdersResponse;
 };
 

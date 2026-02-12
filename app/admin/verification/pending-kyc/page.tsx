@@ -22,7 +22,7 @@ export default function PendingKycPage() {
   const { data, isLoading } = useGetAdminAllKyc({
     status: "PENDING",
     page,
-    limit: 10,
+    limit,
   });
 
   const { mutate: updateStatus, isPending } =

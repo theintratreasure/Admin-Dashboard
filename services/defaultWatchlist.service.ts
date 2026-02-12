@@ -19,7 +19,7 @@ export async function fetchDefaultWatchlist() {
 }
 
 export async function addDefaultWatchlist(code: string) {
-  const res = await api.post<ApiResponse<any>>(
+  const res = await api.post<ApiResponse<unknown>>(
     "/watchlist/default/add",
     { code }
   );
@@ -27,7 +27,7 @@ export async function addDefaultWatchlist(code: string) {
 }
 
 export async function removeDefaultWatchlist(code: string) {
-  const res = await api.delete<ApiResponse<any>>(
+  const res = await api.delete<ApiResponse<unknown>>(
     `/watchlist/default/remove/${code}`
   );
   return res.data;

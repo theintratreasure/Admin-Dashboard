@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Layers,
   Percent,
@@ -14,6 +14,42 @@ import { AccountPlan, AccountPlanPayload } from "@/types/accountPlan";
 import PremiumInput from "../ui/PremiumInput";
 import Toggle from "../ui/Toggle";
 
+const DEFAULT_FORM: AccountPlanPayload = {
+  name: "",
+  spreadPips: 0,
+  commission: 0,
+  leverageNote: "Up to Unlimited",
+  max_leverage: 0,
+  minLotSize: 0.01,
+  minDeposit: 0,
+  guidance: "",
+  is_demo_allowed: true,
+  spread_type: "FLOATING",
+  commission_per_lot: 0,
+  swap_enabled: true,
+  isActive: true,
+};
+
+function getInitialForm(initialData?: AccountPlan | null): AccountPlanPayload {
+  if (!initialData) return DEFAULT_FORM;
+
+  return {
+    name: initialData.name,
+    spreadPips: initialData.spreadPips,
+    commission: initialData.commission,
+    leverageNote: initialData.leverageNote,
+    max_leverage: initialData.max_leverage ?? 0,
+    minLotSize: initialData.minLotSize,
+    minDeposit: initialData.minDeposit,
+    guidance: initialData.guidance,
+    is_demo_allowed: initialData.is_demo_allowed,
+    spread_type: initialData.spread_type,
+    commission_per_lot: initialData.commission_per_lot,
+    swap_enabled: initialData.swap_enabled,
+    isActive: initialData.isActive,
+  };
+}
+
 interface Props {
   initialData?: AccountPlan | null;
   onSubmit: (payload: AccountPlanPayload) => void;
@@ -25,29 +61,9 @@ export default function AccountPlanForm({
   onSubmit,
   loading,
 }: Props) {
-  const [form, setForm] = useState<AccountPlanPayload>({
-    name: "",
-    spreadPips: 0,
-    commission: 0,
-    leverageNote: "Up to Unlimited",
-    max_leverage: 0,
-    minLotSize: 0.01,
-    minDeposit: 0,
-    guidance: "",
-    is_demo_allowed: true,
-    spread_type: "FLOATING",
-    commission_per_lot: 0,
-    swap_enabled: true,
-    isActive: true,
-  });
-
-  /* ---------- EDIT MODE FILL ---------- */
-  useEffect(() => {
-    if (initialData) {
-      const { _id, createdAt, updatedAt, ...rest } = initialData;
-      setForm(rest);
-    }
-  }, [initialData]);
+  const [form, setForm] = useState<AccountPlanPayload>(() =>
+    getInitialForm(initialData)
+  );
 
   return (
     <div className="space-y-5">

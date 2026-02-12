@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   Plus,
   Pencil,
   Trash2,
@@ -137,8 +136,11 @@ export default function ManageInstruments() {
   }, []);
 
   useEffect(() => {
-    if (!openForm || !form) return;
-    const q = String(form.code || "").trim().toUpperCase();
+    const formCode = form?.code;
+    const formSegment = form?.segment;
+
+    if (!openForm || !formCode) return;
+    const q = String(formCode || "").trim().toUpperCase();
     if (!q) {
       setSymbolResults([]);
       setSymbolLoading(false);
@@ -148,7 +150,7 @@ export default function ManageInstruments() {
     let active = true;
     const handler = setTimeout(async () => {
       setSymbolLoading(true);
-      const segKey = (form.segment || "").toUpperCase();
+      const segKey = (formSegment || "").toUpperCase();
       const category =
         segKey === "FOREX"
           ? "FX"
@@ -186,8 +188,8 @@ export default function ManageInstruments() {
     const rows = data?.data ?? [];
     if (!search) return rows;
 
-    return rows.filter((r: any) =>
-      Object.values(r)
+    return rows.filter((row) =>
+      Object.values(row)
         .join(" ")
         .toLowerCase()
         .includes(search.toLowerCase())
@@ -218,7 +220,7 @@ export default function ManageInstruments() {
     setOpenForm(true);
   };
 
-  const openEdit = (row: any) => {
+  const openEdit = (row: InstrumentFormState) => {
     setForm(row);
     setOpenForm(true);
   };
@@ -462,7 +464,7 @@ export default function ManageInstruments() {
                     </td>
                   </tr>
                 ) : (
-                  instruments.map((row: any, idx: number) => (
+                  instruments.map((row, idx) => (
                     <motion.tr
                       key={row._id}
                       initial={{ opacity: 0, x: 20 }}
@@ -568,7 +570,7 @@ export default function ManageInstruments() {
               No instruments found
             </div>
           ) : (
-            instruments.map((row: any) => (
+            instruments.map((row) => (
               <div
                 key={row._id}
                 className="w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-3 shadow-none relative overflow-hidden"

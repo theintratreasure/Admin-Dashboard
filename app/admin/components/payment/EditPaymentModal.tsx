@@ -1,20 +1,38 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { uploadToCloudinary } from "@/services/cloudinary.service";
 import { useUpdatePaymentMethod } from "@/hooks/payment-method/useUpdatePaymentMethod";
 import GlobalLoader from "../ui/GlobalLoader";
 import { X } from "lucide-react";
+import type { PaymentType, PaymentMethodPayload } from "@/services/payment-method/payment-method.service";
+
+type PaymentMethod = {
+  _id: string;
+  type: PaymentType;
+  title: string;
+  is_active?: boolean;
+  bank_name?: string;
+  account_name?: string;
+  account_number?: string;
+  ifsc?: string;
+  upi_id?: string;
+  crypto_network?: string;
+  crypto_address?: string;
+  image_url?: string;
+  image_public_id?: string;
+};
 
 export default function EditPaymentModal({
   data,
   onClose,
 }: {
-  data: any;
+  data: PaymentMethod;
   onClose: () => void;
 }) {
   const update = useUpdatePaymentMethod();
-  const [form, setForm] = useState<any>({ ...data });
+  const [form, setForm] = useState<PaymentMethod>({ ...data });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(data.image_url || null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +40,7 @@ export default function EditPaymentModal({
   const save = async () => {
     setLoading(true);
 
-    const payload: any = {
+    const payload: Partial<PaymentMethodPayload> = {
       title: form.title,
       bank_name: form.bank_name,
       account_name: form.account_name,
@@ -144,10 +162,13 @@ export default function EditPaymentModal({
 
               {preview && (
                 <div className="rounded-lg border border-[var(--card-border)] bg-[var(--hover-bg)] p-2 inline-block">
-                  <img
+                  <Image
                     src={preview}
                     alt="Payment image"
-                    className="max-h-40 rounded-md object-contain"
+                    width={400}
+                    height={160}
+                    unoptimized
+                    className="max-h-40 w-auto rounded-md object-contain"
                   />
                 </div>
               )}

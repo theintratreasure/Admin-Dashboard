@@ -1,7 +1,16 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
@@ -24,7 +33,7 @@ import {
   Users,
   Hash,
   Building2,
-  X,
+  XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Modal from "@/app/admin/components/ui/Modal";
@@ -34,12 +43,27 @@ import Pagination from "@/app/admin/components/ui/pagination";
 import { useAdminUser } from "@/hooks/useAdminUser";
 import { useAdminUserAccounts } from "@/hooks/useAdminUserAccounts";
 import { useAdminUserTransactions } from "@/hooks/useAdminUserTransactions";
+import { useTradeAdminClosedTrades } from "@/hooks/useTradeAdminClosedTrades";
+import { useTradeAdminPendingOpenOrders } from "@/hooks/useTradeAdminPendingOpenOrders";
+import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
+import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 import { useUpdateAdminUser } from "@/hooks/useUpdateAdminUser";
 import { useChangeAdminUserPassword } from "@/hooks/useChangeAdminUserPassword";
 import { useUpdateAdminUserAccount } from "@/hooks/useUpdateAdminUserAccount";
+import {
+  useResetAccountTradePassword,
+  useResetAccountWatchPassword,
+} from "@/hooks/useResetAccountPasswords";
+import {
+  useTradeAdminModifyPendingOrder,
+  useTradeAdminCancelPendingOrder,
+  useTradeAdminModifyPosition,
+  useTradeAdminClosePosition,
+} from "@/hooks/useTradeAdminOrderActions";
 import type { AdminAccount, AdminAccountUpdatePayload } from "@/types/account";
 import type { AdminUserUpdatePayload } from "@/types/user";
 import type { AdminTransaction } from "@/types/transaction";
+import type { TradeAdminPendingOrder } from "@/services/tradeAdmin.service";
 
 const kycStyles: Record<string, string> = {
   VERIFIED: "border-emerald-500/40 bg-emerald-500/5 text-emerald-600",
@@ -124,6 +148,70 @@ const buildAccountEditForm = (account: AdminAccount): AccountEditForm => ({
       ? "disabled"
       : "active",
 });
+
+type LivePositionSnapshot = {
+  positionId: string;
+  accountId: string;
+  symbol?: string;
+  side?: string;
+  volume?: number;
+  openPrice?: number;
+  currentPrice?: number;
+  floatingPnL?: number;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+  openTime?: number;
+  updatedAt: string;
+};
+
+function normalizeWebSocketUrl(url: string) {
+  if (url.startsWith("ws://") || url.startsWith("wss://")) return url;
+  if (url.startsWith("http://")) return `ws://${url.slice("http://".length)}`;
+  if (url.startsWith("https://")) return `wss://${url.slice("https://".length)}`;
+  if (url.startsWith("//")) {
+    const protocol =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "wss:"
+        : "ws:";
+    return `${protocol}${url}`;
+  }
+  return url;
+}
+
+function resolveAccountSocketUrl() {
+  const direct = process.env.NEXT_PUBLIC_ACCOUNT_SOCKET_URL;
+  if (direct) return normalizeWebSocketUrl(direct);
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return "";
+  const trimmed = apiUrl.replace(/\/$/, "");
+  const derived = /\/api\/v\d+$/i.test(trimmed)
+    ? trimmed.replace(/\/api\/v\d+$/i, "/ws/account")
+    : `${trimmed}/ws/account`;
+  return normalizeWebSocketUrl(derived);
+}
+
+function parseSocketMessages(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  }
+}
 
 const FieldControl = ({
   icon: Icon,
@@ -261,6 +349,12 @@ export default function UserViewPage() {
   const updateMutation = useUpdateAdminUser();
   const changePasswordMutation = useChangeAdminUserPassword();
   const updateAccountMutation = useUpdateAdminUserAccount();
+  const resetTradePasswordMutation = useResetAccountTradePassword();
+  const resetWatchPasswordMutation = useResetAccountWatchPassword();
+  const modifyPendingMutation = useTradeAdminModifyPendingOrder();
+  const cancelPendingMutation = useTradeAdminCancelPendingOrder();
+  const modifyPositionMutation = useTradeAdminModifyPosition();
+  const closePositionMutation = useTradeAdminClosePosition();
 
   const [editOpen, setEditOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
@@ -280,20 +374,61 @@ export default function UserViewPage() {
   });
   const [toast, setToast] = useState("");
   const [touched, setTouched] = useState<Partial<Record<keyof AdminUserUpdatePayload, boolean>>>({});
-  const [activeTab, setActiveTab] = useState("Fund History");
-  const [localProfile, setLocalProfile] = useState<{
-    name: string;
-    email: string;
-    phone: string;
-    isMailVerified: boolean;
-    kycStatus: string;
-  }>({
-    name: "",
-    email: "",
-    phone: "",
-    isMailVerified: false,
-    kycStatus: "NOT_STARTED",
+  const [activeTab, setActiveTab] = useState<
+    "Fund History" | "Accounts" | "Active Trades" | "Closed Trades" | "Pending Trades"
+  >(() => {
+    const normalized = (searchParams.get("tab") ?? "").toLowerCase();
+    if (
+      normalized === "active-trades" ||
+      normalized === "active_trades" ||
+      normalized === "active" ||
+      normalized === "positions"
+    ) {
+      return "Active Trades";
+    }
+    return "Fund History";
   });
+  const [positionActionOpen, setPositionActionOpen] = useState(false);
+  const [positionAction, setPositionAction] = useState<LivePositionSnapshot | null>(null);
+  const [positionForm, setPositionForm] = useState({
+    stopLoss: "",
+    takeProfit: "",
+  });
+  const [positionActionError, setPositionActionError] = useState("");
+  const [pendingActionOpen, setPendingActionOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<TradeAdminPendingOrder | null>(
+    null
+  );
+  const [pendingEditForm, setPendingEditForm] = useState({
+    price: "",
+    stopLoss: "",
+    takeProfit: "",
+  });
+  const [pendingActionError, setPendingActionError] = useState("");
+  const [liveStatus, setLiveStatus] = useState<
+    "idle" | "connecting" | "connected" | "error"
+  >("idle");
+  const [livePositions, setLivePositions] = useState<LivePositionSnapshot[]>([]);
+  const [liveAccountFilter, setLiveAccountFilter] = useState("");
+  const livePositionsRef = useRef<Map<string, LivePositionSnapshot>>(new Map());
+  const closedPositionsRef = useRef<Map<string, number>>(new Map());
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const handleTabChange = (nextTab: typeof activeTab) => {
+    setActiveTab(nextTab);
+    if (nextTab === "Active Trades") {
+      setLiveStatus((prev) => (prev === "connected" ? prev : "connecting"));
+    } else {
+      setLiveStatus("idle");
+    }
+  };
+
+  const [closedPage, setClosedPage] = useState(1);
+  const [closedLimit, setClosedLimit] = useState(20);
+  const [closedAccountFilter, setClosedAccountFilter] = useState("");
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingLimit, setPendingLimit] = useState(20);
+  const [pendingAccountFilter, setPendingAccountFilter] = useState("");
   const [txPage, setTxPage] = useState(1);
   const [txLimit, setTxLimit] = useState(20);
   const [txAccountId, setTxAccountId] = useState("");
@@ -333,6 +468,18 @@ export default function UserViewPage() {
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordType, setResetPasswordType] = useState<"trade" | "watch">(
+    "trade"
+  );
+  const [resetPasswordAccount, setResetPasswordAccount] =
+    useState<AdminAccount | null>(null);
+  const [accountPassword, setAccountPassword] = useState("");
+  const [accountPasswordConfirm, setAccountPasswordConfirm] = useState("");
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [showAccountPasswordConfirm, setShowAccountPasswordConfirm] =
+    useState(false);
+  const [accountPasswordError, setAccountPasswordError] = useState("");
 
   const profileFromParams = useMemo(() => {
     const name = searchParams.get("name") ?? "";
@@ -344,15 +491,110 @@ export default function UserViewPage() {
     return { name, email, phone, kycStatus, isMailVerified };
   }, [searchParams]);
 
+  const profile = userQuery.data ?? profileFromParams;
+  const profileSnapshot = {
+    name: profile.name ?? "",
+    email: profile.email ?? "",
+    phone: profile.phone ?? "",
+    isMailVerified: Boolean(profile.isMailVerified),
+    kycStatus: profile.kycStatus ?? "NOT_STARTED",
+  };
+
 	  const accountsQuery = useAdminUserAccounts({
 	    userId,
 	    page: 1,
 	    limit: 50,
 	  });
-	  const accountList = useMemo(
-	    () => accountsQuery.data?.data ?? [],
-	    [accountsQuery.data?.data]
-	  );
+  const accountList = useMemo(
+    () => accountsQuery.data?.data ?? [],
+    [accountsQuery.data?.data]
+  );
+  const accountIds = useMemo(
+    () => accountList.map((account) => account._id).filter(Boolean),
+    [accountList]
+  );
+  const accountIdSet = useMemo(() => new Set(accountIds), [accountIds]);
+  const accountSocketUrl = resolveAccountSocketUrl();
+  const effectiveLiveStatus =
+    activeTab !== "Active Trades"
+      ? "idle"
+      : !accountIds.length
+      ? "idle"
+      : !accountSocketUrl
+      ? "error"
+      : liveStatus;
+
+  const closedTradesQuery = useTradeAdminClosedTrades({
+    page: closedPage,
+    limit: closedLimit,
+    userId: userId ?? "0",
+    accountId: closedAccountFilter || undefined,
+    sortBy: "closeTime",
+    sortDir: "desc",
+  });
+
+  const closedTrades = useMemo(
+    () => closedTradesQuery.data?.data ?? [],
+    [closedTradesQuery.data?.data]
+  );
+  const closedPagination = closedTradesQuery.data?.pagination;
+  const closedTotalPages = closedPagination?.totalPages ?? 1;
+  const closedTotal = closedPagination?.total ?? closedTrades.length;
+  const closedSummary = useMemo(() => {
+    return closedTrades.reduce(
+      (acc, trade) => {
+        acc.pageTrades += 1;
+        acc.totalVolume += trade.volume ?? 0;
+        acc.totalPnl += trade.realizedPnL ?? 0;
+        if ((trade.realizedPnL ?? 0) > 0) acc.wins += 1;
+        return acc;
+      },
+      { pageTrades: 0, totalVolume: 0, totalPnl: 0, wins: 0 }
+    );
+  }, [closedTrades]);
+
+  const pendingOpenQuery = useTradeAdminPendingOpenOrders({
+    page: pendingPage,
+    limit: pendingLimit,
+    userId: userId ?? "0",
+    accountId: pendingAccountFilter || undefined,
+    sortBy: "createdAt",
+    sortDir: "desc",
+  });
+
+  const pendingOpenTrades = useMemo(
+    () => pendingOpenQuery.data?.data ?? [],
+    [pendingOpenQuery.data?.data]
+  );
+  const pendingSymbols = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          pendingOpenTrades
+            .map((order) => (order.symbol ?? "").toUpperCase())
+            .filter(Boolean)
+        )
+      ),
+    [pendingOpenTrades]
+  );
+  const marketToken = getAccessTokenFromCookie();
+  const pendingQuotes = useLiveQuotesBySymbols(marketToken, pendingSymbols);
+  const pendingPagination = pendingOpenQuery.data?.pagination;
+  const pendingTotalPages = pendingPagination?.totalPages ?? 1;
+  const pendingTotal = pendingPagination?.total ?? pendingOpenTrades.length;
+  const pendingSummary = useMemo(() => {
+    return pendingOpenTrades.reduce(
+      (acc, order) => {
+        acc.pageOrders += 1;
+        const side = (order.side ?? "").toUpperCase();
+        if (side === "BUY") acc.buy += 1;
+        if (side === "SELL") acc.sell += 1;
+        acc.totalVolume += order.volume ?? 0;
+        return acc;
+      },
+      { pageOrders: 0, buy: 0, sell: 0, totalVolume: 0 }
+    );
+  }, [pendingOpenTrades]);
 
 	  const accountOptions = useMemo<SelectOption[]>(() => {
 	    if (!accountList.length) {
@@ -429,6 +671,17 @@ export default function UserViewPage() {
     return value.toLocaleString("en-IN");
   };
 
+  const getAmountClass = (
+    value?: number,
+    positiveClass = "text-emerald-600"
+  ) => {
+    if (value === undefined || value === null || Number.isNaN(value))
+      return "text-[var(--text-muted)]";
+    if (value < 0) return "text-rose-600";
+    if (value === 0) return "text-slate-600";
+    return positiveClass;
+  };
+
   const formatDateTime = (value?: string) => {
     if (!value) return "--";
     const date = new Date(value);
@@ -443,31 +696,406 @@ export default function UserViewPage() {
     });
   };
 
+  const formatLiveNumber = (value?: number, digits = 2) => {
+    if (value === undefined || value === null || Number.isNaN(value)) return "--";
+    return value.toLocaleString("en-IN", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  };
+
+  const formatLivePrice = (value?: number) => {
+    if (value === undefined || value === null || Number.isNaN(value)) return "--";
+    const digits = Math.abs(value) >= 100 ? 2 : 5;
+    return formatLiveNumber(value, digits);
+  };
+
+  const parseNullableNumber = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const num = Number(trimmed);
+    if (!Number.isFinite(num)) return null;
+    return num;
+  };
+
+  const extractMessage = (value: unknown): string | undefined => {
+    if (typeof value !== "object" || value === null) return undefined;
+
+    const record = value as Record<string, unknown>;
+    const direct = record.message;
+    if (typeof direct === "string" && direct.trim()) return direct;
+
+    const nestedData = record.data;
+    if (typeof nestedData === "object" && nestedData !== null) {
+      const nestedMessage = (nestedData as Record<string, unknown>).message;
+      if (typeof nestedMessage === "string" && nestedMessage.trim()) {
+        return nestedMessage;
+      }
+    }
+
+    const response = record.response;
+    if (typeof response === "object" && response !== null) {
+      const responseData = (response as Record<string, unknown>).data;
+      if (typeof responseData === "object" && responseData !== null) {
+        const responseMessage = (responseData as Record<string, unknown>).message;
+        if (typeof responseMessage === "string" && responseMessage.trim()) {
+          return responseMessage;
+        }
+      }
+    }
+
+    return undefined;
+  };
+
+  const getLiveStatusClass = (status: string) => {
+    if (status === "connected")
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
+    if (status === "connecting")
+      return "border-amber-500/40 bg-amber-500/10 text-amber-700";
+    if (status === "error")
+      return "border-rose-500/40 bg-rose-500/10 text-rose-700";
+    return "border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)]";
+  };
+
+  const getSideClass = (side?: string) => {
+    const normalized = (side ?? "").toUpperCase();
+    if (normalized === "BUY")
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
+    if (normalized === "SELL")
+      return "border-rose-500/40 bg-rose-500/10 text-rose-700";
+    return "border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)]";
+  };
+
+  const getOrderTypeClass = (orderType?: string) => {
+    const normalized = (orderType ?? "").toUpperCase();
+    if (normalized === "MARKET")
+      return "border-violet-500/40 bg-violet-500/10 text-violet-700";
+    if (normalized.includes("LIMIT"))
+      return "border-sky-500/40 bg-sky-500/10 text-sky-700";
+    if (normalized.includes("STOP"))
+      return "border-amber-500/40 bg-amber-500/10 text-amber-700";
+    return "border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)]";
+  };
+
+  const getPnlClass = (value?: number) => {
+    if (value === undefined || value === null || Number.isNaN(value))
+      return "text-[var(--text-muted)]";
+    if (value > 0) return "text-emerald-600";
+    if (value < 0) return "text-rose-600";
+    return "text-[var(--text-muted)]";
+  };
+
+  const getPendingLivePrice = (order: {
+    symbol?: string;
+    side?: string;
+  }) => {
+    const symbol = (order.symbol ?? "").toUpperCase();
+    if (!symbol) return undefined;
+    const quote = pendingQuotes[symbol];
+    if (!quote) return undefined;
+    const bid = Number(quote.bid);
+    const ask = Number(quote.ask);
+    const side = (order.side ?? "").toUpperCase();
+    if (side === "BUY" && Number.isFinite(ask)) return ask;
+    if (side === "SELL" && Number.isFinite(bid)) return bid;
+    if (Number.isFinite(ask)) return ask;
+    if (Number.isFinite(bid)) return bid;
+    return undefined;
+  };
+
+  const getPendingTriggerInfo = (order: {
+    orderType?: string;
+    orderKind?: string;
+    side?: string;
+    price?: number;
+  }) => {
+    const livePrice = getPendingLivePrice(order);
+    const target = order.price;
+    if (
+      livePrice === undefined ||
+      target === undefined ||
+      target === null ||
+      Number.isNaN(target)
+    ) {
+      return { status: "na" as const };
+    }
+
+    const side = (order.side ?? "").toUpperCase();
+    const kind = (order.orderType ?? order.orderKind ?? "").toUpperCase();
+    let triggered = false;
+
+    if (kind.includes("LIMIT")) {
+      if (side === "BUY") triggered = livePrice <= target;
+      if (side === "SELL") triggered = livePrice >= target;
+    } else if (kind.includes("STOP")) {
+      if (side === "BUY") triggered = livePrice >= target;
+      if (side === "SELL") triggered = livePrice <= target;
+    }
+
+    if (triggered) return { status: "ready" as const };
+
+    return {
+      status: "away" as const,
+      value: Math.abs(target - livePrice),
+    };
+  };
+
+  const filteredLivePositions = useMemo(() => {
+    if (!liveAccountFilter) return livePositions;
+    return livePositions.filter(
+      (position) => position.accountId === liveAccountFilter
+    );
+  }, [liveAccountFilter, livePositions]);
+
+  const markPositionClosed = useCallback((positionId: string) => {
+    if (!positionId) return;
+    closedPositionsRef.current.set(positionId, Date.now());
+    if (livePositionsRef.current.delete(positionId)) {
+      setLivePositions(Array.from(livePositionsRef.current.values()));
+    }
+    while (closedPositionsRef.current.size > 500) {
+      const oldestKey = closedPositionsRef.current.keys().next().value;
+      if (!oldestKey) break;
+      closedPositionsRef.current.delete(oldestKey);
+    }
+  }, []);
+
+  const liveSummary = useMemo(
+    () =>
+      filteredLivePositions.reduce(
+        (acc, position) => {
+          acc.total += 1;
+          const side = (position.side ?? "").toUpperCase();
+          if (side === "BUY") acc.buy += 1;
+          if (side === "SELL") acc.sell += 1;
+          acc.pnl += position.floatingPnL ?? 0;
+          acc.last = position.updatedAt ?? acc.last;
+          return acc;
+        },
+        { total: 0, buy: 0, sell: 0, pnl: 0, last: "" }
+      ),
+    [filteredLivePositions]
+  );
+
   const resolveTxType = (tx: AdminTransaction) =>
     (tx.transactionType ?? tx.type ?? "").toString();
   const resolveTxStatus = (tx: AdminTransaction) =>
     (tx.status ?? "").toString();
 
   useEffect(() => {
-    const profile = userQuery.data;
-    const source = profile ?? profileFromParams;
+    if (activeTab !== "Active Trades") {
+      if (wsRef.current) {
+        wsRef.current.close(1000, "active_tab_change");
+        wsRef.current = null;
+      }
+      return;
+    }
 
-    setLocalProfile({
-      name: source.name ?? "",
-      email: source.email ?? "",
-      phone: source.phone ?? "",
-      isMailVerified: Boolean(source.isMailVerified),
-      kycStatus: source.kycStatus ?? "NOT_STARTED",
-    });
+    if (!accountIds.length) {
+      if (wsRef.current) {
+        wsRef.current.close(1000, "no_accounts");
+        wsRef.current = null;
+      }
+      return;
+    }
+    const socketUrl = resolveAccountSocketUrl();
+    if (!socketUrl) {
+      if (wsRef.current) {
+        wsRef.current.close(1000, "no_socket_url");
+        wsRef.current = null;
+      }
+      return;
+    }
+
+    const existing = wsRef.current;
+    if (
+      existing &&
+      (existing.readyState === WebSocket.OPEN ||
+        existing.readyState === WebSocket.CONNECTING)
+    ) {
+      if (existing.readyState === WebSocket.OPEN) {
+        accountIds.forEach((accountId) => {
+          existing.send(
+            JSON.stringify({
+              type: "identify",
+              accountId,
+            })
+          );
+        });
+      }
+      return;
+    }
+
+    const ws = new WebSocket(socketUrl);
+    wsRef.current = ws;
+
+    const sendIdentifyAll = () => {
+      accountIds.forEach((accountId) => {
+        ws.send(
+          JSON.stringify({
+            type: "identify",
+            accountId,
+          })
+        );
+      });
+    };
+
+    ws.onopen = () => {
+      setLiveStatus("connected");
+      sendIdentifyAll();
+    };
+
+    ws.onmessage = (event) => {
+      const raw =
+        typeof event.data === "string"
+          ? event.data
+          : event.data instanceof ArrayBuffer
+          ? new TextDecoder().decode(event.data)
+          : "";
+      const messages = parseSocketMessages(raw);
+      if (!messages.length) return;
+
+      messages.forEach((msg) => {
+        const type = (msg?.type ?? "").toString().toLowerCase();
+        const data = msg?.data ?? msg;
+
+        if (!data?.accountId || !accountIdSet.has(data.accountId)) return;
+
+        if (type === "live_account") {
+          return;
+        }
+
+        if (
+          type !== "live_position" &&
+          type.includes("position") &&
+          (type.includes("close") || type.includes("closed"))
+        ) {
+          const positionId = data.positionId ?? data.position_id;
+          if (positionId) {
+            markPositionClosed(positionId);
+          }
+          return;
+        }
+
+        if (type === "live_position") {
+          const positionId = data.positionId ?? data.position_id;
+          if (!positionId) return;
+          if (closedPositionsRef.current.has(positionId)) return;
+
+          const rawStatus = data.status ?? data.positionStatus ?? "";
+          const normalizedStatus = rawStatus.toString().toLowerCase();
+          const volumeValue =
+            typeof data.volume === "number" ? data.volume : Number(data.volume);
+          const isClosedFlag = data.isClosed === true || data.closed === true;
+          const isOpenFlag = data.isOpen === false || data.open === false;
+          const closeTime =
+            data.closeTime ??
+            data.closedAt ??
+            data.closed_at ??
+            data.close_time ??
+            data.closeTimestamp ??
+            data.close_ts;
+          const closePrice =
+            data.closePrice ?? data.close_price ?? data.closedPrice ?? data.closed_price;
+          const closeReasonRaw = data.closeReason ?? data.close_reason ?? data.reason ?? "";
+          const closeReason = closeReasonRaw.toString().toLowerCase();
+          const hasCloseReason = closeReason.length > 0;
+          const closeReasonMatches =
+            hasCloseReason &&
+            (closeReason.includes("stop") ||
+              closeReason.includes("sl") ||
+              closeReason.includes("take") ||
+              closeReason.includes("tp") ||
+              closeReason.includes("close") ||
+              closeReason.includes("liquid") ||
+              closeReason.includes("margin"));
+
+          if (
+            isClosedFlag ||
+            isOpenFlag ||
+            normalizedStatus === "closed" ||
+            normalizedStatus === "close" ||
+            normalizedStatus === "closing" ||
+            normalizedStatus === "cancelled" ||
+            normalizedStatus === "canceled" ||
+            Boolean(closeTime) ||
+            Boolean(closePrice) ||
+            closeReasonMatches ||
+            (Number.isFinite(volumeValue) && volumeValue <= 0)
+          ) {
+            markPositionClosed(positionId);
+            return;
+          }
+
+          const prev = livePositionsRef.current.get(positionId);
+          const snapshot: LivePositionSnapshot = {
+            positionId,
+            accountId: data.accountId,
+            symbol: data.symbol ?? prev?.symbol,
+            side: data.side ?? prev?.side,
+            volume: Number.isFinite(volumeValue) ? volumeValue : prev?.volume,
+            openPrice: data.openPrice ?? prev?.openPrice,
+            currentPrice: data.currentPrice ?? prev?.currentPrice,
+            floatingPnL: data.floatingPnL ?? prev?.floatingPnL,
+            stopLoss: data.stopLoss ?? prev?.stopLoss ?? null,
+            takeProfit: data.takeProfit ?? prev?.takeProfit ?? null,
+            openTime: data.openTime ?? prev?.openTime,
+            updatedAt: new Date().toISOString(),
+          };
+          livePositionsRef.current.set(positionId, snapshot);
+          setLivePositions(Array.from(livePositionsRef.current.values()));
+        }
+      });
+    };
+
+    ws.onerror = () => setLiveStatus("error");
+    ws.onclose = () => {
+      wsRef.current = null;
+      setLiveStatus("idle");
+    };
+
+    return () => {
+      ws.close(1000, "component_unmount");
+      wsRef.current = null;
+    };
+  }, [activeTab, accountIds, accountIdSet, markPositionClosed]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const displayName = profileSnapshot.name || "User";
+  const displayEmail = profileSnapshot.email || "--";
+  const selectedAccountTypeMeta = useMemo(
+    () => getAccountTypeMeta(selectedAccount?.account_type),
+    [selectedAccount?.account_type]
+  );
+  const SelectedAccountTypeIcon = selectedAccountTypeMeta.icon;
+
+  const kycBadgeClass =
+    kycStyles[profileSnapshot.kycStatus ?? ""] ||
+    "border-[var(--border-subtle)] bg-[var(--chip-bg)] text-[var(--text-muted)]";
+
+  const mailBadgeClass = profileSnapshot.isMailVerified
+    ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
+    : "border-amber-500/40 bg-amber-500/5 text-amber-600";
+
+  const canSubmit = useMemo(
+    () => !updateMutation.isPending,
+    [updateMutation.isPending]
+  );
+
+  const openEdit = () => {
+    const profile = userQuery.data;
 
     setForm({
-      name: source.name ?? "",
-      phone: source.phone ?? "",
-      isMailVerified: Boolean(source.isMailVerified),
-      kycStatus: source.kycStatus ?? "NOT_STARTED",
-      date_of_birth: profile?.date_of_birth
-        ? profile.date_of_birth.slice(0, 10)
-        : "",
+      name: profileSnapshot.name,
+      phone: profileSnapshot.phone,
+      isMailVerified: profileSnapshot.isMailVerified,
+      kycStatus: profileSnapshot.kycStatus,
+      date_of_birth: profile?.date_of_birth ? profile.date_of_birth.slice(0, 10) : "",
       gender: profile?.gender ?? "",
       address_line_1: profile?.address_line_1 ?? "",
       address_line_2: profile?.address_line_2 ?? "",
@@ -476,36 +1104,9 @@ export default function UserViewPage() {
       country: profile?.country ?? "",
       pincode: profile?.pincode ?? "",
     });
-
     setTouched({});
-  }, [profileFromParams, userQuery.data]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(""), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const displayName = localProfile.name || "User";
-  const displayEmail = localProfile.email || "--";
-  const selectedAccountTypeMeta = useMemo(
-    () => getAccountTypeMeta(selectedAccount?.account_type),
-    [selectedAccount?.account_type]
-  );
-  const SelectedAccountTypeIcon = selectedAccountTypeMeta.icon;
-
-  const kycBadgeClass =
-    kycStyles[localProfile.kycStatus ?? ""] ||
-    "border-[var(--border-subtle)] bg-[var(--chip-bg)] text-[var(--text-muted)]";
-
-  const mailBadgeClass = localProfile.isMailVerified
-    ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
-    : "border-amber-500/40 bg-amber-500/5 text-amber-600";
-
-  const canSubmit = useMemo(
-    () => !updateMutation.isPending,
-    [updateMutation.isPending]
-  );
+    setEditOpen(true);
+  };
 
   const handleChange =
     (key: keyof AdminUserUpdatePayload) =>
@@ -538,28 +1139,24 @@ export default function UserViewPage() {
     updateMutation.mutate(
       { id: userId, payload },
       {
-        onSuccess: (resp: any) => {
+        onSuccess: (resp: unknown) => {
           const msg =
-            resp?.message || resp?.data?.message || "Profile updated successfully";
-          const nextProfile = {
-            name: form.name ?? localProfile.name,
-            email: localProfile.email,
-            phone: form.phone ?? localProfile.phone,
-            isMailVerified: form.isMailVerified ?? localProfile.isMailVerified,
-            kycStatus: form.kycStatus ?? localProfile.kycStatus,
-          };
-
-          setLocalProfile(nextProfile);
+            typeof resp === "object" && resp !== null
+              ? ((resp as { message?: string; data?: { message?: string } }).message ??
+                  (resp as { data?: { message?: string } }).data?.message)
+              : undefined;
           setTouched({});
           setEditOpen(false);
-          setToast(msg);
+          setToast(msg || "Profile updated successfully");
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
           const msg =
-            err?.response?.data?.message ||
-            err?.message ||
-            "Update failed. Please try again.";
-          setToast(msg);
+            typeof err === "object" && err !== null
+              ? ((err as { response?: { data?: { message?: string } } }).response
+                  ?.data?.message ??
+                (err as { message?: string }).message)
+              : undefined;
+          setToast(msg || "Update failed. Please try again.");
         },
       }
     );
@@ -590,6 +1187,144 @@ export default function UserViewPage() {
   const closeAccountEdit = () => {
     setAccountEditOpen(false);
     setAccountFormError("");
+  };
+
+  const openPositionAction = (position: LivePositionSnapshot) => {
+    setPositionAction(position);
+    setPositionForm({
+      stopLoss: position.stopLoss ? String(position.stopLoss) : "",
+      takeProfit: position.takeProfit ? String(position.takeProfit) : "",
+    });
+    setPositionActionError("");
+    setPositionActionOpen(true);
+  };
+
+  const closePositionAction = () => {
+    setPositionActionOpen(false);
+    setPositionAction(null);
+    setPositionActionError("");
+  };
+
+  const openPendingAction = (order: TradeAdminPendingOrder) => {
+    setPendingAction(order);
+    setPendingEditForm({
+      price: order.price ? String(order.price) : "",
+      stopLoss: order.stopLoss ? String(order.stopLoss) : "",
+      takeProfit: order.takeProfit ? String(order.takeProfit) : "",
+    });
+    setPendingActionError("");
+    setPendingActionOpen(true);
+  };
+
+  const closePendingAction = () => {
+    setPendingActionOpen(false);
+    setPendingAction(null);
+    setPendingActionError("");
+  };
+
+  const handlePositionModifySubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!positionAction) return;
+
+    const stopLoss = parseNullableNumber(positionForm.stopLoss);
+    const takeProfit = parseNullableNumber(positionForm.takeProfit);
+
+    modifyPositionMutation.mutate(
+      {
+        accountId: positionAction.accountId,
+        positionId: positionAction.positionId,
+        userId,
+        stopLoss: stopLoss ?? undefined,
+        takeProfit: takeProfit ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          setToast("Position updated.");
+          closePositionAction();
+        },
+        onError: (err: unknown) => {
+          setPositionActionError(extractMessage(err) || "Position update failed.");
+        },
+      }
+    );
+  };
+
+  const handlePendingModifySubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!pendingAction) return;
+
+    const price = parseNullableNumber(pendingEditForm.price);
+    const stopLoss = parseNullableNumber(pendingEditForm.stopLoss);
+    const takeProfit = parseNullableNumber(pendingEditForm.takeProfit);
+
+    if (price === null && stopLoss === null && takeProfit === null) {
+      setPendingActionError("Enter price or stopLoss/takeProfit.");
+      return;
+    }
+
+    modifyPendingMutation.mutate(
+      {
+        accountId: pendingAction.accountId,
+        orderId: pendingAction.orderId,
+        price: price ?? undefined,
+        stopLoss: stopLoss ?? undefined,
+        takeProfit: takeProfit ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          setToast("Pending order updated.");
+          closePendingAction();
+          pendingOpenQuery.refetch();
+        },
+        onError: (err: unknown) => {
+          setPendingActionError(
+            extractMessage(err) || "Pending order update failed."
+          );
+        },
+      }
+    );
+  };
+
+  const handlePendingCancel = (order: TradeAdminPendingOrder) => {
+    const cancelUserId = order.userId ?? userId ?? "";
+    if (!cancelUserId) {
+      setToast("User ID is required to cancel this order.");
+      return;
+    }
+    cancelPendingMutation.mutate(
+      { accountId: order.accountId, orderId: order.orderId, userId: cancelUserId },
+      {
+        onSuccess: () => {
+          setToast("Pending order cancelled.");
+          pendingOpenQuery.refetch();
+          if (pendingAction?.orderId === order.orderId) {
+            closePendingAction();
+          }
+        },
+        onError: (err: unknown) => {
+          setToast(extractMessage(err) || "Cancel pending order failed.");
+        },
+      }
+    );
+  };
+
+  const handlePositionClose = (position: LivePositionSnapshot) => {
+    closePositionMutation.mutate(
+      {
+        accountId: position.accountId,
+        positionId: position.positionId,
+        userId,
+      },
+      {
+        onSuccess: () => {
+          markPositionClosed(position.positionId);
+          setToast("Position closed.");
+        },
+        onError: (err: unknown) => {
+          setToast(extractMessage(err) || "Close position failed.");
+        },
+      }
+    );
   };
 
   const handleAccountFormField =
@@ -679,21 +1414,73 @@ export default function UserViewPage() {
     changePasswordMutation.mutate(
       { userId, newPassword },
       {
-        onSuccess: (resp: any) => {
-          const msg =
-            resp?.message ||
-            resp?.data?.message ||
-            "Password updated successfully";
-          setToast(msg);
+        onSuccess: (resp: unknown) => {
+          setToast(extractMessage(resp) || "Password updated successfully");
           setPasswordForm({ newPassword: "", confirmPassword: "" });
           setPasswordOpen(false);
         },
-        onError: (err: any) => {
-          const msg =
-            err?.response?.data?.message ||
-            err?.message ||
-            "Unable to update password.";
-          setPasswordError(msg);
+        onError: (err: unknown) => {
+          setPasswordError(extractMessage(err) || "Unable to update password.");
+        },
+      }
+    );
+  };
+
+  const openResetPassword = (account: AdminAccount, type: "trade" | "watch") => {
+    setResetPasswordAccount(account);
+    setResetPasswordType(type);
+    setAccountPassword("");
+    setAccountPasswordConfirm("");
+    setAccountPasswordError("");
+    setShowAccountPassword(false);
+    setShowAccountPasswordConfirm(false);
+    setResetPasswordOpen(true);
+  };
+
+  const closeResetPassword = () => {
+    setResetPasswordOpen(false);
+  };
+
+  const handleResetAccountPassword = () => {
+    setAccountPasswordError("");
+    const accountId = resetPasswordAccount?._id;
+    if (!accountId) {
+      setAccountPasswordError("Select an account first.");
+      return;
+    }
+    const password = accountPassword.trim();
+    const confirmation = accountPasswordConfirm.trim();
+    if (!password || !confirmation) {
+      setAccountPasswordError("Both password fields are required.");
+      return;
+    }
+    if (password.length < 6) {
+      setAccountPasswordError("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirmation) {
+      setAccountPasswordError("Passwords do not match.");
+      return;
+    }
+
+    const mutation =
+      resetPasswordType === "trade"
+        ? resetTradePasswordMutation
+        : resetWatchPasswordMutation;
+    const label = resetPasswordType === "trade" ? "Trade" : "Investor";
+
+    mutation.mutate(
+      { accountId, newPassword: password },
+      {
+        onSuccess: (resp) => {
+          setToast(resp?.message || `${label} password reset.`);
+          closeResetPassword();
+        },
+        onError: (err: unknown) => {
+          setAccountPasswordError(
+            extractMessage(err) ||
+              `Failed to reset ${label.toLowerCase()} password.`
+          );
         },
       }
     );
@@ -762,11 +1549,11 @@ export default function UserViewPage() {
                 </span>
                 <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5 break-all">
                   <Phone size={14} />
-                  {localProfile.phone || "--"}
-                  {localProfile.phone && localProfile.phone !== "--" && (
+                  {profileSnapshot.phone || "--"}
+                  {profileSnapshot.phone && profileSnapshot.phone !== "--" && (
                     <button
                       type="button"
-                      onClick={() => handleCopy(localProfile.phone, "Phone")}
+                      onClick={() => handleCopy(profileSnapshot.phone, "Phone")}
                       className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
                       aria-label="Copy phone"
                     >
@@ -781,13 +1568,13 @@ export default function UserViewPage() {
                   className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 uppercase tracking-wide ${mailBadgeClass}`}
                 >
                   <Mail size={12} />
-                  {localProfile.isMailVerified ? "MAIL VERIFIED" : "MAIL UNVERIFIED"}
+                  {profileSnapshot.isMailVerified ? "MAIL VERIFIED" : "MAIL UNVERIFIED"}
                 </span>
                 <span
                   className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 uppercase tracking-wide ${kycBadgeClass}`}
                 >
                   <ShieldCheck size={12} />
-                  KYC {(localProfile.kycStatus || "STATUS").replaceAll("_", " ")}
+                  KYC {(profileSnapshot.kycStatus || "STATUS").replaceAll("_", " ")}
                 </span>
               </div>
             </div>
@@ -800,7 +1587,7 @@ export default function UserViewPage() {
                 <Eye size={16} /> View Details
               </button>
               <button
-                onClick={() => setEditOpen(true)}
+                onClick={openEdit}
                 className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
               >
                 <Pencil size={16} /> Update
@@ -817,11 +1604,12 @@ export default function UserViewPage() {
       </div>
 
 	      <div className="flex flex-wrap gap-2">
-	        {["Fund History", "Accounts", "Active Trades", "Closed Trades", "Pending Trades"].map(
-          (tab) => (
+	        {(
+	          ["Fund History", "Accounts", "Active Trades", "Closed Trades", "Pending Trades"] as const
+	        ).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                 activeTab === tab
                   ? "border-[var(--primary)]/40 bg-[var(--primary)]/10 text-[var(--primary)]"
@@ -830,8 +1618,7 @@ export default function UserViewPage() {
             >
               {tab}
             </button>
-          )
-        )}
+          ))}
       </div>
 
 	      {activeTab === "Fund History" && (
@@ -1159,25 +1946,25 @@ export default function UserViewPage() {
 	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
 	                    Total Balance
 	                  </p>
-	                  <p className="mt-1 text-lg font-semibold text-emerald-600">
-	                    ${formatAmount(accountSummary.totalBalance)}
-	                  </p>
+                  <p className={`mt-1 text-lg font-semibold ${getAmountClass(accountSummary.totalBalance, "text-emerald-600")}`}>
+                    ${formatAmount(accountSummary.totalBalance)}
+                  </p>
 	                </div>
 	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
 	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
 	                    Total Hold Balance
 	                  </p>
-	                  <p className="mt-1 text-lg font-semibold text-amber-600">
-	                    ${formatAmount(accountSummary.totalHoldBalance)}
-	                  </p>
+                  <p className={`mt-1 text-lg font-semibold ${getAmountClass(accountSummary.totalHoldBalance, "text-amber-600")}`}>
+                    ${formatAmount(accountSummary.totalHoldBalance)}
+                  </p>
 	                </div>
 	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
 	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
 	                    Total Equity
 	                  </p>
-	                  <p className="mt-1 text-lg font-semibold text-sky-600">
-	                    ${formatAmount(accountSummary.totalEquity)}
-	                  </p>
+                  <p className={`mt-1 text-lg font-semibold ${getAmountClass(accountSummary.totalEquity, "text-sky-600")}`}>
+                    ${formatAmount(accountSummary.totalEquity)}
+                  </p>
 	                </div>
 	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
 	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
@@ -1231,35 +2018,68 @@ export default function UserViewPage() {
 	                            {typeMeta.label}
 	                          </span>
 	                        </p>
-	                        <p><span className="text-[var(--text-muted)]">Balance:</span> <span className="font-semibold text-emerald-600">${formatAmount(account.balance)}</span></p>
-	                        <p><span className="text-[var(--text-muted)]">Hold:</span> <span className="font-semibold text-amber-600">${formatAmount(account.hold_balance)}</span></p>
-	                        <p><span className="text-[var(--text-muted)]">Equity:</span> <span className="font-semibold text-sky-600">${formatAmount(account.equity)}</span></p>
+                        <p>
+                          <span className="text-[var(--text-muted)]">Balance:</span>{" "}
+                          <span className={`font-semibold ${getAmountClass(account.balance, "text-emerald-600")}`}>
+                            ${formatAmount(account.balance)}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-[var(--text-muted)]">Hold:</span>{" "}
+                          <span className={`font-semibold ${getAmountClass(account.hold_balance, "text-amber-600")}`}>
+                            ${formatAmount(account.hold_balance)}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-[var(--text-muted)]">Equity:</span>{" "}
+                          <span className={`font-semibold ${getAmountClass(account.equity, "text-sky-600")}`}>
+                            ${formatAmount(account.equity)}
+                          </span>
+                        </p>
 	                        <p><span className="text-[var(--text-muted)]">Currency:</span> {account.currency ?? "--"}</p>
 	                        <p><span className="text-[var(--text-muted)]">Leverage:</span> {account.leverage ? `x${account.leverage}` : "--"}</p>
 	                        <p><span className="text-[var(--text-muted)]">Commission:</span> {account.commission_per_lot ?? "--"}</p>
 	                      </div>
-	                      <div className="mt-3 flex items-center gap-2">
-	                        <button
-	                          type="button"
-	                          onClick={() => openAccountView(account)}
-	                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
-	                        >
-	                          <Eye size={13} />
-	                          View
-	                        </button>
-	                        <button
-	                          type="button"
-	                          onClick={() => openAccountEdit(account)}
-	                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
-	                        >
-	                          <Pencil size={13} />
-	                          Edit
-	                        </button>
-	                      </div>
-	                    </div>
-	                  );
-	                })}
-	              </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openAccountView(account)}
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
+                        >
+                          <Eye size={13} />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openAccountEdit(account)}
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]"
+                        >
+                          <Pencil size={13} />
+                          Edit
+                        </button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openResetPassword(account, "trade")}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/20"
+                        >
+                          <KeyRound size={12} />
+                          Reset Trade
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openResetPassword(account, "watch")}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-[11px] font-semibold text-sky-700 hover:bg-sky-500/20"
+                        >
+                          <KeyRound size={12} />
+                          Reset Investor
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
 	              <div className="mt-4 hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
 	                <table className="w-full table-auto text-left text-sm">
@@ -1332,15 +2152,15 @@ export default function UserViewPage() {
 	                              ? "Disabled"
 	                              : `${account.swap_charge ?? "--"}`}
 	                          </td>
-	                          <td className="px-4 py-3 font-medium text-emerald-600">
-	                            ${formatAmount(account.balance)}
-	                          </td>
-	                          <td className="px-4 py-3 font-medium text-amber-600">
-	                            ${formatAmount(account.hold_balance)}
-	                          </td>
-	                          <td className="px-4 py-3 font-medium text-sky-600">
-	                            ${formatAmount(account.equity)}
-	                          </td>
+                          <td className={`px-4 py-3 font-medium ${getAmountClass(account.balance, "text-emerald-600")}`}>
+                            ${formatAmount(account.balance)}
+                          </td>
+                          <td className={`px-4 py-3 font-medium ${getAmountClass(account.hold_balance, "text-amber-600")}`}>
+                            ${formatAmount(account.hold_balance)}
+                          </td>
+                          <td className={`px-4 py-3 font-medium ${getAmountClass(account.equity, "text-sky-600")}`}>
+                            ${formatAmount(account.equity)}
+                          </td>
 	                          <td className="px-4 py-3 uppercase">{account.currency ?? "--"}</td>
 	                          <td className="px-4 py-3">
 	                            <span
@@ -1362,29 +2182,45 @@ export default function UserViewPage() {
 	                          </td>
 	                          <td className="px-4 py-3">{formatDateTime(account.createdAt)}</td>
 	                          <td className="px-4 py-3">{formatDateTime(account.updatedAt)}</td>
-	                          <td className="px-4 py-3">
-	                            <div className="flex items-center gap-2">
-	                              <button
-	                                type="button"
-	                                onClick={() => openAccountView(account)}
-	                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
-	                              >
-	                                <Eye size={12} />
-	                                View
-	                              </button>
-	                              <button
-	                                type="button"
-	                                onClick={() => openAccountEdit(account)}
-	                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
-	                              >
-	                                <Pencil size={12} />
-	                                Edit
-	                              </button>
-	                            </div>
-	                          </td>
-	                        </tr>
-	                      );
-	                    })}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openAccountView(account)}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
+                              >
+                                <Eye size={12} />
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openAccountEdit(account)}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--hover-bg)]"
+                              >
+                                <Pencil size={12} />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openResetPassword(account, "trade")}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/20"
+                              >
+                                <KeyRound size={12} />
+                                Trade PW
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openResetPassword(account, "watch")}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-500/20"
+                              >
+                                <KeyRound size={12} />
+                                Investor PW
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
 	                  </tbody>
 	                </table>
 	              </div>
@@ -1394,10 +2230,552 @@ export default function UserViewPage() {
 	      )}
 	
 	
-	      {activeTab !== "Fund History" && activeTab !== "Accounts" && (
-	        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-muted)]">
-	          No data available for {activeTab}.
-	        </div>
+	      {activeTab === "Active Trades" && (
+	        <div className="rounded-2xl border border-[var(--card-border)] bg-gradient-to-br from-[var(--card-bg)] via-[var(--card-bg)] to-emerald-500/5 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">
+                Live Stream
+              </div>
+              <h3 className="mt-2 text-lg font-semibold">Active Positions</h3>
+              <p className="text-xs text-[var(--text-muted)]">
+                WebSocket:
+                <span
+                  className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getLiveStatusClass(
+                    effectiveLiveStatus
+                  )}`}
+                >
+                  {effectiveLiveStatus}
+                </span>
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-xs text-[var(--text-muted)]">
+                Accounts: {accountIds.length} | Positions: {filteredLivePositions.length}
+              </div>
+              <div className="min-w-[200px]">
+                <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  Account Filter
+                </p>
+                <CustomSelect
+                  value={liveAccountFilter}
+                  onChange={setLiveAccountFilter}
+                  options={accountOptions}
+                  placeholder="All Accounts"
+                  buttonClassName="h-9 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-700">BUY</p>
+              <p className="mt-1 text-xl font-semibold text-emerald-700">
+                {liveSummary.buy}
+              </p>
+            </div>
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-3">
+              <p className="text-[11px] uppercase tracking-wide text-rose-700">SELL</p>
+              <p className="mt-1 text-xl font-semibold text-rose-700">
+                {liveSummary.sell}
+              </p>
+            </div>
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.06] p-3">
+              <p className="text-[11px] uppercase tracking-wide text-sky-700">Total</p>
+              <p className="mt-1 text-xl font-semibold text-sky-700">
+                {liveSummary.total}
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700">Floating PnL</p>
+              <p className={`mt-1 text-xl font-semibold ${getPnlClass(liveSummary.pnl)}`}>
+                {formatLiveNumber(liveSummary.pnl, 2)}
+              </p>
+            </div>
+          </div>
+
+          {filteredLivePositions.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-8 text-center text-sm text-[var(--text-muted)]">
+              No live positions for this account. Try another filter or keep this tab
+              open to receive updates.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div className="overflow-x-auto">
+                <table className="min-w-[1200px] w-full text-left text-sm">
+                <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
+                  <tr>
+                    <th className="px-4 py-3">Symbol</th>
+                    <th className="px-4 py-3">Side</th>
+                    <th className="px-4 py-3">Volume</th>
+                    <th className="px-4 py-3">Open Price</th>
+                    <th className="px-4 py-3">Current Price</th>
+                    <th className="px-4 py-3">Stop Loss</th>
+                    <th className="px-4 py-3">Take Profit</th>
+                    <th className="px-4 py-3">Floating PnL</th>
+                    <th className="px-4 py-3">Account ID</th>
+                    <th className="px-4 py-3">Position ID</th>
+                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLivePositions.map((position) => (
+                    <tr
+                      key={position.positionId}
+                      className="border-b border-[var(--card-border)] even:bg-[var(--input-bg)]/40"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        {position.symbol ?? "--"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getSideClass(
+                            position.side
+                          )}`}
+                        >
+                          {position.side ?? "--"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatLiveNumber(position.volume, 2)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatLivePrice(position.openPrice)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatLivePrice(position.currentPrice)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatLivePrice(position.stopLoss ?? undefined)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatLivePrice(position.takeProfit ?? undefined)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={getPnlClass(position.floatingPnL)}>
+                          {formatLiveNumber(position.floatingPnL, 2)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {position.accountId}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {position.positionId}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {formatDateTime(position.updatedAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openPositionAction(position)}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-semibold hover:bg-[var(--hover-bg)]"
+                          >
+                            <Pencil size={12} />
+                            Modify
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePositionClose(position)}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/20"
+                          >
+                            <XCircle size={12} />
+                            Close
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Closed Trades" && (
+        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold">Closed Trades</h3>
+              <p className="text-xs text-[var(--text-muted)]">
+                Total: {closedTotal}
+              </p>
+            </div>
+            <div className="min-w-[200px]">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                Account Filter
+              </p>
+              <CustomSelect
+                value={closedAccountFilter}
+                onChange={(value) => {
+                  setClosedAccountFilter(value);
+                  setClosedPage(1);
+                }}
+                options={accountOptions}
+                placeholder="All Accounts"
+                buttonClassName="h-9 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-sky-700">
+                Total Trades
+              </p>
+              <p className="mt-1 text-xl font-semibold text-sky-700">
+                {closedTotal}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                On page: {closedSummary.pageTrades}
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700">
+                Total Volume (page)
+              </p>
+              <p className="mt-1 text-xl font-semibold text-amber-700">
+                {formatLiveNumber(closedSummary.totalVolume, 2)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-700">
+                Net PnL (page)
+              </p>
+              <p
+                className={`mt-1 text-xl font-semibold ${getPnlClass(
+                  closedSummary.totalPnl
+                )}`}
+              >
+                {formatLiveNumber(closedSummary.totalPnl, 2)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-violet-700">
+                Win Rate (page)
+              </p>
+              <p className="mt-1 text-xl font-semibold text-violet-700">
+                {closedSummary.pageTrades
+                  ? Math.round((closedSummary.wins / closedSummary.pageTrades) * 100)
+                  : 0}
+                %
+              </p>
+            </div>
+          </div>
+
+          {closedTradesQuery.isLoading ? (
+            <div className="mt-6">
+              <GlobalLoader />
+            </div>
+          ) : closedTrades.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-8 text-center text-sm text-[var(--text-muted)]">
+              No closed trades found for this user.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div className="overflow-x-auto">
+                <table className="min-w-[1200px] w-full text-left text-sm">
+                  <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Symbol</th>
+                      <th className="px-4 py-3">Side</th>
+                      <th className="px-4 py-3">Order Type</th>
+                      <th className="px-4 py-3">Volume</th>
+                      <th className="px-4 py-3">Open</th>
+                      <th className="px-4 py-3">Close</th>
+                      <th className="px-4 py-3">Realized PnL</th>
+                      <th className="px-4 py-3">Open Time</th>
+                      <th className="px-4 py-3">Close Time</th>
+                      <th className="px-4 py-3">Account ID</th>
+                      <th className="px-4 py-3">Position ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closedTrades.map((trade) => (
+                      <tr
+                        key={trade._id}
+                        className="border-b border-[var(--card-border)] even:bg-[var(--input-bg)]/40"
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          {trade.symbol ?? "--"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getSideClass(
+                              trade.side
+                            )}`}
+                          >
+                            {trade.side ?? "--"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getOrderTypeClass(
+                              trade.orderType
+                            )}`}
+                          >
+                            {trade.orderType ?? "--"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLiveNumber(trade.volume, 2)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(trade.openPrice)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(trade.closePrice)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={getPnlClass(trade.realizedPnL)}>
+                            {formatLiveNumber(trade.realizedPnL, 2)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {formatDateTime(trade.openTime)}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {formatDateTime(trade.closeTime)}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {trade.accountId}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {trade.positionId}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                page={closedPage}
+                totalPages={closedTotalPages}
+                limit={closedLimit}
+                onPageChange={setClosedPage}
+                onLimitChange={(value) => {
+                  setClosedLimit(value);
+                  setClosedPage(1);
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Pending Trades" && (
+        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold">Open Pending Orders</h3>
+              <p className="text-xs text-[var(--text-muted)]">
+                Total: {pendingTotal}
+              </p>
+            </div>
+            <div className="min-w-[200px]">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                Account Filter
+              </p>
+              <CustomSelect
+                value={pendingAccountFilter}
+                onChange={(value) => {
+                  setPendingAccountFilter(value);
+                  setPendingPage(1);
+                }}
+                options={accountOptions}
+                placeholder="All Accounts"
+                buttonClassName="h-9 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-sky-700">
+                Total Orders
+              </p>
+              <p className="mt-1 text-xl font-semibold text-sky-700">
+                {pendingTotal}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                On page: {pendingSummary.pageOrders}
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-700">
+                BUY
+              </p>
+              <p className="mt-1 text-xl font-semibold text-emerald-700">
+                {pendingSummary.buy}
+              </p>
+            </div>
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-rose-700">
+                SELL
+              </p>
+              <p className="mt-1 text-xl font-semibold text-rose-700">
+                {pendingSummary.sell}
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700">
+                Total Volume (page)
+              </p>
+              <p className="mt-1 text-xl font-semibold text-amber-700">
+                {formatLiveNumber(pendingSummary.totalVolume, 2)}
+              </p>
+            </div>
+          </div>
+
+          {pendingOpenQuery.isLoading ? (
+            <div className="mt-6">
+              <GlobalLoader />
+            </div>
+          ) : pendingOpenTrades.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-8 text-center text-sm text-[var(--text-muted)]">
+              No open pending orders found for this user.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div className="overflow-x-auto">
+                <table className="min-w-[1200px] w-full text-left text-sm">
+                  <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Symbol</th>
+                      <th className="px-4 py-3">Side</th>
+                      <th className="px-4 py-3">Order Type</th>
+                      <th className="px-4 py-3">Price</th>
+                      <th className="px-4 py-3">Live Price</th>
+                      <th className="px-4 py-3">Trigger Left</th>
+                      <th className="px-4 py-3">Volume</th>
+                      <th className="px-4 py-3">Stop Loss</th>
+                      <th className="px-4 py-3">Take Profit</th>
+                      <th className="px-4 py-3">Created</th>
+                      <th className="px-4 py-3">Updated</th>
+                      <th className="px-4 py-3">Account ID</th>
+                      <th className="px-4 py-3">Order ID</th>
+                      <th className="px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingOpenTrades.map((order) => (
+                      <tr
+                        key={order._id}
+                        className="border-b border-[var(--card-border)] even:bg-[var(--input-bg)]/40"
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          {order.symbol ?? "--"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getSideClass(
+                              order.side
+                            )}`}
+                          >
+                            {order.side ?? "--"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getOrderTypeClass(
+                              order.orderType
+                            )}`}
+                          >
+                            {order.orderType ?? "--"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(order.price)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(getPendingLivePrice(order))}
+                        </td>
+                        <td className="px-4 py-3">
+                          {(() => {
+                            const info = getPendingTriggerInfo(order);
+                            if (info.status === "ready") {
+                              return (
+                                <span className="inline-flex rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                                  Ready
+                                </span>
+                              );
+                            }
+                            if (info.status === "away") {
+                              return (
+                                <span className="text-xs font-semibold text-[var(--text-muted)]">
+                                  {formatLivePrice(info.value)} away
+                                </span>
+                              );
+                            }
+                            return <span className="text-xs text-[var(--text-muted)]">--</span>;
+                          })()}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLiveNumber(order.volume, 2)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(order.stopLoss ?? undefined)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatLivePrice(order.takeProfit ?? undefined)}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {formatDateTime(order.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {formatDateTime(order.updatedAt)}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {order.accountId}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {order.orderId}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openPendingAction(order)}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-semibold hover:bg-[var(--hover-bg)]"
+                            >
+                              <Pencil size={12} />
+                              Modify
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePendingCancel(order)}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/20"
+                            >
+                              <XCircle size={12} />
+                              Cancel
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                page={pendingPage}
+                totalPages={pendingTotalPages}
+                limit={pendingLimit}
+                onPageChange={setPendingPage}
+                onLimitChange={(value) => {
+                  setPendingLimit(value);
+                  setPendingPage(1);
+                }}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <Modal
@@ -1432,19 +2810,19 @@ export default function UserViewPage() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
                 <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Balance</p>
-                <p className="mt-1 font-semibold text-emerald-600">
+                <p className={`mt-1 font-semibold ${getAmountClass(selectedAccount.balance, "text-emerald-600")}`}>
                   ${formatAmount(selectedAccount.balance)}
                 </p>
               </div>
               <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
                 <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Hold</p>
-                <p className="mt-1 font-semibold text-amber-600">
+                <p className={`mt-1 font-semibold ${getAmountClass(selectedAccount.hold_balance, "text-amber-600")}`}>
                   ${formatAmount(selectedAccount.hold_balance)}
                 </p>
               </div>
               <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
                 <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Equity</p>
-                <p className="mt-1 font-semibold text-sky-600">
+                <p className={`mt-1 font-semibold ${getAmountClass(selectedAccount.equity, "text-sky-600")}`}>
                   ${formatAmount(selectedAccount.equity)}
                 </p>
               </div>
@@ -1467,8 +2845,114 @@ export default function UserViewPage() {
                 </p>
               </div>
             </div>
+
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title={`Reset ${
+          resetPasswordType === "trade" ? "Trade" : "Investor"
+        } Password`}
+        open={resetPasswordOpen}
+        onClose={closeResetPassword}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeResetPassword}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleResetAccountPassword}
+              disabled={
+                resetPasswordType === "trade"
+                  ? resetTradePasswordMutation.isPending
+                  : resetWatchPasswordMutation.isPending
+              }
+              className="rounded-md bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-dark)] disabled:opacity-60"
+            >
+              {resetPasswordType === "trade"
+                ? resetTradePasswordMutation.isPending
+                  ? "Resetting..."
+                  : "Reset Trade Password"
+                : resetWatchPasswordMutation.isPending
+                ? "Resetting..."
+                : "Reset Investor Password"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {accountPasswordError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {accountPasswordError}
+            </div>
+          ) : null}
+
+          <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs text-[var(--text-muted)]">
+            Account:{" "}
+            <span className="font-mono text-[var(--foreground)]">
+              {resetPasswordAccount?.account_number ??
+                resetPasswordAccount?._id ??
+                "--"}
+            </span>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[var(--text-muted)]">
+              New Password
+            </label>
+            <div className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2">
+              <input
+                type={showAccountPassword ? "text" : "password"}
+                value={accountPassword}
+                onChange={(event) => setAccountPassword(event.target.value)}
+                placeholder="Enter new password"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAccountPassword((prev) => !prev)}
+                className="text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              >
+                {showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[var(--text-muted)]">
+              Confirm Password
+            </label>
+            <div className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2">
+              <input
+                type={showAccountPasswordConfirm ? "text" : "password"}
+                value={accountPasswordConfirm}
+                onChange={(event) => setAccountPasswordConfirm(event.target.value)}
+                placeholder="Confirm new password"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setShowAccountPasswordConfirm((prev) => !prev)
+                }
+                className="text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              >
+                {showAccountPasswordConfirm ? (
+                  <EyeOff size={16} />
+                ) : (
+                  <Eye size={16} />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       <Modal
@@ -1614,6 +3098,211 @@ export default function UserViewPage() {
       </Modal>
 
       <Modal
+        title="Modify Position"
+        open={positionActionOpen}
+        onClose={closePositionAction}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closePositionAction}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="position-action-form"
+              disabled={modifyPositionMutation.isPending || !positionAction}
+              className="rounded-md bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-dark)] disabled:opacity-60"
+            >
+              {modifyPositionMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        }
+      >
+        <form
+          id="position-action-form"
+          onSubmit={handlePositionModifySubmit}
+          className="space-y-4"
+        >
+          {positionActionError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {positionActionError}
+            </div>
+          ) : null}
+
+          {!positionAction ? (
+            <p className="text-sm text-[var(--text-muted)]">No position selected.</p>
+          ) : (
+            <>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3 text-sm">
+                <p className="font-mono font-semibold">{positionAction.positionId}</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Account: {positionAction.accountId}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Stop Loss
+                  </label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={positionForm.stopLoss}
+                      onChange={(event) =>
+                        setPositionForm((prev) => ({
+                          ...prev,
+                          stopLoss: event.target.value,
+                        }))
+                      }
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Take Profit
+                  </label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={positionForm.takeProfit}
+                      onChange={(event) =>
+                        setPositionForm((prev) => ({
+                          ...prev,
+                          takeProfit: event.target.value,
+                        }))
+                      }
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
+
+      <Modal
+        title="Modify Pending Order"
+        open={pendingActionOpen}
+        onClose={closePendingAction}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closePendingAction}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="pending-action-form"
+              disabled={modifyPendingMutation.isPending || !pendingAction}
+              className="rounded-md bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-dark)] disabled:opacity-60"
+            >
+              {modifyPendingMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        }
+      >
+        <form
+          id="pending-action-form"
+          onSubmit={handlePendingModifySubmit}
+          className="space-y-4"
+        >
+          {pendingActionError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {pendingActionError}
+            </div>
+          ) : null}
+
+          {!pendingAction ? (
+            <p className="text-sm text-[var(--text-muted)]">
+              No pending order selected.
+            </p>
+          ) : (
+            <>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3 text-sm">
+                <p className="font-mono font-semibold">{pendingAction.orderId}</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Account: {pendingAction.accountId}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Price
+                  </label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={pendingEditForm.price}
+                      onChange={(event) =>
+                        setPendingEditForm((prev) => ({
+                          ...prev,
+                          price: event.target.value,
+                        }))
+                      }
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Stop Loss
+                  </label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={pendingEditForm.stopLoss}
+                      onChange={(event) =>
+                        setPendingEditForm((prev) => ({
+                          ...prev,
+                          stopLoss: event.target.value,
+                        }))
+                      }
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Take Profit
+                  </label>
+                  <FieldControl icon={Hash}>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={pendingEditForm.takeProfit}
+                      onChange={(event) =>
+                        setPendingEditForm((prev) => ({
+                          ...prev,
+                          takeProfit: event.target.value,
+                        }))
+                      }
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
+
+      <Modal
         title="User Details"
         open={viewOpen}
         onClose={() => setViewOpen(false)}
@@ -1625,7 +3314,7 @@ export default function UserViewPage() {
               <User size={12} /> Full Name
             </div>
             <p className="mt-1 text-sm font-medium">
-              {userQuery.data?.name ?? localProfile.name ?? "--"}
+              {profileSnapshot.name || "--"}
             </p>
           </div>
           <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
@@ -1633,7 +3322,7 @@ export default function UserViewPage() {
               <Mail size={12} /> Email
             </div>
             <p className="mt-1 text-sm font-medium">
-              {userQuery.data?.email ?? localProfile.email ?? "--"}
+              {profileSnapshot.email || "--"}
             </p>
           </div>
           <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
@@ -1641,7 +3330,7 @@ export default function UserViewPage() {
               <Phone size={12} /> Phone
             </div>
             <p className="mt-1 text-sm font-medium">
-              {userQuery.data?.phone ?? localProfile.phone ?? "--"}
+              {profileSnapshot.phone || "--"}
             </p>
           </div>
           <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
@@ -1652,7 +3341,7 @@ export default function UserViewPage() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${mailBadgeClass}`}
               >
-                {localProfile.isMailVerified ? "Verified" : "Unverified"}
+                {profileSnapshot.isMailVerified ? "Verified" : "Unverified"}
               </span>
             </div>
           </div>
@@ -1664,7 +3353,7 @@ export default function UserViewPage() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${kycBadgeClass}`}
               >
-                {(localProfile.kycStatus || "STATUS").replaceAll("_", " ")}
+                {(profileSnapshot.kycStatus || "STATUS").replaceAll("_", " ")}
               </span>
             </div>
           </div>

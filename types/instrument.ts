@@ -18,6 +18,7 @@ export interface Instrument {
 
   pricePrecision: number;
   tickSize?: number | null;
+  spread: number;
 
   contractSize: number;
 

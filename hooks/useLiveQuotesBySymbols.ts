@@ -17,7 +17,7 @@ export function useLiveQuotesBySymbols(
 
     const [quotes, setQuotes] = useState<QuoteMap>({});
 
-    function pickNumber(...values: Array<number | string | undefined | null>) {
+    function pickNumber(...values: Array<unknown>) {
         for (const v of values) {
             if (v === undefined || v === null) continue;
             const n = Number(v);
@@ -26,36 +26,57 @@ export function useLiveQuotesBySymbols(
         return undefined;
     }
 
+    function isRecord(value: unknown): value is Record<string, unknown> {
+        return typeof value === "object" && value !== null;
+    }
+
+    function flush() {
+        if (frameRef.current) return;
+        frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = null;
+            setQuotes({ ...bufferRef.current });
+        });
+    }
+
     /* SOCKET INIT */
     useEffect(() => {
         if (!token) return;
         const socket = new MarketSocket();
         socketRef.current = socket;
 
-        socket.connect(token, (msg: any) => {
-            if (msg.status === "subscribed") {
-                const s = msg.symbol;
+        socket.connect(token, (raw: unknown) => {
+            if (!isRecord(raw)) return;
+
+            if (raw.status === "subscribed") {
+                const s = raw.symbol;
+                if (typeof s !== "string") return;
                 if (!bufferRef.current[s]) return;
 
+                const data = isRecord(raw.data) ? raw.data : undefined;
+
                 const nextOpen = pickNumber(
-                    msg.dayOpen,
-                    msg.open,
-                    msg.data?.dayOpen,
-                    msg.data?.open
+                    raw.dayOpen,
+                    raw.open,
+                    data?.dayOpen,
+                    data?.open
                 );
                 const nextClose = pickNumber(
-                    msg.dayClose,
-                    msg.close,
-                    msg.data?.dayClose,
-                    msg.data?.close,
-                    msg.prevClose,
-                    msg.data?.prevClose
+                    raw.dayClose,
+                    raw.close,
+                    data?.dayClose,
+                    data?.close,
+                    raw.prevClose,
+                    data?.prevClose
                 );
 
                 bufferRef.current[s] = {
                     ...bufferRef.current[s],
-                    high: Number(msg.dayHigh),
-                    low: Number(msg.dayLow),
+                    high:
+                        pickNumber(raw.dayHigh, data?.dayHigh) ??
+                        bufferRef.current[s].high,
+                    low:
+                        pickNumber(raw.dayLow, data?.dayLow) ??
+                        bufferRef.current[s].low,
                     open: nextOpen ?? bufferRef.current[s].open,
                     close: nextClose ?? bufferRef.current[s].close,
                 };
@@ -63,50 +84,72 @@ export function useLiveQuotesBySymbols(
                 return;
             }
 
-            if (msg.type === "orderbook") {
-                const s = msg.data.code;
-                const bid = msg.data.bids?.[0];
-                const ask = msg.data.asks?.[0];
-                if (!bid || !ask) return;
+            if (raw.type === "orderbook") {
+                const data = raw.data;
+                if (!isRecord(data)) return;
+
+                const s = data.code;
+                if (typeof s !== "string") return;
+
+                const bids = data.bids;
+                const asks = data.asks;
+                if (!Array.isArray(bids) || !Array.isArray(asks)) return;
+
+                const bidRaw = bids[0];
+                const askRaw = asks[0];
+                if (!isRecord(bidRaw) || !isRecord(askRaw)) return;
+
+                const bidPrice = bidRaw.price;
+                const askPrice = askRaw.price;
+                const bidVolume = bidRaw.volume;
+                const askVolume = askRaw.volume;
+                if (
+                    typeof bidPrice !== "string" ||
+                    typeof askPrice !== "string" ||
+                    typeof bidVolume !== "string" ||
+                    typeof askVolume !== "string"
+                ) {
+                    return;
+                }
 
                 const old = bufferRef.current[s];
                 if (!old) return;
 
                 const nextOpen = pickNumber(
-                    msg.data?.dayOpen,
-                    msg.data?.open,
-                    msg.data?.openPrice
+                    data.dayOpen,
+                    data.open,
+                    data.openPrice
                 );
                 const nextClose = pickNumber(
-                    msg.data?.dayClose,
-                    msg.data?.close,
-                    msg.data?.prevClose
+                    data.dayClose,
+                    data.close,
+                    data.prevClose
                 );
 
                 bufferRef.current[s] = {
                     ...old,
-                    bid: bid.price,
-                    ask: ask.price,
-                    bidVolume: bid.volume,
-                    askVolume: ask.volume,
-                    high: msg.data.dayHigh ?? old.high,
-                    low: msg.data.dayLow ?? old.low,
+                    bid: bidPrice,
+                    ask: askPrice,
+                    bidVolume,
+                    askVolume,
+                    high: pickNumber(data.dayHigh) ?? old.high,
+                    low: pickNumber(data.dayLow) ?? old.low,
                     open: nextOpen ?? old.open,
                     close: nextClose ?? old.close,
                     bidDir:
                         old.bid === "--"
                             ? "same"
-                            : Number(bid.price) > Number(old.bid)
+                            : Number(bidPrice) > Number(old.bid)
                                 ? "up"
-                                : Number(bid.price) < Number(old.bid)
+                                : Number(bidPrice) < Number(old.bid)
                                     ? "down"
                                     : old.bidDir,
                     askDir:
                         old.ask === "--"
                             ? "same"
-                            : Number(ask.price) > Number(old.ask)
+                            : Number(askPrice) > Number(old.ask)
                                 ? "up"
-                                : Number(ask.price) < Number(old.ask)
+                                : Number(askPrice) < Number(old.ask)
                                     ? "down"
                                     : old.askDir,
                 };
@@ -157,14 +200,6 @@ export function useLiveQuotesBySymbols(
 
         flush();
     }, [symbols]);
-
-    function flush() {
-        if (frameRef.current) return;
-        frameRef.current = requestAnimationFrame(() => {
-            frameRef.current = null;
-            setQuotes({ ...bufferRef.current });
-        });
-    }
 
     return quotes;
 }

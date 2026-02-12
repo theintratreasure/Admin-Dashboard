@@ -37,7 +37,7 @@ export type BroadcastNotificationPayload = {
 
 export async function broadcastNotificationService(
   payload: BroadcastNotificationPayload
-): Promise<any> {
+): Promise<unknown> {
   const res = await api.post("/notification/admin/broadcast", payload);
   return res.data;
 }

@@ -1,28 +1,25 @@
 "use client";
 
-import { Search, User, Sun, Moon } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const Topbar: React.FC = () => {
-  const [theme, setTheme] = useState("light");
+export default function Topbar() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return localStorage.theme === "dark" ? "dark" : "light";
+  });
 
   useEffect(() => {
-    if (localStorage.theme === "dark") {
+    if (theme === "dark") {
       document.documentElement.classList.add("dark");
-      setTheme("dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    if (theme === "light") {
-      document.documentElement.classList.add("dark");
-      localStorage.theme = "dark";
-      setTheme("dark");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.theme = "light";
-      setTheme("light");
     }
+    localStorage.theme = theme;
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
   return (
@@ -65,6 +62,4 @@ const Topbar: React.FC = () => {
       </div>
     </header>
   );
-};
-
-export default Topbar;
+}

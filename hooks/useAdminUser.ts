@@ -8,8 +8,11 @@ export const useAdminUser = (userId?: string) =>
     enabled: Boolean(userId),
     staleTime: 1000 * 30,
     refetchOnWindowFocus: false,
-    retry: (failureCount, error: any) => {
-      const status = error?.response?.status;
+    retry: (failureCount, error: unknown) => {
+      const status =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
       if (status === 404) return false;
       return failureCount < 2;
     },

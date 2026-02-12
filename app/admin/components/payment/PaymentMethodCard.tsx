@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   Bitcoin,
   Building2,
@@ -158,14 +159,15 @@ export default function PaymentMethodCard({
           )}
         </div>
 
-        {data.image_url && (
+          {data.image_url && (
           <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] p-2">
-            <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-lg border border-[var(--card-border)]/60 bg-gradient-to-br from-slate-100/60 via-white to-slate-100/50">
-              <img
+            <div className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-lg border border-[var(--card-border)]/60 bg-gradient-to-br from-slate-100/60 via-white to-slate-100/50">
+              <Image
                 src={data.image_url}
                 alt={`${data.title} preview`}
-                loading="lazy"
-                className="h-full w-full object-contain p-1"
+                fill
+                sizes="(max-width: 768px) 100vw, 520px"
+                className="object-contain p-1"
               />
             </div>
           </div>

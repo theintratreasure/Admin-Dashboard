@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  getAdminNotificationsService,
-  NotificationListResponse,
-} from "@/services/notification/notification.services";
+import { getAdminNotificationsService } from "@/services/notification/notification.services";
 
 interface UseGetAdminNotificationsProps {
   page: number;

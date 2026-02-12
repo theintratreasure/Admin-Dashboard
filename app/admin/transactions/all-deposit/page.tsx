@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -534,11 +535,15 @@ export default function AllDeposit() {
                   {selected.proof?.image_url && (
                     <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
                       <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Proof</p>
-                      <img
-                        src={selected.proof.image_url}
-                        alt="Deposit proof"
-                        className="w-full h-64 object-contain rounded-xl bg-[var(--card-bg)]"
-                      />
+                      <div className="relative h-64 w-full overflow-hidden rounded-xl bg-[var(--card-bg)]">
+                        <Image
+                          src={selected.proof.image_url}
+                          alt="Deposit proof"
+                          fill
+                          sizes="(max-width: 640px) 100vw, 900px"
+                          className="object-contain"
+                        />
+                      </div>
                     </div>
                   )}
 

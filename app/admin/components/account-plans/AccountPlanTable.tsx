@@ -22,7 +22,6 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
   const mobileTrackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setActiveIndex(0);
     if (mobileTrackRef.current) {
       mobileTrackRef.current.scrollLeft = 0;
     }
