@@ -1,9 +1,12 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useClickSoundSettings } from "./ClickSoundProvider";
 
 export default function Topbar() {
+  const { enabled: clickSoundEnabled, toggle: toggleClickSound } =
+    useClickSoundSettings();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
     return localStorage.theme === "dark" ? "dark" : "light";
@@ -24,17 +27,26 @@ export default function Topbar() {
 
   return (
     <header className="w-full sticky top-0 z-50 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 flex-wrap gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
 
         {/* Branding */}
-        <div className="ml-12 lg:ml-0 flex items-center gap-3">
-          <h1 className="text-xl font-bold tracking-wide">
-            Trading <span className="text-[var(--primary)]">Admin</span>
-          </h1>
+        <div className="ml-12 lg:ml-0 flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="h-8 w-[2px] shrink-0 rounded-full bg-[var(--primary)]/80"
+          />
+          <div className="min-w-0 leading-none">
+            <p className="truncate text-sm font-bold tracking-wide text-[var(--foreground)]">
+              ALS
+            </p>
+            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--primary)] sm:text-[11px]">
+              Trades
+            </p>
+          </div>
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
 
           {/* Search Box */}
           {/* <div className="relative w-40 sm:w-52 md:w-60">
@@ -50,11 +62,23 @@ export default function Topbar() {
           {/*Theme Toggle Button — ADDED HERE */}
           <button
             onClick={toggleTheme}
-            className="h-10 w-10 rounded-full flex items-center justify-center 
+            className="h-9 w-9 rounded-full flex items-center justify-center 
             border border-[var(--input-border)] bg-[var(--input-bg)] 
-            hover:scale-105 transition-transform shadow-sm"
+            hover:scale-105 transition-transform shadow-sm sm:h-10 sm:w-10"
           >
             {theme === "light" ? <Moon size={18}  /> : <Sun size={18} />}
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleClickSound}
+            title={`Click sound: ${clickSoundEnabled ? "On" : "Off"}`}
+            aria-label={`Click sound ${clickSoundEnabled ? "on" : "off"}`}
+            className="h-9 w-9 rounded-full flex items-center justify-center 
+            border border-[var(--input-border)] bg-[var(--input-bg)] 
+            hover:scale-105 transition-transform shadow-sm sm:h-10 sm:w-10"
+          >
+            {clickSoundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
 
         </div>

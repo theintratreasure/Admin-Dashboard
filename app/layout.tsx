@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trading Admin",
+  title: "ALS Trades",
   description: "Admin Dashboard with Theme Support",
 };
 
@@ -26,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
