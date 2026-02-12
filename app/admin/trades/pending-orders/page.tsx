@@ -19,6 +19,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
 import { useTradeAdminPendingOrders } from "@/hooks/useTradeAdminPendingOrders";
@@ -166,6 +167,7 @@ function getStatusClass(status?: string) {
 }
 
 export default function PendingOrdersPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [copyToast, setCopyToast] = useState("");
@@ -609,7 +611,11 @@ export default function PendingOrdersPage() {
                   {rows.map((order) => (
                     <tr
                       key={order._id}
-                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60"
+                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60 cursor-pointer"
+                      onClick={() => {
+                        if (!order.userId) return;
+                        router.push(`/admin/users/users/view/${order.userId}`);
+                      }}
                     >
                       <td className="whitespace-nowrap px-4 py-3 font-semibold">
                         {order.symbol || "--"}
@@ -927,7 +933,10 @@ function CopyBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
       className="inline-flex h-5 w-5 items-center justify-center rounded border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
       aria-label="Copy value"
       title="Copy"

@@ -255,21 +255,7 @@ export default function UserFundsPage() {
               setDraftFilters((prev) => ({ ...prev, userId: value }))
             }
           />
-          <SelectField
-            icon={<Users size={14} />}
-            value={draftFilters.userType}
-            onChange={(value) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                userType: value as FundsFilters["userType"],
-              }))
-            }
-            options={[
-              { value: "", label: "All User Type" },
-              { value: "USER", label: "USER" },
-              { value: "ADMIN", label: "ADMIN" },
-            ]}
-          />
+         
           <SelectField
             icon={<MailCheck size={14} />}
             value={draftFilters.isMailVerified}
@@ -534,6 +520,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 function UserFundsRow({ row }: { row: TradeAdminUserFundsItem }) {
+  const router = useRouter();
   const userId = row.userId ?? (row._id as string | undefined) ?? "--";
   const userName = row.name ?? row.fullName ?? "--";
   const email = row.email ?? "--";
@@ -547,7 +534,13 @@ function UserFundsRow({ row }: { row: TradeAdminUserFundsItem }) {
   const kycStatus = row.kycStatus ?? "--";
 
   return (
-    <tr className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60">
+    <tr
+      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60 cursor-pointer"
+      onClick={() => {
+        if (!userId || userId === "--") return;
+        router.push(`/admin/users/users/view/${userId}`);
+      }}
+    >
       <td className="px-4 py-3">
         <p className="font-semibold">{userName}</p>
         <p className="text-xs text-[var(--text-muted)]">{email}</p>
@@ -582,11 +575,19 @@ function UserFundsRow({ row }: { row: TradeAdminUserFundsItem }) {
           {kycStatus}
         </span>
       </td>
-      <td className="px-4 py-3">{row.accountsCount ?? "--"}</td>
-      <td className="px-4 py-3">{formatNumber(Number(row.totalBalance))}</td>
-      <td className="px-4 py-3">{formatNumber(Number(row.totalHoldBalance))}</td>
-      <td className="px-4 py-3">{formatNumber(Number(row.totalFreeBalance))}</td>
-      <td className="px-4 py-3">{formatNumber(Number(row.totalEquity))}</td>
+      <td className="px-4 py-3">{getFundsValue(row, "accountsCount") ?? "--"}</td>
+      <td className="px-4 py-3">
+        {formatNumber(Number(getFundsValue(row, "totalBalance")))}
+      </td>
+      <td className="px-4 py-3">
+        {formatNumber(Number(getFundsValue(row, "totalHoldBalance")))}
+      </td>
+      <td className="px-4 py-3">
+        {formatNumber(Number(getFundsValue(row, "totalFreeBalance")))}
+      </td>
+      <td className="px-4 py-3">
+        {formatNumber(Number(getFundsValue(row, "totalEquity")))}
+      </td>
     </tr>
   );
 }

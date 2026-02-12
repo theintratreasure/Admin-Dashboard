@@ -17,6 +17,7 @@ import {
   User,
   Wallet,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
 import { useTradeAdminClosedTrades } from "@/hooks/useTradeAdminClosedTrades";
@@ -166,6 +167,7 @@ function getOrderTypeClass(orderType?: string) {
 }
 
 export default function ClosedTradesPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [copyToast, setCopyToast] = useState("");
@@ -589,7 +591,11 @@ export default function ClosedTradesPage() {
                   {rows.map((trade) => (
                     <tr
                       key={trade._id}
-                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60"
+                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60 cursor-pointer"
+                      onClick={() => {
+                        if (!trade.userId) return;
+                        router.push(`/admin/users/users/view/${trade.userId}`);
+                      }}
                     >
                       <td className="whitespace-nowrap px-4 py-3 font-semibold">{trade.symbol || "--"}</td>
                       <td className="px-4 py-3">
@@ -905,7 +911,10 @@ function CopyBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
       className="inline-flex h-5 w-5 items-center justify-center rounded border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
       aria-label="Copy value"
       title="Copy"

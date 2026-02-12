@@ -155,14 +155,16 @@ export const createAdminDeposit = async (
 export const approveDeposit = async (depositId: string) => {
   try {
     const res = await api.patch(
-      `/deposits/${depositId}/approve`,
+      `/deposits/admin/${depositId}/approve`,
       { status: "APPROVED" }
     );
     return res.data;
   } catch (error: unknown) {
     const statusCode = (error as { response?: { status?: number } }).response?.status;
-    if (statusCode === 400 || statusCode === 422) {
-      const fallbackRes = await api.patch(`/deposits/${depositId}/approve`);
+    if (statusCode === 400 || statusCode === 404 || statusCode === 422) {
+      const fallbackRes = await api.patch(`/deposits/${depositId}/approve`, {
+        status: "APPROVED",
+      });
       return fallbackRes.data;
     }
     throw error;

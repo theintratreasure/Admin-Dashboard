@@ -26,6 +26,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Modal from "@/app/admin/components/ui/Modal";
 import Pagination from "@/app/admin/components/ui/pagination";
@@ -188,6 +189,7 @@ function getPnlClass(value?: number) {
 }
 
 export default function ActivePositionsPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [copyToast, setCopyToast] = useState("");
@@ -781,10 +783,14 @@ export default function ActivePositionsPage() {
                     const livePnl = getLivePnl(trade, livePrice);
 
                     return (
-                      <tr
-                        key={trade._id}
-                        className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60"
-                      >
+                    <tr
+                      key={trade._id}
+                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60 cursor-pointer"
+                      onClick={() => {
+                        if (!trade.userId) return;
+                        router.push(`/admin/users/users/view/${trade.userId}`);
+                      }}
+                    >
                         <td className="whitespace-nowrap px-4 py-3 font-semibold">
                           {trade.symbol || "--"}
                         </td>
@@ -864,7 +870,10 @@ export default function ActivePositionsPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => openPositionAction(trade)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openPositionAction(trade);
+                              }}
                               className="inline-flex items-center gap-1 rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-2.5 py-1 text-xs font-semibold hover:bg-[var(--hover-bg)]"
                             >
                               <Pencil size={12} />
@@ -872,7 +881,10 @@ export default function ActivePositionsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => openCloseConfirm(trade)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCloseConfirm(trade);
+                              }}
                               className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
                             >
                               <XCircle size={12} />
@@ -1218,7 +1230,10 @@ function CopyBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
       className="inline-flex h-5 w-5 items-center justify-center rounded border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
       aria-label="Copy value"
       title="Copy"

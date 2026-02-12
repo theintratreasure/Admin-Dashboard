@@ -7,6 +7,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
 import { useTradeAdminBrokerage } from "@/hooks/useTradeAdminBrokerage";
@@ -45,6 +46,7 @@ function formatNumber(value?: number, digits = 2) {
 }
 
 export default function BrokerageCommissionPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
 
@@ -245,7 +247,11 @@ export default function BrokerageCommissionPage() {
                   {rows.map((item) => (
                     <tr
                       key={item._id}
-                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60"
+                      className="border-t border-[var(--card-border)] hover:bg-[var(--hover-bg)]/60 cursor-pointer"
+                      onClick={() => {
+                        if (!item.user_id) return;
+                        router.push(`/admin/users/users/view/${item.user_id}`);
+                      }}
                     >
                       <td className="px-4 py-3 font-semibold">{item.symbol || "--"}</td>
                       <td className="px-4 py-3 font-mono text-xs">{item.user_id}</td>

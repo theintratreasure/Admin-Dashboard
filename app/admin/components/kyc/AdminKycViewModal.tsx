@@ -19,12 +19,14 @@ type ImageItem = {
 export default function AdminKycViewModal({
   data,
   loading,
+  actionInFlight,
   onApprove,
   onReject,
   onClose,
 }: {
   data: AdminKyc;
   loading: boolean;
+  actionInFlight?: "APPROVE" | "REJECT" | null;
   onApprove: () => void;
   onReject: (reason: string) => void;
   onClose: () => void;
@@ -40,6 +42,11 @@ export default function AdminKycViewModal({
     { label: "Back", src: data.documents.back?.image_url },
     { label: "Selfie", src: data.documents.selfie?.image_url },
   ];
+
+  useEffect(() => {
+    setReason("");
+    setConfirmApprove(false);
+  }, [data._id]);
 
   /* keyboard navigation */
   useEffect(() => {
@@ -60,22 +67,23 @@ export default function AdminKycViewModal({
   return (
     <>
       {/* MAIN MODAL */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl p-3 sm:p-6">
         <div
           className="
-            w-full max-w-6xl overflow-hidden rounded-3xl
+            w-full max-w-4xl overflow-hidden rounded-2xl
             border border-[var(--card-border)]
             bg-[var(--card-bg)]
-            shadow-[0_40px_120px_rgba(0,0,0,0.45)]
+            shadow-[0_30px_90px_rgba(0,0,0,0.35)]
           "
+          style={{ maxHeight: "calc(100vh - 2rem)" }}
         >
           {/* HEADER */}
-          <div className="flex justify-between border-b border-[var(--card-border)] px-6 py-5">
+          <div className="flex items-start justify-between gap-4 border-b border-[var(--card-border)] px-5 py-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.3em] text-[var(--text-muted)]">
                 KYC REVIEW
               </p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight">
+              <h2 className="mt-1 text-lg font-semibold tracking-tight">
                 {data.user.name}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
@@ -88,59 +96,85 @@ export default function AdminKycViewModal({
                 </span>
               </p>
             </div>
-            <button onClick={onClose}>
-              <X />
+            <button
+              onClick={onClose}
+              className="rounded-full border border-[var(--card-border)] p-2"
+              aria-label="Close"
+            >
+              <X size={18} />
             </button>
           </div>
 
-          {/* IMAGE GRID */}
-          <div className="grid gap-6 px-6 py-6 md:grid-cols-3">
-            {images.map((img, idx) => (
-              <ImageCard
-                key={img.label}
-                label={img.label}
-                src={img.src}
-                onClick={() => {
-                  setActiveIndex(idx);
-                  setViewerOpen(true);
-                }}
-              />
-            ))}
-          </div>
-
-          {/* PREVIOUS REJECTION */}
-          {data.rejectionReason && (
-            <div className="mx-6 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-400">
-              Previous rejection: {data.rejectionReason}
+          <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+            {/* IMAGE GRID */}
+            <div className="grid gap-3 px-5 py-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3">
+              {images.map((img, idx) => (
+                <ImageCard
+                  key={img.label}
+                  label={img.label}
+                  src={img.src}
+                  onClick={() => {
+                    setActiveIndex(idx);
+                    setViewerOpen(true);
+                  }}
+                />
+              ))}
             </div>
-          )}
 
-          {/* ACTIONS */}
-          <div className="flex flex-col gap-4 border-t border-[var(--card-border)] px-6 py-5">
+            {/* PREVIOUS REJECTION */}
+            {data.rejectionReason && (
+              <div className="mx-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
+                Previous rejection: {data.rejectionReason}
+              </div>
+            )}
+
+            {/* ACTIONS */}
+            <div className="flex flex-col gap-4 border-t border-[var(--card-border)] px-5 py-4">
             {data.status === "PENDING" && (
               <>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Enter rejection reason (required)"
-                  className="
-                    w-full rounded-xl border border-[var(--card-border)]
-                    bg-[var(--card-bg)] px-4 py-3 text-sm
-                    focus:outline-none focus:ring-2 focus:ring-red-500/40
-                  "
-                />
+                <div
+                  className="rounded-2xl border border-[var(--card-border)] p-4"
+                  style={{
+                    background:
+                      "color-mix(in srgb, var(--hover-bg) 70%, transparent)",
+                  }}
+                >
+                  <div className="mb-2 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                    <span className="font-semibold uppercase tracking-wider">
+                      Rejection Reason
+                    </span>
+                    <span>{reason.trim().length}/240</span>
+                  </div>
+                  <textarea
+                    value={reason}
+                    maxLength={240}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Explain why the KYC is being rejected"
+                    className="
+                      w-full rounded-xl border border-[var(--card-border)]
+                      bg-[var(--card-bg)] px-4 py-3 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-red-500/30
+                    "
+                    rows={2}
+                  />
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    Reason is required for rejection and will be visible to the user.
+                  </p>
+                </div>
 
-                <div className="flex justify-end gap-4">
+                <div className="flex flex-wrap items-center justify-end gap-3">
                   <button
-                    disabled={loading || !reason}
-                    onClick={() => onReject(reason)}
+                    disabled={loading || reason.trim().length === 0}
+                    onClick={() => onReject(reason.trim())}
                     className="
                       flex items-center gap-2 rounded-full
-                      bg-red-500/10 px-6 py-2 text-sm text-red-400
+                      border border-red-500/40 bg-red-500/10 px-5 py-2 text-sm text-red-500
                       hover:bg-red-500 hover:text-white
+                      disabled:cursor-not-allowed disabled:opacity-60
                     "
                   >
-                    <XCircle size={16} /> Reject
+                    <XCircle size={16} />
+                    {actionInFlight === "REJECT" ? "Rejecting..." : "Reject"}
                   </button>
 
                   <button
@@ -148,27 +182,64 @@ export default function AdminKycViewModal({
                     onClick={() => setConfirmApprove(true)}
                     className="
                       flex items-center gap-2 rounded-full
-                      bg-[var(--primary)] px-6 py-2 text-sm text-white
+                      bg-[var(--primary)] px-5 py-2 text-sm text-white
                       shadow-[0_12px_35px_var(--glow)]
+                      disabled:cursor-not-allowed disabled:opacity-60
                     "
                   >
-                    <CheckCircle size={16} /> Approve
+                    <CheckCircle size={16} />
+                    {actionInFlight === "APPROVE" ? "Approving..." : "Approve"}
                   </button>
                 </div>
               </>
             )}
 
             {confirmApprove && (
-              <div className="flex items-center justify-end gap-4">
-                <span className="text-sm">Confirm approval?</span>
-                <button
-                  onClick={onApprove}
-                  className="rounded-full bg-green-600 px-6 py-2 text-sm text-white"
-                >
-                  Yes, approve
-                </button>
+              <div
+                className="
+                  flex flex-wrap items-center justify-between gap-3
+                  rounded-2xl border border-[var(--card-border)]
+                  px-4 py-3
+                "
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--hover-bg) 80%, transparent)",
+                }}
+              >
+                <div>
+                  <p className="text-sm font-semibold">
+                    Confirm approval
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    This will mark the KYC as verified.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setConfirmApprove(false)}
+                    disabled={loading}
+                    className="
+                      rounded-full border border-[var(--card-border)]
+                      px-4 py-2 text-xs
+                      disabled:cursor-not-allowed disabled:opacity-60
+                    "
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onApprove}
+                    disabled={loading}
+                    className="
+                      rounded-full bg-green-600 px-5 py-2 text-xs text-white
+                      disabled:cursor-not-allowed disabled:opacity-60
+                    "
+                  >
+                    {actionInFlight === "APPROVE" ? "Approving..." : "Yes, approve"}
+                  </button>
+                </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>
@@ -236,7 +307,7 @@ function ImageCard({
     <div
       onClick={onClick}
       className="
-        group relative h-[260px] cursor-zoom-in 
+        group relative h-[140px] cursor-zoom-in sm:h-[180px] lg:h-[200px]
         overflow-hidden rounded-2xl
         border border-[var(--card-border)]
         bg-black

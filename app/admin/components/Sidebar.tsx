@@ -31,6 +31,7 @@ import {
   UserCheck,
   Clock3,
   Plus,
+  RefreshCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -92,6 +93,7 @@ const navSections: {
         { href: "/admin/account-plan", label: "Account Plans", icon: <Gift size={18} /> },
       ],
     },
+    
     {
       title: "Users & Compliance",
       items: [
@@ -107,12 +109,14 @@ const navSections: {
           label: "Verification",
           icon: <ShieldCheck size={18} />,
           children: [
-            { href: "/admin/verification/pending-kyc", label: "Pending KYC", icon: <ClockDot /> },
             { href: "/admin/verification/kyc", label: "KYC Completed", icon: <UserCheck size={14} /> },
           ],
         },
+        
       ],
+      
     },
+    
     {
       title: "Finance",
       items: [
@@ -123,6 +127,7 @@ const navSections: {
             { href: "/admin/transactions/bank-details", label: "Bank Details", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/withdraw-request", label: "Withdraw Requests", icon: <DollarSign size={14} /> },
             { href: "/admin/transactions/all-deposit", label: "Deposit Requests", icon: <FileText size={14} /> },
+            { href: "/admin/transactions/swap", label: "Swap Transactions", icon: <RefreshCcw size={14} /> },
           ],
         },
         { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },

@@ -464,8 +464,8 @@ export default function CreateTradePage() {
               className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md p-3 mt-1 text-[var(--foreground)]"
             >
               <option value="">All segments</option>
-              {SEGMENTS.map((seg) => (
-                <option key={seg} value={seg}>
+              {SEGMENTS.map((seg, index) => (
+                <option key={`${seg}-${index}`} value={seg}>
                   {seg}
                 </option>
               ))}
@@ -492,9 +492,9 @@ export default function CreateTradePage() {
                 {instrumentLoading ? (
                   <div className="px-3 py-2 text-sm text-[var(--text-muted)]">Searching...</div>
                 ) : instrumentResults.length ? (
-                  instrumentResults.map((item) => (
+                  instrumentResults.map((item, index) => (
                     <button
-                      key={item._id}
+                      key={`${item._id ?? item.code ?? "instrument"}-${index}`}
                       type="button"
                       onClick={() => handleSelectInstrument(item)}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--hover-bg)]"
@@ -537,9 +537,9 @@ export default function CreateTradePage() {
                 {usersQuery.isLoading ? (
                   <div className="px-3 py-2 text-sm text-[var(--text-muted)]">Searching...</div>
                 ) : userOptions.length ? (
-                  userOptions.map((user) => (
+                  userOptions.map((user, index) => (
                     <button
-                      key={user._id}
+                      key={`${user._id ?? user.email ?? "user"}-${index}`}
                       type="button"
                       onClick={() => handleSelectUser(user)}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--hover-bg)]"
@@ -574,8 +574,8 @@ export default function CreateTradePage() {
               disabled={!selectedUser || accountsQuery.isLoading}
             >
               <option value="">{selectedUser ? "Select account" : "Select user first"}</option>
-              {accountOptions.map((acc) => (
-                <option key={acc._id} value={acc._id}>
+              {accountOptions.map((acc, index) => (
+                <option key={`${acc._id ?? acc.account_number ?? "account"}-${index}`} value={acc._id}>
                   {acc.account_number || acc._id}
                 </option>
               ))}
