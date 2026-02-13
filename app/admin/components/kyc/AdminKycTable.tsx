@@ -26,6 +26,13 @@ export default function AdminKycTable({
 }) {
     const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
+    const formatDocumentType = (value: AdminKyc["documentType"]) => {
+        if (typeof value !== "string") return "--";
+        const trimmed = value.trim();
+        if (!trimmed) return "--";
+        return trimmed.replace(/_/g, " ");
+    };
+
     const sortedList = [...list].sort((a, b) => {
         const da = new Date(a.createdAt).getTime();
         const db = new Date(b.createdAt).getTime();
@@ -131,7 +138,7 @@ export default function AdminKycTable({
 
                         {/* DOCUMENT */}
                         <p className="text-sm font-medium">
-                            {u.documentType.replace("_", " ")}
+                            {formatDocumentType(u.documentType)}
                         </p>
 
                         {/* STATUS */}
@@ -220,7 +227,7 @@ export default function AdminKycTable({
                                     <FileText size={12} /> Document
                                 </span>
                                 <span className="text-right text-[var(--foreground)]">
-                                    {u.documentType.replace("_", " ")}
+                                    {formatDocumentType(u.documentType)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
