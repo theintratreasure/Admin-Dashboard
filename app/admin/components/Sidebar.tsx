@@ -130,7 +130,7 @@ const navSections: {
             { href: "/admin/transactions/swap", label: "Swap Transactions", icon: <RefreshCcw size={14} /> },
           ],
         },
-        { href: "/admin/dollar-rate", label: "Dollar Rate", icon: <DollarSign size={18} /> },
+        { href: "/admin/dollar-rate", label: "Conversion Rates", icon: <DollarSign size={18} /> },
       ],
     },
     {
