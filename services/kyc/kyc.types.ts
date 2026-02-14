@@ -21,7 +21,7 @@ export interface KycDocuments {
 export interface AdminKyc {
   _id: string;
   user: KycUser;
-  documentType: string;
+  documentType?: string | null;
   documents: KycDocuments;
   status: KycStatus;
   rejectionReason: string;

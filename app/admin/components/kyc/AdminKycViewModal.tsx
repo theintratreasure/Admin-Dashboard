@@ -37,16 +37,16 @@ export default function AdminKycViewModal({
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const documentLabel =
+    typeof data.documentType === "string" && data.documentType.trim()
+      ? data.documentType.trim().replace(/_/g, " ")
+      : "--";
+
   const images: ImageItem[] = [
     { label: "Front", src: data.documents.front?.image_url },
     { label: "Back", src: data.documents.back?.image_url },
     { label: "Selfie", src: data.documents.selfie?.image_url },
   ];
-
-  useEffect(() => {
-    setReason("");
-    setConfirmApprove(false);
-  }, [data._id]);
 
   /* keyboard navigation */
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function AdminKycViewModal({
               <p className="mt-1 text-xs">
                 Document{" "}
                 <span className="font-medium">
-                  {data.documentType.replace("_", " ")}
+                  {documentLabel}
                 </span>
               </p>
             </div>

@@ -217,6 +217,7 @@ export default function CompletedKycPage() {
       {/* READ-ONLY MODAL */}
       {selectedKyc && (
         <AdminKycViewModal
+          key={selectedKyc._id}
           data={selectedKyc}
           loading={updateStatus.isPending}
           actionInFlight={actionInFlight}
