@@ -16,6 +16,7 @@ export type AdminAccount = {
   equity?: number;
   currency?: string;
   first_deposit?: boolean;
+  bonus_percent_override?: number | null;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -29,6 +30,7 @@ export type AdminAccountUpdatePayload = {
   swap_enabled: boolean;
   swap_charge: number;
   status: "active" | "disabled";
+  bonus_percent_override?: number | null;
 };
 
 export type AdminAccountPagination = {

@@ -14,6 +14,7 @@ export interface AccountPlan {
   spread_type: SpreadType;
   commission_per_lot: number;
   swap_enabled: boolean;
+  referral_reward_amount?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -32,5 +33,6 @@ export interface AccountPlanPayload {
   spread_type: SpreadType;
   commission_per_lot: number;
   swap_enabled: boolean;
+  referral_reward_amount?: number;
   isActive: boolean;
 }

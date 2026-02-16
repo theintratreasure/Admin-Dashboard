@@ -25,6 +25,7 @@ import {
   Globe,
   KeyRound,
   Copy,
+  Percent,
   MapPin,
   Mail,
   Pencil,
@@ -88,6 +89,8 @@ const txTypeStyles: Record<string, string> = {
   TRADE_PROFIT: "border-sky-500/40 bg-sky-500/10 text-sky-700",
   TRADE_LOSS: "border-amber-500/40 bg-amber-500/10 text-amber-700",
   BONUS: "border-purple-500/40 bg-purple-500/10 text-purple-700",
+  BONUS_CREDIT_IN: "border-purple-500/40 bg-purple-500/10 text-purple-700",
+  BONUS_CREDIT_OUT: "border-purple-500/40 bg-purple-500/10 text-purple-700",
   ADJUSTMENT: "border-slate-500/40 bg-slate-500/10 text-slate-700",
 };
 
@@ -137,6 +140,7 @@ type AccountEditForm = {
   swap_enabled: "true" | "false";
   swap_charge: string;
   status: "active" | "disabled";
+  bonus_percent_override: string;
 };
 
 const buildAccountEditForm = (account: AdminAccount): AccountEditForm => ({
@@ -150,6 +154,10 @@ const buildAccountEditForm = (account: AdminAccount): AccountEditForm => ({
     (account.status ?? "active").toLowerCase() === "disabled"
       ? "disabled"
       : "active",
+  bonus_percent_override:
+    account.bonus_percent_override === null || account.bonus_percent_override === undefined
+      ? ""
+      : String(account.bonus_percent_override),
 });
 
 type LivePositionSnapshot = {
@@ -375,6 +383,7 @@ export default function UserViewPage() {
     swap_enabled: "true",
     swap_charge: "0",
     status: "active",
+    bonus_percent_override: "",
   });
   const [toast, setToast] = useState("");
   const [touched, setTouched] = useState<Partial<Record<keyof AdminUserUpdatePayload, boolean>>>({});
@@ -1512,6 +1521,9 @@ export default function UserViewPage() {
     const spreadPips = Number(accountForm.spread_pips);
     const commissionPerLot = Number(accountForm.commission_per_lot);
     const swapCharge = Number(accountForm.swap_charge);
+    const bonusOverrideRaw = accountForm.bonus_percent_override.trim();
+    const bonusOverrideValue =
+      bonusOverrideRaw.length === 0 ? null : Number(bonusOverrideRaw);
 
     const numericValues = [leverage, spreadPips, commissionPerLot, swapCharge];
     const invalidNumber = numericValues.some(
@@ -1523,6 +1535,17 @@ export default function UserViewPage() {
       return;
     }
 
+    if (
+      bonusOverrideRaw.length > 0 &&
+      (Number.isNaN(bonusOverrideValue) ||
+        !Number.isFinite(bonusOverrideValue) ||
+        bonusOverrideValue < 0 ||
+        bonusOverrideValue > 100)
+    ) {
+      setAccountFormError("Bonus override must be between 0 and 100.");
+      return;
+    }
+
     const payload: AdminAccountUpdatePayload = {
       leverage,
       spread_enabled: accountForm.spread_enabled === "true",
@@ -1531,6 +1554,7 @@ export default function UserViewPage() {
       swap_enabled: accountForm.swap_enabled === "true",
       swap_charge: swapCharge,
       status: accountForm.status,
+      bonus_percent_override: bonusOverrideValue,
     };
 
     updateAccountMutation.mutate(
@@ -1882,7 +1906,9 @@ export default function UserViewPage() {
                   { value: "WITHDRAW", label: "Withdraw", dotClass: "bg-amber-500" },
                   { value: "TRADE_PROFIT", label: "Trade Profit", dotClass: "bg-sky-500" },
                   { value: "TRADE_LOSS", label: "Trade Loss", dotClass: "bg-rose-500" },
-                  { value: "BONUS", label: "Bonus", dotClass: "bg-purple-500" },
+                  { value: "BONUS", label: "Bonus (Legacy)", dotClass: "bg-purple-500" },
+                  { value: "BONUS_CREDIT_IN", label: "Bonus Credit In", dotClass: "bg-purple-500" },
+                  { value: "BONUS_CREDIT_OUT", label: "Bonus Credit Out", dotClass: "bg-purple-500" },
                   { value: "ADJUSTMENT", label: "Adjustment", dotClass: "bg-slate-500" },
                 ]}
               />
@@ -2213,6 +2239,13 @@ export default function UserViewPage() {
 	                        <p><span className="text-[var(--text-muted)]">Currency:</span> {account.currency ?? "--"}</p>
 	                        <p><span className="text-[var(--text-muted)]">Leverage:</span> {account.leverage ? `x${account.leverage}` : "--"}</p>
 	                        <p><span className="text-[var(--text-muted)]">Commission:</span> {account.commission_per_lot ?? "--"}</p>
+                          <p>
+                            <span className="text-[var(--text-muted)]">Bonus %:</span>{" "}
+                            {account.bonus_percent_override === null ||
+                            account.bonus_percent_override === undefined
+                              ? "Default"
+                              : account.bonus_percent_override}
+                          </p>
 	                      </div>
                       <div className="mt-3 flex items-center gap-2">
                         <button
@@ -2263,6 +2296,7 @@ export default function UserViewPage() {
 	                      <th className="px-4 py-3">Plan</th>
 	                      <th className="px-4 py-3">Type</th>
 	                      <th className="px-4 py-3">Leverage</th>
+	                      <th className="px-4 py-3">Bonus %</th>
 	                      <th className="px-4 py-3">Spread</th>
 	                      <th className="px-4 py-3">Commission/Lot</th>
 	                      <th className="px-4 py-3">Swap</th>
@@ -2314,6 +2348,12 @@ export default function UserViewPage() {
 	                          </td>
 	                          <td className="px-4 py-3">
 	                            {account.leverage ? `x${account.leverage}` : "--"}
+	                          </td>
+	                          <td className="px-4 py-3">
+	                            {account.bonus_percent_override === null ||
+	                            account.bonus_percent_override === undefined
+	                              ? "Default"
+	                              : account.bonus_percent_override}
 	                          </td>
 	                          <td className="px-4 py-3">
 	                            {account.spread_enabled === false
@@ -3018,6 +3058,15 @@ export default function UserViewPage() {
                   {selectedAccount.currency ?? "--"}
                 </p>
               </div>
+              <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Bonus %</p>
+                <p className="mt-1 font-semibold text-[var(--text-main)]">
+                  {selectedAccount.bonus_percent_override === null ||
+                  selectedAccount.bonus_percent_override === undefined
+                    ? "Default"
+                    : selectedAccount.bonus_percent_override}
+                </p>
+              </div>
             </div>
 
           </div>
@@ -3415,6 +3464,26 @@ export default function UserViewPage() {
                       className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
                     />
                   </FieldControl>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)]">
+                    Bonus Override (%)
+                  </label>
+                  <FieldControl icon={Percent}>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      value={accountForm.bonus_percent_override}
+                      onChange={handleAccountFormField("bonus_percent_override")}
+                      placeholder="Default"
+                      className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none"
+                    />
+                  </FieldControl>
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    Leave empty to use global bonus.
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-[var(--text-muted)]">Status</label>

@@ -62,6 +62,9 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                 <th className="px-3 py-3 text-left font-semibold">
                   Comm / Lot
                 </th>
+                <th className="px-3 py-3 text-left font-semibold">
+                  Referral Reward
+                </th>
                 <th className="px-3 py-3 text-left font-semibold">Leverage</th>
                 <th className="px-3 py-3 text-left font-semibold">Demo</th>
                 <th className="px-3 py-3 text-left font-semibold">Swap</th>
@@ -115,6 +118,13 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
 
                   {/* COMMISSION PER LOT */}
                   <td className="px-3 py-3">{p.commission_per_lot}</td>
+
+                  {/* REFERRAL REWARD */}
+                  <td className="px-3 py-3">
+                    {typeof p.referral_reward_amount === "number"
+                      ? `$ ${p.referral_reward_amount.toLocaleString("en-IN")}`
+                      : "--"}
+                  </td>
 
                   {/* LEVERAGE */}
                   <td className="px-3 py-3 whitespace-nowrap">
@@ -202,7 +212,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
               {data.length === 0 && (
                 <tr>
                   <td
-                    colSpan={13}
+                    colSpan={14}
                     className="px-4 py-10 text-center text-sm text-[var(--text-muted)]"
                   >
                     No account plans found.
@@ -306,6 +316,14 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                   value={`${p.commission} / ${p.commission_per_lot}`}
                 />
                 <FieldRow label="Commission / Lot" value={p.commission_per_lot} />
+                <FieldRow
+                  label="Referral Reward"
+                  value={
+                    typeof p.referral_reward_amount === "number"
+                      ? `$${p.referral_reward_amount.toLocaleString("en-IN")}`
+                      : "--"
+                  }
+                />
                 <FieldRow
                   label="Leverage"
                   value={p.max_leverage ? `1:${p.max_leverage}` : "Unlimited"}

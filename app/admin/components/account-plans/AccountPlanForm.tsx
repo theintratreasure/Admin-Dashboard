@@ -8,6 +8,7 @@ import {
   BadgePercent,
   Activity,
   Scale,
+  Gift,
 } from "lucide-react";
 
 import { AccountPlan, AccountPlanPayload } from "@/types/accountPlan";
@@ -27,6 +28,7 @@ const DEFAULT_FORM: AccountPlanPayload = {
   spread_type: "FLOATING",
   commission_per_lot: 0,
   swap_enabled: true,
+  referral_reward_amount: 0,
   isActive: true,
 };
 
@@ -46,6 +48,7 @@ function getInitialForm(initialData?: AccountPlan | null): AccountPlanPayload {
     spread_type: initialData.spread_type,
     commission_per_lot: initialData.commission_per_lot,
     swap_enabled: initialData.swap_enabled,
+    referral_reward_amount: initialData.referral_reward_amount ?? 0,
     isActive: initialData.isActive,
   };
 }
@@ -171,6 +174,17 @@ export default function AccountPlanForm({
         onChange={(v) =>
           setForm({ ...form, commission_per_lot: Number(v) })
         }
+      />
+
+      {/* ================= REFERRAL REWARD ================= */}
+      <PremiumInput
+        label="Referral Reward Amount"
+        type="number"
+        value={form.referral_reward_amount ?? 0}
+        onChange={(v) =>
+          setForm({ ...form, referral_reward_amount: Number(v) })
+        }
+        icon={Gift}
       />
 
       {/* ================= GUIDANCE ================= */}
