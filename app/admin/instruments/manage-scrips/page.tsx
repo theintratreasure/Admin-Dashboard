@@ -787,7 +787,7 @@ export default function ManageInstruments() {
                   label="Tick Size"
                   type="number"
                   icon={MoveHorizontal}
-                  value={form.tickSize ?? 0}
+                  value={form.tickSize ?? ""}
                   onChange={(v) =>
                     setForm({ ...form, tickSize: v ? Number(v) : null })
                   }

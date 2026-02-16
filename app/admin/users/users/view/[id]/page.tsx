@@ -144,18 +144,34 @@ type AccountEditForm = {
 };
 
 const buildAccountEditForm = (account: AdminAccount): AccountEditForm => ({
-  leverage: String(account.leverage ?? 0),
+  leverage:
+    account.leverage === null || account.leverage === undefined || account.leverage === 0
+      ? ""
+      : String(account.leverage),
   spread_enabled: account.spread_enabled === false ? "false" : "true",
-  spread_pips: String(account.spread_pips ?? 0),
-  commission_per_lot: String(account.commission_per_lot ?? 0),
+  spread_pips:
+    account.spread_pips === null || account.spread_pips === undefined || account.spread_pips === 0
+      ? ""
+      : String(account.spread_pips),
+  commission_per_lot:
+    account.commission_per_lot === null ||
+    account.commission_per_lot === undefined ||
+    account.commission_per_lot === 0
+      ? ""
+      : String(account.commission_per_lot),
   swap_enabled: account.swap_enabled === false ? "false" : "true",
-  swap_charge: String(account.swap_charge ?? 0),
+  swap_charge:
+    account.swap_charge === null || account.swap_charge === undefined || account.swap_charge === 0
+      ? ""
+      : String(account.swap_charge),
   status:
     (account.status ?? "active").toLowerCase() === "disabled"
       ? "disabled"
       : "active",
   bonus_percent_override:
-    account.bonus_percent_override === null || account.bonus_percent_override === undefined
+    account.bonus_percent_override === null ||
+    account.bonus_percent_override === undefined ||
+    account.bonus_percent_override === 0
       ? ""
       : String(account.bonus_percent_override),
 });
@@ -376,12 +392,12 @@ export default function UserViewPage() {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [accountFormError, setAccountFormError] = useState("");
   const [accountForm, setAccountForm] = useState<AccountEditForm>({
-    leverage: "0",
+    leverage: "",
     spread_enabled: "true",
-    spread_pips: "0",
-    commission_per_lot: "0",
+    spread_pips: "",
+    commission_per_lot: "",
     swap_enabled: "true",
-    swap_charge: "0",
+    swap_charge: "",
     status: "active",
     bonus_percent_override: "",
   });

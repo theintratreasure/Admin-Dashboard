@@ -115,7 +115,7 @@ export default function AllDeposit() {
   const [selected, setSelected] = useState<DepositRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [editOpen, setEditOpen] = useState(false);
-  const [editAmount, setEditAmount] = useState<number>(0);
+  const [editAmount, setEditAmount] = useState("");
   const editMutation = useEditDepositAmount();
 
   useEffect(() => {
@@ -639,7 +639,7 @@ export default function AllDeposit() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelected(d);
-                              setEditAmount(d.amount ?? 0);
+                              setEditAmount(d.amount ? String(d.amount) : "");
                               setEditOpen(true);
                             }}
                             className="p-2 text-[var(--primary)]"
@@ -866,7 +866,7 @@ export default function AllDeposit() {
             <input
               type="number"
               value={editAmount}
-              onChange={(e) => setEditAmount(Number(e.target.value))}
+              onChange={(e) => setEditAmount(e.target.value)}
               placeholder="Enter new deposit amount"
               className="input w-full mb-6"
             />
@@ -887,9 +887,14 @@ export default function AllDeposit() {
                     toast.error("Deposit ID not found");
                     return;
                   }
+                  const nextAmount = Number(editAmount);
+                  if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+                    toast.error("Please enter a valid deposit amount");
+                    return;
+                  }
                   await editMutation.mutateAsync({
                     id: depositId,
-                    newAmount: editAmount,
+                    newAmount: nextAmount,
                   });
                   setEditOpen(false);
                   setSelected(null);

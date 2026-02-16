@@ -24,6 +24,12 @@ export default function PremiumInput({
   disabled = false,
   required = false,
 }: PremiumInputProps) {
+  const inputValue =
+    type === "number" &&
+    (value === 0 || value === "0" || value === null || value === undefined)
+      ? ""
+      : value;
+
   return (
     <div className="w-full space-y-1">
       {label && (
@@ -50,7 +56,7 @@ export default function PremiumInput({
 
         <input
           type={type}
-          value={value}
+          value={inputValue}
           disabled={disabled}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}

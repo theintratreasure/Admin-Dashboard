@@ -1,0 +1,51 @@
+
+> admin@0.1.0 dev
+> npx -y -p node@25.6.1 node node_modules/next/dist/bin/next dev
+
+   ▲ Next.js 16.0.7 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.128.1:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 908ms
+ ○ Compiling / ...
+ GET / 200 in 3.5s (compile: 3.3s, render: 175ms)
+ GET /admin 200 in 1215ms (compile: 1109ms, proxy.ts: 31ms, render: 75ms)
+ GET /admin 200 in 49ms (compile: 8ms, proxy.ts: 10ms, render: 31ms)
+ GET /firebase-messaging-sw.js 404 in 350ms (compile: 311ms, render: 39ms)
+ GET / 200 in 72ms (compile: 13ms, render: 59ms)
+ GET /admin 200 in 70ms (compile: 5ms, proxy.ts: 8ms, render: 58ms)
+ GET /admin 200 in 40ms (compile: 7ms, proxy.ts: 7ms, render: 26ms)
+ GET /firebase-messaging-sw.js 404 in 48ms (compile: 5ms, render: 43ms)
+ GET /admin/referral 200 in 1049ms (compile: 1005ms, proxy.ts: 6ms, render: 39ms)
+ GET /verify-email?token=64b4a654ef5894fd684a4e953a12d2a8da8cc3aec200e397f5784754a2d89637 404 in 93ms (compile: 39ms, render: 53ms)
+ GET /sw.js 404 in 37ms (compile: 7ms, render: 30ms)
+ GET /admin/transactions/all-deposit 200 in 784ms (compile: 755ms, proxy.ts: 5ms, render: 25ms)
+ GET / 200 in 71ms (compile: 29ms, render: 41ms)
+ GET /admin 200 in 63ms (compile: 26ms, proxy.ts: 5ms, render: 32ms)
+ GET /admin/referral 200 in 83ms (compile: 24ms, proxy.ts: 22ms, render: 38ms)
+ ○ Compiling /admin/instruments/market-settings ...
+ GET /admin/instruments/market-settings 200 in 3.4s (compile: 3.3s, proxy.ts: 5ms, render: 38ms)
+ GET /admin/instruments/market-settings 200 in 427ms (compile: 4ms, proxy.ts: 3ms, render: 420ms)
+ GET /firebase-messaging-sw.js 404 in 88ms (compile: 51ms, render: 36ms)
+ GET / 200 in 141ms (compile: 13ms, render: 128ms)
+ GET /admin 200 in 98ms (compile: 9ms, proxy.ts: 10ms, render: 79ms)
+ GET /admin 200 in 49ms (compile: 11ms, proxy.ts: 10ms, render: 28ms)
+ GET /firebase-messaging-sw.js 404 in 71ms (compile: 8ms, render: 63ms)
+   Reload env: .env.local
+ ✓ Compiled in 1841ms
+ GET /admin/instruments/market-settings 200 in 1857ms (compile: 1197ms, proxy.ts: 584ms, render: 77ms)
+   Reload env: .env.local
+ ✓ Compiled in 392ms
+ GET /admin/instruments/market-settings 200 in 266ms (compile: 201ms, proxy.ts: 27ms, render: 39ms)
+ GET /admin/instruments/market-watch 200 in 1342ms (compile: 1299ms, proxy.ts: 6ms, render: 37ms)
+ GET /admin/instruments/manage-scrips 200 in 1176ms (compile: 1135ms, proxy.ts: 7ms, render: 34ms)
+ GET /admin/instruments/manage-scrips 200 in 964ms (compile: 7ms, proxy.ts: 7ms, render: 950ms)
+ GET /firebase-messaging-sw.js 404 in 554ms (compile: 397ms, render: 157ms)
+ GET /admin/account-plan 200 in 881ms (compile: 811ms, proxy.ts: 40ms, render: 30ms)
+ ✓ Compiled in 454ms
+ ✓ Compiled in 276ms
+ ✓ Compiled in 227ms
+ GET /admin/account-plan 200 in 374ms (compile: 118ms, proxy.ts: 3ms, render: 253ms)
+ GET /firebase-messaging-sw.js 404 in 44ms (compile: 6ms, render: 38ms)

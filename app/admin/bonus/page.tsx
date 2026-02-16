@@ -90,6 +90,8 @@ export default function BonusPage() {
     selectedAccountId.trim().length > 0 &&
     Number.isFinite(creditAmountNumber) &&
     creditAmountNumber > 0;
+  const displayNumberInput = (value: string) =>
+    value.trim() !== "" && Number(value) === 0 ? "" : value;
 
   const formatNumber = (value?: number | null, fractionDigits = 2) => {
     if (value === undefined || value === null || Number.isNaN(value)) return "--";
@@ -278,7 +280,7 @@ export default function BonusPage() {
                   min={0}
                   max={100}
                   step="0.1"
-                  value={percentValue}
+                  value={displayNumberInput(percentValue)}
                   onChange={(event) => setPercentInput(event.target.value)}
                   className="w-full bg-transparent text-sm outline-none"
                   placeholder="e.g. 20"
@@ -443,7 +445,7 @@ export default function BonusPage() {
                   type="number"
                   min={0}
                   step="0.01"
-                  value={creditAmount}
+                  value={displayNumberInput(creditAmount)}
                   onChange={(event) => setCreditAmount(event.target.value)}
                   className="w-full bg-transparent text-sm outline-none"
                   placeholder="Enter bonus amount"
