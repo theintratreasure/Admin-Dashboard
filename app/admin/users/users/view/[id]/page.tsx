@@ -1552,7 +1552,7 @@ export default function UserViewPage() {
     }
 
     if (
-      bonusOverrideRaw.length > 0 &&
+      bonusOverrideValue !== null &&
       (Number.isNaN(bonusOverrideValue) ||
         !Number.isFinite(bonusOverrideValue) ||
         bonusOverrideValue < 0 ||

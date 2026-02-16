@@ -130,7 +130,7 @@ export default function AccountPlanForm({
         <PremiumInput
           label="Max Leverage (0 = Unlimited)"
           type="number"
-          value={form.max_leverage}
+          value={form.max_leverage ?? 0}
           onChange={(v) =>
             setForm({ ...form, max_leverage: Number(v) })
           }
@@ -180,7 +180,7 @@ export default function AccountPlanForm({
       <PremiumInput
         label="Referral Reward Amount"
         type="number"
-        value={form.referral_reward_amount}
+        value={form.referral_reward_amount ?? 0}
         onChange={(v) =>
           setForm({ ...form, referral_reward_amount: Number(v) })
         }
