@@ -53,3 +53,13 @@
  GET /admin/bonus 200 in 2.2s (compile: 2.1s, proxy.ts: 5ms, render: 24ms)
  ✓ Compiled in 472ms
  GET /admin/transactions/all-deposit 200 in 1321ms (compile: 1127ms, proxy.ts: 12ms, render: 182ms)
+   Reload env: .env.local
+ ✓ Compiled in 1218ms
+ GET /admin/transactions/all-deposit 200 in 1244ms (compile: 295ms, proxy.ts: 849ms, render: 101ms)
+   Reload env: .env.local
+ ✓ Compiled in 900ms
+ GET /admin/transactions/all-deposit 200 in 805ms (compile: 722ms, proxy.ts: 43ms, render: 40ms)
+ GET /admin/transactions/all-deposit 200 in 34ms (compile: 5ms, proxy.ts: 6ms, render: 24ms)
+ GET /admin/transactions/all-deposit 200 in 40ms (compile: 4ms, proxy.ts: 4ms, render: 32ms)
+ GET /admin/transactions/all-deposit 200 in 48ms (compile: 8ms, proxy.ts: 7ms, render: 33ms)
+ GET /admin/transactions/all-deposit 200 in 39ms (compile: 6ms, proxy.ts: 6ms, render: 27ms)
