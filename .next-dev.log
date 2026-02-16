@@ -49,3 +49,7 @@
  ✓ Compiled in 227ms
  GET /admin/account-plan 200 in 374ms (compile: 118ms, proxy.ts: 3ms, render: 253ms)
  GET /firebase-messaging-sw.js 404 in 44ms (compile: 6ms, render: 38ms)
+ GET /admin/referral 200 in 108ms (compile: 72ms, proxy.ts: 10ms, render: 25ms)
+ GET /admin/bonus 200 in 2.2s (compile: 2.1s, proxy.ts: 5ms, render: 24ms)
+ ✓ Compiled in 472ms
+ GET /admin/transactions/all-deposit 200 in 1321ms (compile: 1127ms, proxy.ts: 12ms, render: 182ms)
