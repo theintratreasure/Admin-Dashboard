@@ -54,6 +54,7 @@ type InstrumentFormState = {
   pricePrecision: number;
   tickSize?: number | null;
   spread: number;
+  spread_mode: "FIXED" | "ADD_ON";
   contractSize: number;
   swapEnabled: boolean;
   swapLong: number;
@@ -96,6 +97,7 @@ export default function ManageInstruments() {
     pricePrecision: true,
     tickSize: true,
     spread: true,
+    spreadMode: true,
     swapLong: true,
     swapShort: true,
     contract: true,
@@ -210,6 +212,7 @@ export default function ManageInstruments() {
       pricePrecision: 2,
       tickSize: 0,
       spread: 0,
+      spread_mode: "FIXED",
       contractSize: 1,
       swapEnabled: false,
       swapLong: 0,
@@ -221,7 +224,7 @@ export default function ManageInstruments() {
   };
 
   const openEdit = (row: InstrumentFormState) => {
-    setForm(row);
+    setForm({ ...row, spread_mode: row.spread_mode || "FIXED" });
     setOpenForm(true);
   };
 
@@ -368,6 +371,7 @@ export default function ManageInstruments() {
                       { key: "pricePrecision", label: "Price Precision" },
                       { key: "tickSize", label: "Ticksize" },
                       { key: "spread", label: "Spread" },
+                      { key: "spreadMode", label: "Spread Mode" },
                       { key: "swapLong", label: "Swap Long" },
                       { key: "swapShort", label: "Swap Short" },
                       { key: "contract", label: "Contract" },
@@ -431,6 +435,7 @@ export default function ManageInstruments() {
                 {visibleCols.pricePrecision && <th>Price Precision</th>}
                 {visibleCols.tickSize && <th>Ticksize</th>}
                 {visibleCols.spread && <th>Spread</th>}
+                {visibleCols.spreadMode && <th>Spread Mode</th>}
                 {visibleCols.swapLong && <th>Swap Long</th>}
                 {visibleCols.swapShort && <th>Swap Short</th>}
                 {visibleCols.contract && <th>Contract</th>}
@@ -494,6 +499,7 @@ export default function ManageInstruments() {
                       {visibleCols.pricePrecision && <td>{row.pricePrecision}</td>}
                       {visibleCols.tickSize && <td>{row.tickSize}</td>}
                       {visibleCols.spread && <td>{row.spread}</td>}
+                      {visibleCols.spreadMode && <td>{row.spread_mode || "FIXED"}</td>}
                       {visibleCols.swapLong && <td>{row.swapLong}</td>}
                       {visibleCols.swapShort && <td>{row.swapShort}</td>}
                       {visibleCols.contract && <td>{row.contractSize}</td>}
@@ -610,6 +616,7 @@ export default function ManageInstruments() {
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Price Prec</span><span className="font-medium">{row.pricePrecision}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Tick</span><span className="font-medium">{row.tickSize}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Spread</span><span className="font-medium">{row.spread}</span></div>
+                    <div className="flex justify-between"><span className="text-[var(--text-muted)]">Spread Mode</span><span className="font-medium">{row.spread_mode || "FIXED"}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Contract</span><span className="font-medium">{row.contractSize}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Swap Long</span><span className="font-medium">{row.swapLong}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--text-muted)]">Swap Short</span><span className="font-medium">{row.swapShort}</span></div>
@@ -800,6 +807,23 @@ export default function ManageInstruments() {
                   value={form.spread}
                   onChange={(v) => setForm({ ...form, spread: Number(v) })}
                 />
+
+                <div className="w-full space-y-1">
+                  <label className="text-sm font-medium text-[var(--text-muted)] flex items-center gap-2">
+                    <SlidersHorizontal size={14} className="text-[var(--text-muted)]" />
+                    Spread Mode
+                  </label>
+                  <select
+                    value={form.spread_mode}
+                    onChange={(e) =>
+                      setForm({ ...form, spread_mode: e.target.value as "FIXED" | "ADD_ON" })
+                    }
+                    className="input w-full"
+                  >
+                    <option value="FIXED">FIXED (Static)</option>
+                    <option value="ADD_ON">ADD_ON (Add to base)</option>
+                  </select>
+                </div>
 
                 <PremiumInput
                   label="Contract Size"
