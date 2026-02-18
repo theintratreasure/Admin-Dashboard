@@ -186,8 +186,11 @@ export default function ManageInstruments() {
     };
   }, [openForm, form?.code, form?.segment]);
 
-  const instruments = useMemo(() => {
-    const rows = data?.data ?? [];
+  const instruments = useMemo<InstrumentFormState[]>(() => {
+    const rows = (data?.data ?? []).map((row) => ({
+      ...row,
+      spread_mode: row.spread_mode || "FIXED",
+    }));
     if (!search) return rows;
 
     return rows.filter((row) =>
@@ -547,6 +550,7 @@ export default function ManageInstruments() {
                             </button>
                             <button
                               onClick={() => {
+                                if (!row._id) return;
                                 setSelectedId(row._id);
                                 setConfirmOpen(true);
                               }}
@@ -631,6 +635,7 @@ export default function ManageInstruments() {
                     </button>
                     <button
                       onClick={() => {
+                        if (!row._id) return;
                         setSelectedId(row._id);
                         setConfirmOpen(true);
                       }}
