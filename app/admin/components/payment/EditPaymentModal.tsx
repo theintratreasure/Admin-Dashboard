@@ -20,6 +20,8 @@ type PaymentMethod = {
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
+  international_name?: string;
+  international_email?: string;
   image_url?: string;
   image_public_id?: string;
 };
@@ -49,6 +51,8 @@ export default function EditPaymentModal({
       upi_id: form.upi_id,
       crypto_network: form.crypto_network,
       crypto_address: form.crypto_address,
+      international_name: form.international_name,
+      international_email: form.international_email,
     };
 
     if (file) {
@@ -132,6 +136,13 @@ export default function EditPaymentModal({
                 <>
                   <Field label="Network" placeholder="TRC20 / ERC20 / Polygon" value={form.crypto_network} onChange={(v) => setForm({ ...form, crypto_network: v })} />
                   <Field label="Wallet address" placeholder="0x..." value={form.crypto_address} onChange={(v) => setForm({ ...form, crypto_address: v })} />
+                </>
+              )}
+
+              {form.type === "INTERNATIONAL" && (
+                <>
+                  <Field label="Account holder name" placeholder="Account Holder Name" value={form.international_name} onChange={(v) => setForm({ ...form, international_name: v })} />
+                  <Field label="Email" placeholder="user@example.com" value={form.international_email} onChange={(v) => setForm({ ...form, international_email: v })} />
                 </>
               )}
             </div>

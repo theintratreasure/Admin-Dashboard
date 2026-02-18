@@ -1,6 +1,6 @@
 import api from "@/api/axios";
 
-export type PaymentType = "BANK" | "UPI" | "CRYPTO";
+export type PaymentType = "BANK" | "UPI" | "CRYPTO" | "INTERNATIONAL";
 
 export interface PaymentMethodPayload {
   type: PaymentType;
@@ -13,6 +13,8 @@ export interface PaymentMethodPayload {
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
+  international_name?: string;
+  international_email?: string;
   image_url: string;
   image_public_id: string;
 }

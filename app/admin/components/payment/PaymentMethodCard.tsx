@@ -5,10 +5,13 @@ import {
   Building2,
   Copy,
   CreditCard,
+  Globe2,
   Landmark,
+  Mail,
   Pencil,
   QrCode,
   Trash2,
+  User,
 } from "lucide-react";
 import { useTogglePaymentStatus } from "@/hooks/payment-method/useTogglePaymentStatus";
 import { useDeletePaymentMethod } from "@/hooks/payment-method/useDeletePaymentMethod";
@@ -26,6 +29,8 @@ type PaymentMethod = {
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
+  international_name?: string;
+  international_email?: string;
   image_url?: string;
 };
 
@@ -157,6 +162,23 @@ export default function PaymentMethodCard({
               />
             </>
           )}
+
+          {data.type === "INTERNATIONAL" && (
+            <>
+              <CopyField
+                icon={User}
+                label="Account Holder"
+                value={data.international_name}
+                onCopy={() => setToast("Account holder copied")}
+              />
+              <CopyField
+                icon={Mail}
+                label="Email"
+                value={data.international_email}
+                onCopy={() => setToast("Email copied")}
+              />
+            </>
+          )}
         </div>
 
           {data.image_url && (
@@ -261,11 +283,21 @@ function getTypeMeta(type: PaymentType) {
     };
   }
 
+  if (type === "CRYPTO") {
+    return {
+      label: "Crypto",
+      description: "Wallet address and network for crypto transactions.",
+      icon: Bitcoin,
+      stripClass: "bg-gradient-to-r from-amber-500 to-orange-500",
+      pillClass: "border-amber-500/40 bg-amber-500/10 text-amber-700",
+    };
+  }
+
   return {
-    label: "Crypto",
-    description: "Wallet address and network for crypto transactions.",
-    icon: Bitcoin,
-    stripClass: "bg-gradient-to-r from-amber-500 to-orange-500",
-    pillClass: "border-amber-500/40 bg-amber-500/10 text-amber-700",
+    label: "International",
+    description: "International payment account details for global payouts.",
+    icon: Globe2,
+    stripClass: "bg-gradient-to-r from-emerald-500 to-teal-500",
+    pillClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700",
   };
 }

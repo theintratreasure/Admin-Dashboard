@@ -6,7 +6,7 @@ import { uploadToCloudinary } from "@/services/cloudinary.service";
 import { useAddPaymentMethod } from "@/hooks/payment-method/useAddPaymentMethod";
 import GlobalLoader from "../ui/GlobalLoader";
 import { X } from "lucide-react";
-import { Landmark, QrCode, Bitcoin } from "lucide-react";
+import { Landmark, QrCode, Bitcoin, Globe2 } from "lucide-react";
 
 type PaymentMethodDraft = {
     title: string;
@@ -17,21 +17,29 @@ type PaymentMethodDraft = {
     upi_id?: string;
     crypto_network?: string;
     crypto_address?: string;
+    international_name?: string;
+    international_email?: string;
 };
 
 export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
     const add = useAddPaymentMethod();
-    const [type, setType] = useState<"BANK" | "UPI" | "CRYPTO">("BANK");
+    const [type, setType] = useState<"BANK" | "UPI" | "CRYPTO" | "INTERNATIONAL">("BANK");
     const [form, setForm] = useState<PaymentMethodDraft>({ title: "" });
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const typeOptions = [
+        { value: "BANK", label: "Bank", icon: Landmark, helper: "A/C + IFSC" },
+        { value: "UPI", label: "UPI", icon: QrCode, helper: "UPI handle" },
+        { value: "CRYPTO", label: "Crypto", icon: Bitcoin, helper: "Wallet + network" },
+        { value: "INTERNATIONAL", label: "International", icon: Globe2, helper: "Name + email" },
+    ] as const;
 
     const submit = async () => {
-        if (!file) return;
+        if (!file && type !== "INTERNATIONAL") return;
         setLoading(true);
 
-        const img = await uploadToCloudinary(file);
+        const img = file ? await uploadToCloudinary(file) : null;
 
         add.mutate(
             {
@@ -44,8 +52,10 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                 upi_id: form.upi_id,
                 crypto_network: form.crypto_network,
                 crypto_address: form.crypto_address,
-                image_url: img.secure_url,
-                image_public_id: img.public_id,
+                international_name: form.international_name,
+                international_email: form.international_email,
+                image_url: img?.secure_url ?? "",
+                image_public_id: img?.public_id ?? "",
             },
             { onSuccess: onClose, onSettled: () => setLoading(false) }
         );
@@ -91,60 +101,62 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
 
                     {/* Content */}
                     <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
-                        {/* Top row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
-                                    Payment type
-                                </label>
+                        {/* Payment type */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-medium text-[var(--text-muted)]">
+                                Payment type
+                            </label>
 
-                                <div className="flex gap-2">
-  {(["BANK", "UPI", "CRYPTO"] as const).map((v) => {
-    const Icon =
-      v === "BANK"
-        ? Landmark
-        : v === "UPI"
-        ? QrCode
-        : Bitcoin;
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                {typeOptions.map((option) => {
+                                    const Icon = option.icon;
+                                    const active = type === option.value;
 
-    return (
-      <button
-        key={v}
-        type="button"
-        onClick={() => setType(v)}
-        className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2
-        text-xs md:text-sm font-medium transition
-        ${
-          type === v
-            ? "border-[var(--success)] bg-[var(--hover-bg)] text-[var(--foreground)]"
-            : "border-[var(--card-border)] bg-[var(--hover-bg)] text-[var(--text-muted)] hover:opacity-80"
-        }`}
-      >
-        <Icon size={16} />
-        <span>
-          {v === "BANK" && "Bank"}
-          {v === "UPI" && "UPI"}
-          {v === "CRYPTO" && "Crypto"}
-        </span>
-      </button>
-    );
-  })}
-</div>
-
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => setType(option.value)}
+                                            aria-pressed={active}
+                                            className={`group relative flex w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-[11px] font-semibold transition sm:text-xs
+                                            ${
+                                                active
+                                                    ? "border-[var(--primary)]/50 bg-[var(--hover-bg)] text-[var(--foreground)] shadow-sm"
+                                                    : "border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                                            }`}
+                                        >
+                                            <span
+                                                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-[var(--text-muted)]
+                                                ${
+                                                    active
+                                                        ? "border-[var(--primary)]/40 bg-[var(--primary)]/10 text-[var(--primary)]"
+                                                        : "border-[var(--card-border)] bg-[var(--input-bg)]"
+                                                }`}
+                                            >
+                                                <Icon size={14} />
+                                            </span>
+                                            <span className="text-[11px] sm:text-xs">{option.label}</span>
+                                            <span className="text-[9px] font-medium text-[var(--text-muted)] sm:text-[10px]">
+                                                {option.helper}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
-                                    Title
-                                </label>
-                                <input
-                                    className="input w-full"
-                                    placeholder="e.g. Primary business account"
-                                    onChange={(e) =>
-                                        setForm({ ...form, title: e.target.value })
-                                    }
-                                />
-                            </div>
+                        {/* Title */}
+                        <div>
+                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
+                                Title
+                            </label>
+                            <input
+                                className="input w-full"
+                                placeholder="e.g. Primary business account"
+                                onChange={(e) =>
+                                    setForm({ ...form, title: e.target.value })
+                                }
+                            />
                         </div>
 
                         {/* Fields */}
@@ -168,12 +180,19 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                                     <Input label="Wallet address" placeholder="0x..." onChange={(v) => setForm({ ...form, crypto_address: v })} />
                                 </>
                             )}
+
+                            {type === "INTERNATIONAL" && (
+                                <>
+                                    <Input label="Account holder name" placeholder="Account Holder Name" onChange={(v) => setForm({ ...form, international_name: v })} />
+                                    <Input label="Email" placeholder="user@example.com" onChange={(v) => setForm({ ...form, international_email: v })} />
+                                </>
+                            )}
                         </div>
 
                         {/* Upload */}
                         <div className="space-y-2">
                             <label className="block text-xs font-medium text-[var(--text-muted)]">
-                                Proof / QR / Image
+                                Proof / QR / Image{type === "INTERNATIONAL" ? " (optional)" : ""}
                             </label>
 
                             <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[var(--card-border)]
@@ -217,7 +236,13 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                         <button
                             className="btn btn-primary disabled:opacity-60"
                             onClick={submit}
-                            disabled={loading || !file || !form.title}
+                            disabled={
+                                loading ||
+                                !form.title ||
+                                (type !== "INTERNATIONAL" && !file) ||
+                                (type === "INTERNATIONAL" &&
+                                    (!form.international_name || !form.international_email))
+                            }
                         >
                             Save payment method
                         </button>

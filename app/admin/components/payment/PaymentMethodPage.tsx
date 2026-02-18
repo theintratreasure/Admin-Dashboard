@@ -5,6 +5,7 @@ import {
   BadgeIndianRupee,
   Bitcoin,
   CreditCard,
+  Globe2,
   Plus,
   QrCode,
   Search,
@@ -29,6 +30,8 @@ type PaymentMethod = {
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
+  international_name?: string;
+  international_email?: string;
   image_url?: string;
 };
 
@@ -43,6 +46,7 @@ const typeFilterOptions: Array<{
   { value: "BANK", label: "Bank", icon: BadgeIndianRupee },
   { value: "UPI", label: "UPI", icon: QrCode },
   { value: "CRYPTO", label: "Crypto", icon: Bitcoin },
+  { value: "INTERNATIONAL", label: "International", icon: Globe2 },
 ];
 
 export default function PaymentMethodPage() {
@@ -60,8 +64,9 @@ export default function PaymentMethodPage() {
     const bank = methods.filter((method) => method.type === "BANK").length;
     const upi = methods.filter((method) => method.type === "UPI").length;
     const crypto = methods.filter((method) => method.type === "CRYPTO").length;
+    const international = methods.filter((method) => method.type === "INTERNATIONAL").length;
 
-    return { total: methods.length, active, bank, upi, crypto };
+    return { total: methods.length, active, bank, upi, crypto, international };
   }, [methods]);
 
   const filteredMethods = useMemo(() => {
@@ -84,6 +89,8 @@ export default function PaymentMethodPage() {
         method.upi_id,
         method.crypto_network,
         method.crypto_address,
+        method.international_name,
+        method.international_email,
       ]
         .filter(Boolean)
         .join(" ")
@@ -108,8 +115,8 @@ export default function PaymentMethodPage() {
               Payment Methods
             </h1>
             <p className="max-w-2xl text-sm text-[var(--text-muted)]">
-              Manage bank accounts, UPI IDs and crypto wallets for deposit and
-              withdrawal operations.
+              Manage bank accounts, UPI IDs, crypto wallets, and international
+              payment profiles for deposit and withdrawal operations.
             </p>
           </div>
 
@@ -123,12 +130,13 @@ export default function PaymentMethodPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <StatsCard label="Total Methods" value={String(stats.total)} tone="slate" />
           <StatsCard label="Active" value={String(stats.active)} tone="emerald" />
           <StatsCard label="Bank" value={String(stats.bank)} tone="sky" />
           <StatsCard label="UPI" value={String(stats.upi)} tone="violet" />
           <StatsCard label="Crypto" value={String(stats.crypto)} tone="amber" />
+          <StatsCard label="International" value={String(stats.international)} tone="teal" />
         </div>
       </div>
 
@@ -142,7 +150,7 @@ export default function PaymentMethodPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by title, account, UPI or wallet..."
+              placeholder="Search by title, account, UPI, wallet or email..."
               className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
             />
           </div>
@@ -218,7 +226,7 @@ function StatsCard({
 }: {
   label: string;
   value: string;
-  tone: "slate" | "emerald" | "sky" | "violet" | "amber";
+  tone: "slate" | "emerald" | "sky" | "violet" | "amber" | "teal";
 }) {
   const toneMap: Record<typeof tone, string> = {
     slate: "text-slate-700 border-slate-400/30 bg-slate-500/[0.04]",
@@ -226,6 +234,7 @@ function StatsCard({
     sky: "text-sky-700 border-sky-400/30 bg-sky-500/[0.04]",
     violet: "text-violet-700 border-violet-400/30 bg-violet-500/[0.04]",
     amber: "text-amber-700 border-amber-400/30 bg-amber-500/[0.04]",
+    teal: "text-teal-700 border-teal-400/30 bg-teal-500/[0.04]",
   };
 
   return (
