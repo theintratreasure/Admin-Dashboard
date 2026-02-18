@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import Modal from "@/app/admin/components/ui/Modal";
 import { Toast } from "@/app/admin/components/ui/Toast";
 import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
+import { useInstrumentPrecisionMap } from "@/hooks/instruments/useInstrumentPrecisionMap";
 import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAdminUserAccounts } from "@/hooks/useAdminUserAccounts";
@@ -32,6 +33,7 @@ import {
 import type { AdminUser } from "@/types/user";
 import type { AdminAccount } from "@/types/account";
 import type { TradeOrderType, TradeSide } from "@/services/tradeAdmin.service";
+import { formatPrice } from "@/utils/priceFormat";
 
 const SEGMENTS = ["CRYPTO", "FOREX", "COMEX", "US Stocks", "US Indices"];
 const MIN_VOLUME = 0.01;
@@ -108,6 +110,7 @@ export default function CreateTradePage() {
   const instrumentRef = useRef<HTMLDivElement | null>(null);
   const userRef = useRef<HTMLDivElement | null>(null);
   const token = getAccessTokenFromCookie();
+  const { map: precisionMap } = useInstrumentPrecisionMap();
   const symbolUpper = symbol.trim().toUpperCase();
   const liveQuotes = useLiveQuotesBySymbols(
     token,
@@ -153,16 +156,9 @@ export default function CreateTradePage() {
 
   const handleCloseReceipt = () => setReceipt(null);
 
-  const formatQuoteValue = (value?: string) => {
-    if (!value || value === "--") return "--";
-    const num = Number(value);
-    if (!Number.isFinite(num)) return value;
-    const digits = Math.abs(num) >= 100 ? 2 : 5;
-    return num.toLocaleString("en-IN", {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    });
-  };
+  const symbolPrecision = precisionMap[symbolUpper] ?? 2;
+  const formatQuoteValue = (value?: string) =>
+    formatPrice(value, symbolPrecision);
 
   const liveBid = formatQuoteValue(liveQuote?.bid);
   const liveAsk = formatQuoteValue(liveQuote?.ask);

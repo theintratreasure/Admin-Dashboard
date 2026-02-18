@@ -14,6 +14,8 @@ import { useTradeAdminSummary } from "@/hooks/useTradeAdminSummary";
 import { useDefaultWatchlist } from "@/queries/defaultWatchlist.queries";
 import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
 import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
+import { useInstrumentPrecisionMap } from "@/hooks/instruments/useInstrumentPrecisionMap";
+import { formatPrice } from "@/utils/priceFormat";
 
 // ================= MOCK DATA =================
 
@@ -38,6 +40,7 @@ export default function Overview() {
   const { data: summary, isLoading } = useTradeAdminSummary();
   const token = getAccessTokenFromCookie();
   const watchlistQuery = useDefaultWatchlist();
+  const { map: precisionMap } = useInstrumentPrecisionMap();
 
   const safeSummary = summary ?? {
     activePositions: 0,
@@ -195,6 +198,7 @@ export default function Overview() {
             <div className="grid grid-cols-1 gap-2 sm:gap-3">
               {topRows.map((row) => {
                 const live = liveQuotes[row.code];
+                const precision = precisionMap[row.code] ?? 2;
                 const bidColor =
                   live?.bidDir === "up"
                     ? "text-emerald-500"
@@ -226,7 +230,7 @@ export default function Overview() {
                       <p
                         className={`text-[11px] sm:text-base font-semibold tracking-tight tabular-nums drop-shadow-[0_0_2px_rgba(0,0,0,0.18)] ${bidColor}`}
                       >
-                        {live?.bid ?? "--"}
+                        {formatPrice(live?.bid, precision)}
                       </p>
                     </div>
 
@@ -234,7 +238,7 @@ export default function Overview() {
                       <p
                         className={`text-[11px] sm:text-base font-semibold tracking-tight tabular-nums drop-shadow-[0_0_2px_rgba(0,0,0,0.18)] ${askColor}`}
                       >
-                        {live?.ask ?? "--"}
+                        {formatPrice(live?.ask, precision)}
                       </p>
                     </div>
                   </div>
