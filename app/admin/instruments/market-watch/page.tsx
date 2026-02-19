@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
+import { useInstrumentPrecisionMap } from "@/hooks/instruments/useInstrumentPrecisionMap";
 import { searchInstruments } from "@/services/instrument.service";
 
 import {
@@ -22,21 +23,8 @@ import Pagination from "../../components/ui/pagination";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import GlobalLoader from "../../components/ui/GlobalLoader";
 import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
+import { formatPrice, splitPrice } from "@/utils/priceFormat";
 
-
-function splitPrice(price: string) {
-  const [intPart, decimalPart = ""] = price.split(".");
-
-  if (decimalPart.length <= 2) {
-    return { int: intPart, big: decimalPart.padEnd(2, "0") };
-  }
-
-  return {
-    int: intPart,
-    big: decimalPart.slice(0, 2),
-    small: decimalPart.slice(2, 3),
-  };
-}
 
 function toNumber(value?: string | number) {
   if (value === undefined || value === null) return null;
@@ -90,6 +78,7 @@ export default function MarketWatch() {
   const listQuery = useDefaultWatchlist();
   const addMutation = useAddDefaultWatchlist();
   const removeMutation = useRemoveDefaultWatchlist();
+  const { map: precisionMap } = useInstrumentPrecisionMap();
 
   const rows = listQuery.data?.data ?? [];
 
@@ -355,9 +344,10 @@ export default function MarketWatch() {
     ) : (
       paginated.map((row, idx) => {
         const live = liveQuotes[row.code];
+        const precision = precisionMap[row.code] ?? 2;
 
-        const bid = splitPrice(live?.bid ?? "--");
-        const ask = splitPrice(live?.ask ?? "--");
+        const bid = splitPrice(live?.bid ?? "--", precision);
+        const ask = splitPrice(live?.ask ?? "--", precision);
         const spread = calcSpread(live?.bid, live?.ask);
         const current = toNumber(live?.bid ?? live?.ask);
         const open = toNumber(live?.open);
@@ -450,7 +440,7 @@ export default function MarketWatch() {
             {visibleCols.open && (
               <td className="text-right py-0.5 px-0.5">
                 <div className="font-semibold text-[10px] sm:text-[14px]">
-                  {open === null ? "--" : open.toFixed(2)}
+                  {formatPrice(open, precision)}
                 </div>
               </td>
             )}
@@ -494,14 +484,14 @@ export default function MarketWatch() {
             {visibleCols.lowHigh && (
               <td className="text-center text-[10px] sm:text-[12px] py-0.5 px-0.5">
                 <span className="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] sm:text-[12px] font-semibold text-red-600 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.15)]">
-                  {live?.low ?? "--"}
+                  {formatPrice(live?.low, precision)}
                 </span>
               </td>
             )}
             {visibleCols.lowHigh && (
               <td className="text-center text-[10px] sm:text-[12px] py-0.5 px-0.5">
                 <span className="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] sm:text-[12px] font-semibold text-emerald-600 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                  {live?.high ?? "--"}
+                  {formatPrice(live?.high, precision)}
                 </span>
               </td>
             )}

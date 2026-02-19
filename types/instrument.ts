@@ -5,6 +5,8 @@ export type InstrumentSegment =
   | "US Stocks"
   | "US Indices";
 
+export type SpreadMode = "FIXED" | "ADD_ON";
+
 export interface Instrument {
   _id: string;
   code: string;
@@ -19,6 +21,7 @@ export interface Instrument {
   pricePrecision: number;
   tickSize?: number | null;
   spread: number;
+  spread_mode?: SpreadMode;
 
   contractSize: number;
 
