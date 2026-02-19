@@ -1,6 +1,9 @@
 "use client";
 
-import { MarketSocket } from "@/services/marketSocket.service";
+import {
+    MarketSocket,
+    isMarketSocketDebugEnabled,
+} from "@/services/marketSocket.service";
 import { QuoteLiveState } from "@/types/market";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,8 +17,14 @@ export function useLiveQuotesBySymbols(
     const bufferRef = useRef<QuoteMap>({});
     const subscribedRef = useRef<Set<string>>(new Set());
     const frameRef = useRef<number | null>(null);
+    const firstTickLoggedRef = useRef<Set<string>>(new Set());
+    const firstMessageLoggedRef = useRef(false);
 
     const [quotes, setQuotes] = useState<QuoteMap>({});
+
+    function normalizeSymbol(value: string) {
+        return (value ?? "").trim().toUpperCase();
+    }
 
     function pickNumber(...values: Array<unknown>) {
         for (const v of values) {
@@ -30,6 +39,12 @@ export function useLiveQuotesBySymbols(
         return typeof value === "object" && value !== null;
     }
 
+    function toQuoteString(value: unknown): string | undefined {
+        if (typeof value === "string") return value;
+        if (typeof value === "number" && Number.isFinite(value)) return value.toString();
+        return undefined;
+    }
+
     function flush() {
         if (frameRef.current) return;
         frameRef.current = requestAnimationFrame(() => {
@@ -38,18 +53,40 @@ export function useLiveQuotesBySymbols(
         });
     }
 
+    useEffect(() => {
+        return () => {
+            if (frameRef.current) {
+                cancelAnimationFrame(frameRef.current);
+                frameRef.current = null;
+            }
+        };
+    }, []);
+
     /* SOCKET INIT */
     useEffect(() => {
-        if (!token) return;
+        const debug = isMarketSocketDebugEnabled();
+        if (!token) {
+            return;
+        }
         const socket = new MarketSocket();
         socketRef.current = socket;
 
-        socket.connect(token, (raw: unknown) => {
-            if (!isRecord(raw)) return;
+        const handleMessage = (raw: Record<string, unknown>) => {
+            if (!firstMessageLoggedRef.current) {
+                const meta = {
+                    type: typeof raw.type === "string" ? raw.type : undefined,
+                    status: typeof raw.status === "string" ? raw.status : undefined,
+                    symbol: typeof raw.symbol === "string" ? raw.symbol : undefined,
+                };
+                if (debug) {
+                    console.log("[LivePrice] message received", meta);
+                }
+                firstMessageLoggedRef.current = true;
+            }
 
             if (raw.status === "subscribed") {
-                const s = raw.symbol;
-                if (typeof s !== "string") return;
+                const s = typeof raw.symbol === "string" ? normalizeSymbol(raw.symbol) : "";
+                if (!s) return;
                 if (!bufferRef.current[s]) return;
 
                 const data = isRecord(raw.data) ? raw.data : undefined;
@@ -88,8 +125,8 @@ export function useLiveQuotesBySymbols(
                 const data = raw.data;
                 if (!isRecord(data)) return;
 
-                const s = data.code;
-                if (typeof s !== "string") return;
+                const s = typeof data.code === "string" ? normalizeSymbol(data.code) : "";
+                if (!s) return;
 
                 const bids = data.bids;
                 const asks = data.asks;
@@ -99,16 +136,11 @@ export function useLiveQuotesBySymbols(
                 const askRaw = asks[0];
                 if (!isRecord(bidRaw) || !isRecord(askRaw)) return;
 
-                const bidPrice = bidRaw.price;
-                const askPrice = askRaw.price;
-                const bidVolume = bidRaw.volume;
-                const askVolume = askRaw.volume;
-                if (
-                    typeof bidPrice !== "string" ||
-                    typeof askPrice !== "string" ||
-                    typeof bidVolume !== "string" ||
-                    typeof askVolume !== "string"
-                ) {
+                const bidPrice = toQuoteString(bidRaw.price);
+                const askPrice = toQuoteString(askRaw.price);
+                const bidVolume = toQuoteString(bidRaw.volume);
+                const askVolume = toQuoteString(askRaw.volume);
+                if (!bidPrice || !askPrice || !bidVolume || !askVolume) {
                     return;
                 }
 
@@ -154,9 +186,30 @@ export function useLiveQuotesBySymbols(
                                     : old.askDir,
                 };
 
+                if (!firstTickLoggedRef.current.has(s)) {
+                    if (debug) {
+                        console.log("[LivePrice] first tick", {
+                            symbol: s,
+                            bid: bidPrice,
+                            ask: askPrice,
+                        });
+                    }
+                    firstTickLoggedRef.current.add(s);
+                }
                 flush();
             }
+        };
 
+        socket.connect(token, (raw: unknown) => {
+            if (Array.isArray(raw)) {
+                raw.forEach((item) => {
+                    if (isRecord(item)) handleMessage(item);
+                });
+                return;
+            }
+
+            if (!isRecord(raw)) return;
+            handleMessage(raw);
         });
 
         // subscribe any symbols that were queued before socket was ready
@@ -172,9 +225,13 @@ export function useLiveQuotesBySymbols(
 
     /* SYMBOL SYNC */
     useEffect(() => {
-        const next = new Set(symbols);
+        const debug = isMarketSocketDebugEnabled();
+        const normalizedSymbols = symbols
+            .map((s) => normalizeSymbol(s))
+            .filter(Boolean);
+        const next = new Set(normalizedSymbols);
 
-        symbols.forEach((s) => {
+        normalizedSymbols.forEach((s) => {
             if (!subscribedRef.current.has(s)) {
                 subscribedRef.current.add(s);
                 bufferRef.current[s] = {
