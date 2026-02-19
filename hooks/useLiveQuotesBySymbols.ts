@@ -19,11 +19,22 @@ export function useLiveQuotesBySymbols(
     const frameRef = useRef<number | null>(null);
     const firstTickLoggedRef = useRef<Set<string>>(new Set());
     const firstMessageLoggedRef = useRef(false);
+    const aliasesRef = useRef<Record<string, string[]>>({});
 
     const [quotes, setQuotes] = useState<QuoteMap>({});
 
     function normalizeSymbol(value: string) {
         return (value ?? "").trim().toUpperCase();
+    }
+
+    function resolveFeedSymbol(value: string) {
+        const normalized = normalizeSymbol(value);
+        if (!normalized) return "";
+        const map: Record<string, string> = {
+            SILVER: "XAGUSD",
+            GOLD: "XAUUSD",
+        };
+        return map[normalized] ?? normalized;
     }
 
     function pickNumber(...values: Array<unknown>) {
@@ -43,6 +54,18 @@ export function useLiveQuotesBySymbols(
         if (typeof value === "string") return value;
         if (typeof value === "number" && Number.isFinite(value)) return value.toString();
         return undefined;
+    }
+
+    function createEmptyQuote(symbol: string): QuoteLiveState {
+        return {
+            symbol,
+            bid: "--",
+            ask: "--",
+            bidVolume: "--",
+            askVolume: "--",
+            bidDir: "same",
+            askDir: "same",
+        };
     }
 
     function flush() {
@@ -117,6 +140,11 @@ export function useLiveQuotesBySymbols(
                     open: nextOpen ?? bufferRef.current[s].open,
                     close: nextClose ?? bufferRef.current[s].close,
                 };
+                const aliases = aliasesRef.current[s] ?? [];
+                aliases.forEach((alias) => {
+                    if (alias === s) return;
+                    bufferRef.current[alias] = { ...bufferRef.current[s], symbol: alias };
+                });
                 flush();
                 return;
             }
@@ -186,6 +214,12 @@ export function useLiveQuotesBySymbols(
                                     : old.askDir,
                 };
 
+                const aliases = aliasesRef.current[s] ?? [];
+                aliases.forEach((alias) => {
+                    if (alias === s) return;
+                    bufferRef.current[alias] = { ...bufferRef.current[s], symbol: alias };
+                });
+
                 if (!firstTickLoggedRef.current.has(s)) {
                     if (debug) {
                         console.log("[LivePrice] first tick", {
@@ -229,29 +263,59 @@ export function useLiveQuotesBySymbols(
         const normalizedSymbols = symbols
             .map((s) => normalizeSymbol(s))
             .filter(Boolean);
-        const next = new Set(normalizedSymbols);
+        const feedSymbols = normalizedSymbols.map((s) => resolveFeedSymbol(s));
+        const nextFeed = new Set(feedSymbols);
+        const nextAliases = new Set(normalizedSymbols);
+        const aliasesByFeed: Record<string, string[]> = {};
 
-        normalizedSymbols.forEach((s) => {
-            if (!subscribedRef.current.has(s)) {
-                subscribedRef.current.add(s);
-                bufferRef.current[s] = {
-                    symbol: s,
-                    bid: "--",
-                    ask: "--",
-                    bidVolume: "--",
-                    askVolume: "--",
-                    bidDir: "same",
-                    askDir: "same",
-                };
-                socketRef.current?.subscribe(s);
+        normalizedSymbols.forEach((displaySymbol, idx) => {
+            const feedSymbol = feedSymbols[idx];
+            if (!feedSymbol) return;
+            if (!aliasesByFeed[feedSymbol]) aliasesByFeed[feedSymbol] = [];
+            if (!aliasesByFeed[feedSymbol].includes(displaySymbol)) {
+                aliasesByFeed[feedSymbol].push(displaySymbol);
             }
         });
 
-        Object.keys(bufferRef.current).forEach((s) => {
-            if (!next.has(s)) {
-                delete bufferRef.current[s];
-                subscribedRef.current.delete(s);
-                socketRef.current?.unsubscribe(s);
+        aliasesRef.current = aliasesByFeed;
+
+        nextFeed.forEach((feedSymbol) => {
+            if (!subscribedRef.current.has(feedSymbol)) {
+                subscribedRef.current.add(feedSymbol);
+                if (!bufferRef.current[feedSymbol]) {
+                    bufferRef.current[feedSymbol] = createEmptyQuote(feedSymbol);
+                }
+                if (debug) {
+                    console.log("[LivePrice] subscribe", { symbol: feedSymbol });
+                }
+                socketRef.current?.subscribe(feedSymbol);
+            }
+
+            const aliases = aliasesByFeed[feedSymbol] ?? [];
+            aliases.forEach((alias) => {
+                if (!bufferRef.current[alias]) {
+                    bufferRef.current[alias] = {
+                        ...bufferRef.current[feedSymbol],
+                        symbol: alias,
+                    };
+                }
+            });
+        });
+
+        subscribedRef.current.forEach((feedSymbol) => {
+            if (!nextFeed.has(feedSymbol)) {
+                subscribedRef.current.delete(feedSymbol);
+                socketRef.current?.unsubscribe(feedSymbol);
+                if (debug) {
+                    console.log("[LivePrice] unsubscribe", { symbol: feedSymbol });
+                }
+            }
+        });
+
+        const keepKeys = new Set<string>([...nextFeed, ...nextAliases]);
+        Object.keys(bufferRef.current).forEach((key) => {
+            if (!keepKeys.has(key)) {
+                delete bufferRef.current[key];
             }
         });
 

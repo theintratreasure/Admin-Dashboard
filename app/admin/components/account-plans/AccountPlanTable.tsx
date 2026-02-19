@@ -37,17 +37,19 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
     valueClassName?: string;
   }) => (
     <div className="flex items-center gap-2 py-2">
-      <span className="text-black whitespace-nowrap">{label}</span>
+      <span className="text-[var(--text-muted)] whitespace-nowrap">{label}</span>
       <span className="flex-1 h-[3px] bg-[radial-gradient(circle,_var(--card-border)_1.4px,_transparent_1.6px)] bg-[length:10px_3px] opacity-50" />
-      <span className={`text-right whitespace-nowrap ${valueClassName}`}>{value}</span>
+      <span className={`text-right whitespace-nowrap text-[var(--text-main)] ${valueClassName}`}>
+        {value}
+      </span>
     </div>
   );
 
   return (
-    <div className="rounded-2xl bg-[var(--surface)] max-w-7xl p-0" style={{ padding: 0 }}>
+    <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] max-w-7xl p-2 sm:p-3">
       {/* Desktop table wrapper */}
       <div className="hidden lg:block">
-        <div className="max-h-[520px] overflow-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]">
+        <div className="max-h-[520px] overflow-auto rounded-lg bg-[var(--surface)]">
           <table className="min-w-full border-collapse text-sm">
             <thead className="bg-[var(--table-header-bg)] text-[var(--text-muted)] text-xs uppercase sticky top-0 z-10 border-b border-[var(--border-subtle)]">
               <tr>
@@ -132,9 +134,9 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                   </td>
 
                   {/* DEMO */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium whitespace-nowrap ${
                         p.is_demo_allowed
                           ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-500"
                           : "border-[var(--border-subtle)] bg-[var(--chip-bg)] text-[var(--text-muted)]"
@@ -150,9 +152,9 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                   </td>
 
                   {/* SWAP */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium whitespace-nowrap ${
                         p.swap_enabled
                           ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
                           : "border-[var(--border-subtle)] bg-[var(--chip-bg)] text-[var(--text-muted)]"
@@ -168,13 +170,13 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
                   </td>
 
                   {/* STATUS */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {p.isActive ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-500 whitespace-nowrap">
                         <CheckCircle size={14} /> Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--danger)]">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--danger)] whitespace-nowrap">
                         <XCircle size={14} /> Inactive
                       </span>
                     )}
@@ -231,7 +233,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
       </div>
 
             {/* Mobile / tablet: card layout */}
-      <div className="block lg:hidden p-2 text-[14px] text-black space-y-3">
+      <div className="block lg:hidden p-2 text-[14px] text-[var(--text-main)] space-y-3">
         {data.length === 0 && (
           <div className="rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
             No account plans found.
@@ -251,7 +253,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
           {data.map((p) => (
             <div
               key={p._id}
-              className="w-full shrink-0 snap-start rounded-lg border border-[var(--card-border)]/70 bg-[var(--surface-elevated)] p-3 my-2 mx-2 text-black"
+              className="w-full shrink-0 snap-start rounded-lg border border-[var(--card-border)]/70 bg-[var(--surface-elevated)] p-3 my-2 mx-2 text-[var(--text-main)]"
             >
               <div className="flex items-center justify-between gap-2 pb-2 relative border-b border-[var(--card-border)]/70 -mx-3 px-3">
                 <div className="flex items-center gap-2 min-w-0">

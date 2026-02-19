@@ -127,7 +127,7 @@ export class MarketSocket {
       this.socket.send(
         JSON.stringify({
           type: "unsubscribe",
-          market: resolveSocketMarket(normalized),
+          market: "crypto",
           symbol: normalized,
         })
       );
@@ -145,7 +145,7 @@ export class MarketSocket {
     this.socket.send(
         JSON.stringify({
           type: "subscribe",
-        market: resolveSocketMarket(symbol),
+        market: "crypto",
         symbol,
         depth: 1,
       })
@@ -201,18 +201,6 @@ export function getMarketBySymbol(symbol: string): string {
     return "forex";
   }
 
-  return "crypto";
-}
-
-function resolveSocketMarket(symbol: string): string {
-  const forced = process.env.NEXT_PUBLIC_SOCKET_MARKET;
-  if (forced) {
-    const normalized = forced.toLowerCase();
-    if (normalized === "auto" || normalized === "symbol") {
-      return getMarketBySymbol(symbol);
-    }
-    return normalized;
-  }
   return "crypto";
 }
 
