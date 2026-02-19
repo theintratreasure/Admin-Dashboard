@@ -47,17 +47,17 @@ type InstrumentFormState = {
   code: string;
   name: string;
   segment: string;
-  lotSize: number;
-  minQty: number;
-  maxQty: number;
-  qtyPrecision: number;
-  pricePrecision: number;
-  tickSize?: number | null;
-  spread: number;
-  contractSize: number;
+  lotSize: number | "";
+  minQty: number | "";
+  maxQty: number | "";
+  qtyPrecision: number | "";
+  pricePrecision: number | "";
+  tickSize?: number | "" | null;
+  spread: number | "";
+  contractSize: number | "";
   swapEnabled: boolean;
-  swapLong: number;
-  swapShort: number;
+  swapLong: number | "";
+  swapShort: number | "";
   isActive: boolean;
   isTradeable: boolean;
 };
@@ -204,16 +204,16 @@ export default function ManageInstruments() {
       name: "",
       segment: "",
       lotSize: 1,
-      minQty: 0,
-      maxQty: 0,
+      minQty: "",
+      maxQty: "",
       qtyPrecision: 2,
       pricePrecision: 2,
-      tickSize: 0,
-      spread: 0,
+      tickSize: "",
+      spread: "",
       contractSize: 1,
       swapEnabled: false,
-      swapLong: 0,
-      swapShort: 0,
+      swapLong: "",
+      swapShort: "",
       isActive: true,
       isTradeable: true,
     });
@@ -244,14 +244,39 @@ export default function ManageInstruments() {
 
   const handleSave = async () => {
     if (!form) return;
+    const toNumber = (
+      value: number | "" | null | undefined,
+      fallback = 0
+    ) => (value === "" || value === null || value === undefined ? fallback : Number(value));
+    const payload = {
+      code: form.code,
+      name: form.name,
+      segment: form.segment,
+      lotSize: toNumber(form.lotSize, 1),
+      minQty: toNumber(form.minQty),
+      maxQty: toNumber(form.maxQty),
+      qtyPrecision: toNumber(form.qtyPrecision, 2),
+      pricePrecision: toNumber(form.pricePrecision, 2),
+      tickSize:
+        form.tickSize === "" || form.tickSize === null || form.tickSize === undefined
+          ? null
+          : Number(form.tickSize),
+      spread: toNumber(form.spread),
+      contractSize: toNumber(form.contractSize, 1),
+      swapEnabled: form.swapEnabled,
+      swapLong: toNumber(form.swapLong),
+      swapShort: toNumber(form.swapShort),
+      isActive: form.isActive,
+      isTradeable: form.isTradeable,
+    };
 
     if (form._id) {
       await updateMutation.mutateAsync({
         id: form._id,
-        payload: form,
+        payload,
       });
     } else {
-      await createMutation.mutateAsync(form);
+      await createMutation.mutateAsync(payload);
     }
 
     setOpenForm(false);
@@ -764,15 +789,15 @@ export default function ManageInstruments() {
                 </div>
                 <PremiumInput label="Name" icon={Type} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
                 <PremiumInput label="Segment" icon={Layers} value={form.segment} onChange={(v) => setForm({ ...form, segment: v })} />
-                <PremiumInput label="Lot Size" icon={Boxes} type="number" value={form.lotSize} onChange={(v) => setForm({ ...form, lotSize: Number(v) })} />
-                <PremiumInput label="Min Qty" icon={ArrowDownToLine} type="number" value={form.minQty} onChange={(v) => setForm({ ...form, minQty: Number(v) })} />
-                <PremiumInput label="Max Qty" icon={ArrowUpToLine} type="number" value={form.maxQty} onChange={(v) => setForm({ ...form, maxQty: Number(v) })} />
+                <PremiumInput label="Lot Size" icon={Boxes} type="number" value={form.lotSize} onChange={(v) => setForm({ ...form, lotSize: v === "" ? "" : Number(v) })} />
+                <PremiumInput label="Min Qty" icon={ArrowDownToLine} type="number" value={form.minQty} onChange={(v) => setForm({ ...form, minQty: v === "" ? "" : Number(v) })} />
+                <PremiumInput label="Max Qty" icon={ArrowUpToLine} type="number" value={form.maxQty} onChange={(v) => setForm({ ...form, maxQty: v === "" ? "" : Number(v) })} />
                 <PremiumInput
                   label="Qty Precision"
                   type="number"
                   icon={Sigma}
                   value={form.qtyPrecision}
-                  onChange={(v) => setForm({ ...form, qtyPrecision: Number(v) })}
+                  onChange={(v) => setForm({ ...form, qtyPrecision: v === "" ? "" : Number(v) })}
                 />
 
                 <PremiumInput
@@ -780,7 +805,7 @@ export default function ManageInstruments() {
                   type="number"
                   icon={DollarSign}
                   value={form.pricePrecision}
-                  onChange={(v) => setForm({ ...form, pricePrecision: Number(v) })}
+                  onChange={(v) => setForm({ ...form, pricePrecision: v === "" ? "" : Number(v) })}
                 />
 
                 <PremiumInput
@@ -789,7 +814,7 @@ export default function ManageInstruments() {
                   icon={MoveHorizontal}
                   value={form.tickSize ?? ""}
                   onChange={(v) =>
-                    setForm({ ...form, tickSize: v ? Number(v) : null })
+                    setForm({ ...form, tickSize: v === "" ? "" : Number(v) })
                   }
                 />
 
@@ -798,7 +823,7 @@ export default function ManageInstruments() {
                   type="number"
                   icon={MoveHorizontal}
                   value={form.spread}
-                  onChange={(v) => setForm({ ...form, spread: Number(v) })}
+                  onChange={(v) => setForm({ ...form, spread: v === "" ? "" : Number(v) })}
                 />
 
                 <PremiumInput
@@ -806,7 +831,7 @@ export default function ManageInstruments() {
                   type="number"
                   icon={Package}
                   value={form.contractSize}
-                  onChange={(v) => setForm({ ...form, contractSize: Number(v) })}
+                  onChange={(v) => setForm({ ...form, contractSize: v === "" ? "" : Number(v) })}
                 />
 
                 <PremiumInput
@@ -814,7 +839,7 @@ export default function ManageInstruments() {
                   type="number"
                   icon={ArrowUpRight}
                   value={form.swapLong}
-                  onChange={(v) => setForm({ ...form, swapLong: Number(v) })}
+                  onChange={(v) => setForm({ ...form, swapLong: v === "" ? "" : Number(v) })}
                 />
 
                 <PremiumInput
@@ -822,7 +847,7 @@ export default function ManageInstruments() {
                   type="number"
                   icon={ArrowDownRight}
                   value={form.swapShort}
-                  onChange={(v) => setForm({ ...form, swapShort: Number(v) })}
+                  onChange={(v) => setForm({ ...form, swapShort: v === "" ? "" : Number(v) })}
                 />
 
 

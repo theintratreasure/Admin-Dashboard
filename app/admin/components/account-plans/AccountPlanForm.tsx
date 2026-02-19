@@ -15,24 +15,43 @@ import { AccountPlan, AccountPlanPayload } from "@/types/accountPlan";
 import PremiumInput from "../ui/PremiumInput";
 import Toggle from "../ui/Toggle";
 
-const DEFAULT_FORM: AccountPlanPayload = {
+type DraftNumber = number | "";
+
+type AccountPlanDraft = Omit<
+  AccountPlanPayload,
+  | "spreadPips"
+  | "commission"
+  | "max_leverage"
+  | "minDeposit"
+  | "commission_per_lot"
+  | "referral_reward_amount"
+> & {
+  spreadPips: DraftNumber;
+  commission: DraftNumber;
+  max_leverage: DraftNumber;
+  minDeposit: DraftNumber;
+  commission_per_lot: DraftNumber;
+  referral_reward_amount: DraftNumber;
+};
+
+const DEFAULT_FORM: AccountPlanDraft = {
   name: "",
-  spreadPips: 0,
-  commission: 0,
+  spreadPips: "",
+  commission: "",
   leverageNote: "Up to Unlimited",
-  max_leverage: 0,
+  max_leverage: "",
   minLotSize: 0.01,
-  minDeposit: 0,
+  minDeposit: "",
   guidance: "",
   is_demo_allowed: true,
   spread_type: "FLOATING",
-  commission_per_lot: 0,
+  commission_per_lot: "",
   swap_enabled: true,
-  referral_reward_amount: 0,
+  referral_reward_amount: "",
   isActive: true,
 };
 
-function getInitialForm(initialData?: AccountPlan | null): AccountPlanPayload {
+function getInitialForm(initialData?: AccountPlan | null): AccountPlanDraft {
   if (!initialData) return DEFAULT_FORM;
 
   return {
@@ -64,9 +83,11 @@ export default function AccountPlanForm({
   onSubmit,
   loading,
 }: Props) {
-  const [form, setForm] = useState<AccountPlanPayload>(() =>
+  const [form, setForm] = useState<AccountPlanDraft>(() =>
     getInitialForm(initialData)
   );
+  const parseDraftNumber = (value: DraftNumber) =>
+    value === "" ? 0 : Number(value);
 
   return (
     <div className="space-y-5">
@@ -86,7 +107,7 @@ export default function AccountPlanForm({
           type="number"
           value={form.minDeposit}
           onChange={(v) =>
-            setForm({ ...form, minDeposit: Number(v) })
+            setForm({ ...form, minDeposit: v === "" ? "" : Number(v) })
           }
           icon={DollarSign}
         />
@@ -109,7 +130,7 @@ export default function AccountPlanForm({
           type="number"
           value={form.spreadPips}
           onChange={(v) =>
-            setForm({ ...form, spreadPips: Number(v) })
+            setForm({ ...form, spreadPips: v === "" ? "" : Number(v) })
           }
           icon={Percent}
         />
@@ -119,7 +140,7 @@ export default function AccountPlanForm({
           type="number"
           value={form.commission}
           onChange={(v) =>
-            setForm({ ...form, commission: Number(v) })
+            setForm({ ...form, commission: v === "" ? "" : Number(v) })
           }
           icon={BadgePercent}
         />
@@ -130,9 +151,9 @@ export default function AccountPlanForm({
         <PremiumInput
           label="Max Leverage (0 = Unlimited)"
           type="number"
-          value={form.max_leverage ?? 0}
+          value={form.max_leverage}
           onChange={(v) =>
-            setForm({ ...form, max_leverage: Number(v) })
+            setForm({ ...form, max_leverage: v === "" ? "" : Number(v) })
           }
           icon={Activity}
         />
@@ -172,7 +193,7 @@ export default function AccountPlanForm({
         type="number"
         value={form.commission_per_lot}
         onChange={(v) =>
-          setForm({ ...form, commission_per_lot: Number(v) })
+          setForm({ ...form, commission_per_lot: v === "" ? "" : Number(v) })
         }
       />
 
@@ -180,9 +201,12 @@ export default function AccountPlanForm({
       <PremiumInput
         label="Referral Reward Amount"
         type="number"
-        value={form.referral_reward_amount ?? 0}
+        value={form.referral_reward_amount}
         onChange={(v) =>
-          setForm({ ...form, referral_reward_amount: Number(v) })
+          setForm({
+            ...form,
+            referral_reward_amount: v === "" ? "" : Number(v),
+          })
         }
         icon={Gift}
       />
@@ -226,7 +250,17 @@ export default function AccountPlanForm({
       {/* ================= SUBMIT ================= */}
       <button
         disabled={loading}
-        onClick={() => onSubmit(form)}
+        onClick={() =>
+          onSubmit({
+            ...form,
+            spreadPips: parseDraftNumber(form.spreadPips),
+            commission: parseDraftNumber(form.commission),
+            max_leverage: parseDraftNumber(form.max_leverage),
+            minDeposit: parseDraftNumber(form.minDeposit),
+            commission_per_lot: parseDraftNumber(form.commission_per_lot),
+            referral_reward_amount: parseDraftNumber(form.referral_reward_amount),
+          })
+        }
         className="btn btn-primary w-full mt-2"
       >
         {loading ? "Saving..." : "Save Account Plan"}

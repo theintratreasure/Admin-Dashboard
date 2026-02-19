@@ -255,9 +255,6 @@ function InputCard({
   icon: React.ReactNode;
   placeholder: string;
 }) {
-  const displayValue =
-    value.trim() !== "" && Number(value) === 0 ? "" : value;
-
   return (
     <div>
       <label className="text-sm text-[var(--text-muted)]">{label}</label>
@@ -265,7 +262,7 @@ function InputCard({
         <span className="text-[var(--text-muted)]">{icon}</span>
         <input
           type="number"
-          value={displayValue}
+          value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full bg-transparent text-sm outline-none"

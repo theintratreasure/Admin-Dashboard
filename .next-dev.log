@@ -63,3 +63,5 @@
  GET /admin/transactions/all-deposit 200 in 40ms (compile: 4ms, proxy.ts: 4ms, render: 32ms)
  GET /admin/transactions/all-deposit 200 in 48ms (compile: 8ms, proxy.ts: 7ms, render: 33ms)
  GET /admin/transactions/all-deposit 200 in 39ms (compile: 6ms, proxy.ts: 6ms, render: 27ms)
+ GET /admin/transactions/all-deposit 200 in 3.6s (compile: 259ms, proxy.ts: 203ms, render: 3.1s)
+ GET /firebase-messaging-sw.js 404 in 1428ms (compile: 1152ms, render: 276ms)
