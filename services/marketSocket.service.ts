@@ -9,8 +9,16 @@ export class MarketSocket {
   private isConnecting = false;
   private shouldCloseOnOpen = false;
   private manualClose = false;
+  private reconnectTimer: number | null = null;
+  private reconnectAttempts = 0;
+  private lastToken: string | null = null;
+  private lastOnMessage: OnMessage | null = null;
+  private lastBaseUrl: string | null = null;
 
   connect(token: string, onMessage: OnMessage): void {
+    this.lastToken = token;
+    this.lastOnMessage = onMessage;
+
     const rawBaseUrl =
       process.env.NEXT_PUBLIC_SOKET_API_URL ??
       process.env.NEXT_PUBLIC_SOCKET_API_URL;
@@ -23,6 +31,7 @@ export class MarketSocket {
     }
 
     const baseUrl = normalizeWebSocketUrl(rawBaseUrl);
+    this.lastBaseUrl = baseUrl;
     const debug = isMarketSocketDebugEnabled();
 
     // Prevent multiple connections
@@ -42,6 +51,10 @@ export class MarketSocket {
     this.isConnecting = true;
     this.shouldCloseOnOpen = false;
     this.manualClose = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     try {
       this.socket = new WebSocket(
@@ -55,6 +68,11 @@ export class MarketSocket {
 
     this.socket.onopen = () => {
       this.isConnecting = false;
+      this.reconnectAttempts = 0;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
 
       if (this.shouldCloseOnOpen) {
         this.manualClose = true;
@@ -80,7 +98,7 @@ export class MarketSocket {
 
     this.socket.onerror = () => {
       if (this.manualClose || this.shouldCloseOnOpen) return;
-      console.error("Market socket error");
+      console.warn("Market socket error");
     };
 
     this.socket.onclose = (e: CloseEvent) => {
@@ -96,6 +114,7 @@ export class MarketSocket {
       this.isConnecting = false;
       this.shouldCloseOnOpen = false;
       this.manualClose = false;
+      this.scheduleReconnect();
     };
   }
 
@@ -167,9 +186,34 @@ export class MarketSocket {
     }
 
     this.socket = null;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     this.pendingSubscriptions.clear();
     this.isConnecting = false;
+  }
+
+  private scheduleReconnect() {
+    if (this.manualClose || this.shouldCloseOnOpen) return;
+    if (!this.lastToken || !this.lastOnMessage) return;
+    if (this.reconnectTimer) return;
+    if (typeof window === "undefined") return;
+
+    const delay = Math.min(30000, 1000 * Math.pow(2, this.reconnectAttempts));
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = window.setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect(this.lastToken ?? "", this.lastOnMessage ?? (() => null));
+    }, delay);
+
+    if (isMarketSocketDebugEnabled()) {
+      console.warn("[MarketSocket] reconnect scheduled", {
+        delay,
+        baseUrl: this.lastBaseUrl,
+      });
+    }
   }
 }
 
