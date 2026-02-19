@@ -47,17 +47,18 @@ type InstrumentFormState = {
   code: string;
   name: string;
   segment: string;
-  lotSize: number;
-  minQty: number;
-  maxQty: number;
-  qtyPrecision: number;
-  pricePrecision: number;
-  tickSize?: number | null;
-  spread: number;
-  contractSize: number;
+  lotSize: number | "";
+  minQty: number | "";
+  maxQty: number | "";
+  qtyPrecision: number | "";
+  pricePrecision: number | "";
+  tickSize?: number | "" | null;
+  spread: number | "";
+  contractSize: number | "";
   swapEnabled: boolean;
   swapLong: number | "";
   swapShort: number | "";
+  spread_mode?: "FIXED" | "ADD_ON";
   isActive: boolean;
   isTradeable: boolean;
 };
@@ -212,12 +213,13 @@ export default function ManageInstruments() {
       maxQty: "",
       qtyPrecision: 2,
       pricePrecision: 2,
-      tickSize: 0,
-      spread: 0,
+      tickSize: "",
+      spread: "",
       contractSize: 1,
       swapEnabled: false,
       swapLong: "",
       swapShort: "",
+      spread_mode: "FIXED",
       isActive: true,
       isTradeable: true,
     });
