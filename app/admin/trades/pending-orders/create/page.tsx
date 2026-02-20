@@ -70,6 +70,7 @@ export default function CreatePendingOrder() {
               <option value="">Select a segment</option>
               <option>Equity</option>
               <option>Commodity</option>
+              <option>Energy</option>
               <option>Forex</option>
             </select>
           </div>

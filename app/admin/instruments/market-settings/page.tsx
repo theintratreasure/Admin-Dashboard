@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CandlestickChart,
   Clock3,
+  Flame,
   Globe,
   Landmark,
   Layers,
@@ -23,7 +24,7 @@ import { Toast } from "../../components/ui/Toast";
 import Toggle from "../../components/ui/Toggle";
 import MarketScheduleEditModal from "../../components/market-setting/MarketScheduleEditModal";
 
-const SEGMENTS: MarketSegment[] = ["forex", "metal", "crypto", "indexes"];
+const SEGMENTS: MarketSegment[] = ["forex", "metal", "energy", "crypto", "indexes"];
 
 const SEGMENT_META: Record<
   MarketSegment,
@@ -40,6 +41,12 @@ const SEGMENT_META: Record<
     description: "Precious metal trading hours and holiday rules",
     color: "text-emerald-600",
     Icon: Layers,
+  },
+  energy: {
+    label: "Energy",
+    description: "Energy market schedule and holiday rules",
+    color: "text-orange-600",
+    Icon: Flame,
   },
   crypto: {
     label: "Crypto",

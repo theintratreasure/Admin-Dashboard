@@ -8,6 +8,7 @@ import {
   Trash2,
   X,
   Bitcoin,
+  Flame,
   Landmark,
   Layers,
   CandlestickChart,
@@ -161,6 +162,8 @@ export default function ManageInstruments() {
           ? "CRYPTO"
           : segKey === "METAL" || segKey === "METALS"
           ? "METAL"
+          : segKey === "ENERGY"
+          ? "ENERGY"
           : segKey === "INDICES" || segKey === "INDEX"
           ? "INDEXES"
           : undefined;
@@ -242,6 +245,9 @@ export default function ManageInstruments() {
     }
     if (key === "METAL" || key === "METALS") {
       return { label: "METAL", color: "text-emerald-600", Icon: Layers };
+    }
+    if (key === "ENERGY") {
+      return { label: "ENERGY", color: "text-orange-600", Icon: Flame };
     }
     if (key === "INDICES" || key === "INDEX" || key === "INDX") {
       return { label: "INDICES", color: "text-purple-600", Icon: CandlestickChart };
@@ -366,6 +372,7 @@ export default function ManageInstruments() {
           { key: "CRYPTO", label: "Crypto", Icon: Bitcoin },
           { key: "FOREX", label: "Forex", Icon: Landmark },
           { key: "METAL", label: "Metal", Icon: Layers },
+          { key: "ENERGY", label: "Energy", Icon: Flame },
           { key: "INDICES", label: "Indices", Icon: CandlestickChart },
         ].map((item, idx) => (
           <button
@@ -802,6 +809,8 @@ export default function ManageInstruments() {
                                       ? "FOREX"
                                       : item.category === "INDEXES"
                                       ? "INDICES"
+                                      : item.category === "ENERGY"
+                                      ? "ENERGY"
                                       : item.category || "");
                                   return {
                                     ...prev,

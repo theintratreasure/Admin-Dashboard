@@ -14,7 +14,7 @@ export type MarketSchedule = {
   createdAt: string;
   updatedAt: string;
 };
-export type MarketSegment = "forex" | "metal" | "crypto" | "indexes";
+export type MarketSegment = "forex" | "metal" | "energy" | "crypto" | "indexes";
 
 export const getMarketSchedule = async (
   segment: string

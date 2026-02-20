@@ -2,6 +2,7 @@ export type InstrumentSegment =
   | "COMEX"
   | "FOREX"
   | "CRYPTO"
+  | "ENERGY"
   | "US Stocks"
   | "US Indices";
 

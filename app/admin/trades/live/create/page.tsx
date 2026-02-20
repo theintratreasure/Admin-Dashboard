@@ -35,7 +35,7 @@ import type { AdminAccount } from "@/types/account";
 import type { TradeOrderType, TradeSide } from "@/services/tradeAdmin.service";
 import { formatPrice } from "@/utils/priceFormat";
 
-const SEGMENTS = ["CRYPTO", "FOREX", "COMEX", "US Stocks", "US Indices"];
+const SEGMENTS = ["CRYPTO", "FOREX", "ENERGY", "COMEX", "US Stocks", "US Indices"];
 const MIN_VOLUME = 0.01;
 
 const PENDING_ORDER_TYPES: Array<Exclude<TradeOrderType, "MARKET">> = [
