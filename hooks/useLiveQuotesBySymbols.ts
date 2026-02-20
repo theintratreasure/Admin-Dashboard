@@ -9,6 +9,21 @@ import { useEffect, useRef, useState } from "react";
 
 type QuoteMap = Record<string, QuoteLiveState>;
 
+const SYMBOL_ALIAS_MAP: Record<string, string> = {
+    SILVER: "XAGUSD",
+    GOLD: "XAUUSD",
+};
+
+function normalizeSymbol(value: string) {
+    return (value ?? "").trim().toUpperCase();
+}
+
+function resolveFeedSymbol(value: string) {
+    const normalized = normalizeSymbol(value);
+    if (!normalized) return "";
+    return SYMBOL_ALIAS_MAP[normalized] ?? normalized;
+}
+
 export function useLiveQuotesBySymbols(
     token: string,
     symbols: string[]
@@ -22,20 +37,6 @@ export function useLiveQuotesBySymbols(
     const aliasesRef = useRef<Record<string, string[]>>({});
 
     const [quotes, setQuotes] = useState<QuoteMap>({});
-
-    function normalizeSymbol(value: string) {
-        return (value ?? "").trim().toUpperCase();
-    }
-
-    function resolveFeedSymbol(value: string) {
-        const normalized = normalizeSymbol(value);
-        if (!normalized) return "";
-        const map: Record<string, string> = {
-            SILVER: "XAGUSD",
-            GOLD: "XAUUSD",
-        };
-        return map[normalized] ?? normalized;
-    }
 
     function pickNumber(...values: Array<unknown>) {
         for (const v of values) {

@@ -27,6 +27,7 @@ import {
   BadgeCheck,
   Power,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { useInstruments } from "@/hooks/instruments/useInstruments";
 import { useCreateInstrument } from "@/hooks/instruments/useCreateInstrument";
@@ -248,6 +249,29 @@ export default function ManageInstruments() {
     return { label: segment || "--", color: "text-[var(--text-muted)]", Icon: Layers };
   };
 
+  const getErrorMessage = (value: unknown, fallback: string) => {
+    if (typeof value !== "object" || value === null) return fallback;
+
+    const responseMessage = (
+      value as { response?: { data?: { message?: string; error?: string } } }
+    ).response?.data;
+
+    if (typeof responseMessage?.message === "string" && responseMessage.message.trim()) {
+      return responseMessage.message;
+    }
+
+    if (typeof responseMessage?.error === "string" && responseMessage.error.trim()) {
+      return responseMessage.error;
+    }
+
+    const baseMessage = (value as { message?: string }).message;
+    if (typeof baseMessage === "string" && baseMessage.trim()) {
+      return baseMessage;
+    }
+
+    return fallback;
+  };
+
   const handleSave = async () => {
     if (!form) return;
     const toNumber = (
@@ -272,21 +296,32 @@ export default function ManageInstruments() {
       swapEnabled: form.swapEnabled,
       swapLong: toNumber(form.swapLong),
       swapShort: toNumber(form.swapShort),
+      spread_mode: form.spread_mode ?? "FIXED",
       isActive: form.isActive,
       isTradeable: form.isTradeable,
     };
 
-    if (form._id) {
-      await updateMutation.mutateAsync({
-        id: form._id,
-        payload,
-      });
-    } else {
-      await createMutation.mutateAsync(payload);
-    }
+    try {
+      if (form._id) {
+        await updateMutation.mutateAsync({
+          id: form._id,
+          payload,
+        });
+        toast.success("Instrument updated successfully.");
+      } else {
+        await createMutation.mutateAsync(payload);
+        toast.success("Instrument created successfully.");
+      }
 
-    setOpenForm(false);
-    setForm(null);
+      setOpenForm(false);
+      setForm(null);
+    } catch (submitError) {
+      const message = getErrorMessage(
+        submitError,
+        form._id ? "Unable to update instrument." : "Unable to create instrument."
+      );
+      toast.error(message);
+    }
   };
 
   /* ================= RENDER ================= */
@@ -914,9 +949,14 @@ export default function ManageInstruments() {
             setSelectedId(null);
           }}
           onConfirm={async () => {
-            await deleteMutation.mutateAsync(selectedId);
-            setConfirmOpen(false);
-            setSelectedId(null);
+            try {
+              await deleteMutation.mutateAsync(selectedId);
+              toast.success("Instrument deleted.");
+              setConfirmOpen(false);
+              setSelectedId(null);
+            } catch (submitError) {
+              toast.error(getErrorMessage(submitError, "Unable to delete instrument."));
+            }
           }}
         />
       )}

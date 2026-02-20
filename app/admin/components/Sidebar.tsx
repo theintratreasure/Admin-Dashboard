@@ -412,7 +412,3 @@ export default function AdminSidebar() {
   );
 }
 
-/* ================= SMALL DOT ================= */
-function ClockDot() {
-  return <span className="inline-block h-2 w-2 rounded-full bg-yellow-500" />;
-}
