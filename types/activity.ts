@@ -20,6 +20,5 @@ export type AdminActivityListResponse = {
 export type AdminActivityParams = {
   userId?: string;
   limit?: number;
-  cursor?: string;
-  includeUser?: boolean;
+  before?: string;
 };

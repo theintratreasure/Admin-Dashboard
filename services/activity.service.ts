@@ -48,16 +48,14 @@ export const fetchAdminActivityLogs = async (
   params: AdminActivityParams
 ): Promise<AdminActivityListResponse> => {
   const limit = Math.min(100, Math.max(1, params.limit ?? 20));
-  const includeUser = params.includeUser ?? true;
-  const cursor = params.cursor?.trim() || undefined;
+  const before = params.before?.trim() || undefined;
   const userId = params.userId?.trim() || undefined;
 
   const query: Record<string, string | number> = {
     limit,
-    includeUser: includeUser ? 1 : 0,
   };
 
-  if (cursor) query.cursor = cursor;
+  if (before) query.before = before;
 
   const url = userId ? `/activity/admin/${userId}` : "/activity/admin";
   const res = await api.get<ActivityPayload>(url, { params: query });

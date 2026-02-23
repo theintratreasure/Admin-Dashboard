@@ -79,7 +79,7 @@ export default function ActivityLogsPage() {
   const [userIdInput, setUserIdInput] = useState("");
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [limit, setLimit] = useState(20);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [before, setBefore] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -93,7 +93,7 @@ export default function ActivityLogsPage() {
     const t = setTimeout(() => {
       const next = userIdInput.trim();
       setUserId(next.length ? next : undefined);
-      setCursor(undefined);
+      setBefore(undefined);
     }, 350);
 
     return () => clearTimeout(t);
@@ -102,8 +102,7 @@ export default function ActivityLogsPage() {
   const query = useAdminActivityLogs({
     userId,
     limit,
-    cursor,
-    includeUser: true,
+    before,
   });
 
   const logs = query.data?.data ?? EMPTY_LOGS;
@@ -145,7 +144,7 @@ export default function ActivityLogsPage() {
   }, [logs, search]);
 
   const handleRefresh = () => {
-    setCursor(undefined);
+    setBefore(undefined);
     query.refetch();
   };
 
@@ -159,7 +158,7 @@ export default function ActivityLogsPage() {
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-1 text-[11px] font-semibold text-[var(--text-muted)]">
             <Activity size={12} />
-            {cursor ? "Older batch" : "Most recent"}
+            {before ? "Older batch" : "Most recent"}
           </span>
         </div>
 
@@ -259,7 +258,7 @@ export default function ActivityLogsPage() {
                 value={limit}
                 onChange={(e) => {
                   setLimit(Number(e.target.value));
-                  setCursor(undefined);
+                  setBefore(undefined);
                 }}
                 className="w-full appearance-none rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)]
                            px-3 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
@@ -289,7 +288,6 @@ export default function ActivityLogsPage() {
               Updating
             </span>
           )}
-          <span className="pill pill-muted text-[10px]">includeUser=1</span>
         </span>
       </div>
 
@@ -408,13 +406,13 @@ export default function ActivityLogsPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--card-border)] px-4 py-3">
           <span className="text-xs text-[var(--text-muted)]">
-            {cursor ? "Showing older activity logs" : "Showing most recent activity logs"}
+            {before ? "Showing older activity logs" : "Showing most recent activity logs"}
           </span>
           <div className="flex items-center gap-2">
-            {cursor && (
+            {before && (
               <button
                 type="button"
-                onClick={() => setCursor(undefined)}
+                onClick={() => setBefore(undefined)}
                 className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--hover-bg)]"
               >
                 Back to recent
@@ -424,7 +422,7 @@ export default function ActivityLogsPage() {
               type="button"
               disabled={!nextCursor || isInitialLoading}
               onClick={() => {
-                if (nextCursor) setCursor(nextCursor);
+                if (nextCursor) setBefore(nextCursor);
               }}
               className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--text-main)]
                          hover:bg-[var(--hover-bg)] disabled:opacity-60 disabled:cursor-not-allowed"
