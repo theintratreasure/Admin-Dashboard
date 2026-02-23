@@ -136,6 +136,7 @@ const navSections: {
     {
       title: "System",
       items: [
+        { href: "/admin/activity-logs", label: "Activity Logs", icon: <Activity size={18} /> },
         { href: "/admin/notifications/notification", label: "Notifications", icon: <Bell size={18} /> },
         { href: "/admin/inquiry", label: "Inquiry", icon: <MessageSquare size={18} /> },
         {
