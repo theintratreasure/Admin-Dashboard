@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 import { useTradeAdminPendingOrders } from "@/hooks/useTradeAdminPendingOrders";
 import type {
   TradeAdminPendingOrder,
@@ -531,7 +532,7 @@ export default function PendingOrdersPage() {
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <DragScroll className="hidden overflow-x-auto md:block">
               <table className="min-w-[1600px] w-full text-left text-sm">
                 <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                   <tr>
@@ -679,7 +680,7 @@ export default function PendingOrdersPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DragScroll>
 
             <div className="space-y-3 md:hidden">
               {rows.map((order) => (

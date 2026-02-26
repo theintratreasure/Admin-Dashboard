@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 import {
   type SwapDirection,
   type SwapTransaction,
@@ -262,7 +263,7 @@ export default function SwapTransactionsPage() {
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <DragScroll className="hidden overflow-x-auto md:block">
               <table className="min-w-[1300px] w-full text-left text-sm">
                 <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                   <tr>
@@ -366,7 +367,7 @@ export default function SwapTransactionsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DragScroll>
 
             <div className="mt-3 grid grid-cols-1 gap-3 md:hidden">
               {rows.map((item) => (

@@ -17,6 +17,7 @@ import { Inquiry } from "@/types/inquiry";
 import Pagination from "../components/ui/pagination";
 import GlobalLoader from "../components/ui/GlobalLoader";
 import { Toast } from "../components/ui/Toast";
+import DragScroll from "../components/ui/DragScroll";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("en-IN", {
@@ -215,7 +216,7 @@ export default function InquiryPage() {
               ))}
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
+            <DragScroll className="hidden md:block overflow-x-auto">
               <table className="table min-w-[1180px] w-full">
                 <thead>
                   <tr>
@@ -298,7 +299,7 @@ export default function InquiryPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DragScroll>
           </>
         )}
       </div>

@@ -213,6 +213,42 @@ body {
   background: var(--card-bg);
 }
 
+.drag-scroll {
+  cursor: grab;
+  overscroll-behavior-x: contain;
+  touch-action: pan-y;
+}
+
+.drag-scroll table,
+.drag-scroll th,
+.drag-scroll td {
+  cursor: grab;
+}
+
+.drag-scroll a,
+.drag-scroll button,
+.drag-scroll [role="button"],
+.drag-scroll input,
+.drag-scroll select,
+.drag-scroll textarea,
+.drag-scroll [data-no-drag] {
+  cursor: pointer;
+}
+
+.drag-scroll input,
+.drag-scroll textarea {
+  cursor: text;
+}
+
+.drag-scroll.drag-scroll--dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.drag-scroll.drag-scroll--dragging * {
+  user-select: none;
+}
+
 /* truncated message cell */
 .truncate {
   max-width: 380px;

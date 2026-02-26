@@ -15,6 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import Pagination from "../../components/ui/pagination";
 import GlobalLoader from "../../components/ui/GlobalLoader";
+import DragScroll from "../../components/ui/DragScroll";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import type { AdminUser } from "@/types/user";
 
@@ -351,7 +352,7 @@ export default function UsersPage() {
           <span>Page {page} of {totalPages}</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <DragScroll className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-[var(--input-bg)] text-[var(--text-muted)] text-xs uppercase">
               <tr>
@@ -440,7 +441,7 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </DragScroll>
       </div>
 
       {/* PAGINATION */}

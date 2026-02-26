@@ -26,6 +26,7 @@ type PaymentMethod = {
   account_name?: string;
   account_number?: string;
   ifsc?: string;
+  swift_code?: string;
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
@@ -134,6 +135,12 @@ export default function PaymentMethodCard({
                 value={data.ifsc}
                 onCopy={() => setToast("IFSC copied")}
               />
+              <CopyField
+                icon={Globe2}
+                label="SWIFT Code"
+                value={data.swift_code}
+                onCopy={() => setToast("SWIFT code copied")}
+              />
             </>
           )}
 
@@ -181,7 +188,7 @@ export default function PaymentMethodCard({
           )}
         </div>
 
-          {data.image_url && (
+        {data.type !== "BANK" && data.image_url && (
           <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] p-2">
             <div className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-lg border border-[var(--card-border)]/60 bg-gradient-to-br from-slate-100/60 via-white to-slate-100/50">
               <Image

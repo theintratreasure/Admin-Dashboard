@@ -27,6 +27,7 @@ type PaymentMethod = {
   account_name?: string;
   account_number?: string;
   ifsc?: string;
+  swift_code?: string;
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
@@ -86,6 +87,7 @@ export default function PaymentMethodPage() {
         method.account_name,
         method.account_number,
         method.ifsc,
+        method.swift_code,
         method.upi_id,
         method.crypto_network,
         method.crypto_address,

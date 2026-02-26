@@ -24,6 +24,7 @@ import {
   useRejectReferralReward,
 } from "@/hooks/referrals/useReferralRewardActions";
 import type { ReferralRewardStatus } from "@/services/adminReferralReward.service";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 
 type RewardUser = {
   _id?: string;
@@ -536,7 +537,7 @@ export default function ReferralPage() {
             </span>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <DragScroll className="overflow-x-auto">
           <table className="table w-full text-[11px] sm:text-[13px]">
             <thead>
               <tr>
@@ -721,7 +722,7 @@ export default function ReferralPage() {
               </AnimatePresence>
             </tbody>
           </table>
-        </div>
+        </DragScroll>
       </div>
 
       {/* PAGINATION */}

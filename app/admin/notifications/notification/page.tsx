@@ -10,6 +10,7 @@ import { useBroadcastNotification } from "@/hooks/notification/useBroadcastNotif
 import Pagination from "../../components/ui/pagination";
 import { Notification, NotificationType } from "@/services/notification/notification.services";
 import GlobalLoader from "../../components/ui/GlobalLoader";
+import DragScroll from "../../components/ui/DragScroll";
 
 interface TransformedNotification {
   id: string;
@@ -108,7 +109,7 @@ export default function NotificationsPage() {
 
       {/* Responsive Table Card */}
       <div className="card-elevated overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-[var(--text-muted)]/40 scrollbar-track-transparent">
+        <DragScroll className="overflow-x-auto scrollbar-thin scrollbar-thumb-[var(--text-muted)]/40 scrollbar-track-transparent">
           <table className="table table-fixed min-w-[1100px] w-full">
             <thead>
               <tr>
@@ -175,7 +176,7 @@ export default function NotificationsPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </DragScroll>
 
         {/* Mobile Scroll Hint */}
         <div className="lg:hidden px-4 py-2 bg-[var(--hover-bg)] text-[var(--text-muted)] text-xs text-center">

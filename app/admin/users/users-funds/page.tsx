@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Pagination from "@/app/admin/components/ui/pagination";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 import { useAdminUserFunds } from "@/hooks/useAdminUserFunds";
 import type { TradeAdminUserFundsItem } from "@/services/userFunds.service";
 
@@ -403,7 +404,7 @@ export default function UserFundsPage() {
             No users found for selected filters.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <DragScroll className="overflow-x-auto">
             <table className="min-w-[1200px] w-full text-left text-sm">
               <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                 <tr>
@@ -425,7 +426,7 @@ export default function UserFundsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DragScroll>
         )}
       </div>
 

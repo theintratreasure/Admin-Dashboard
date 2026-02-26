@@ -14,6 +14,7 @@ type PaymentMethodDraft = {
     account_name?: string;
     account_number?: string;
     ifsc?: string;
+    swift_code?: string;
     upi_id?: string;
     crypto_network?: string;
     crypto_address?: string;
@@ -36,26 +37,34 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
     ] as const;
 
     const submit = async () => {
-        if (!file && type !== "INTERNATIONAL") return;
+        const needsImage = type === "UPI" || type === "CRYPTO";
+        if (needsImage && !file) return;
         setLoading(true);
 
-        const img = file ? await uploadToCloudinary(file) : null;
+        const shouldUpload = Boolean(file) && type !== "BANK";
+        const img = shouldUpload ? await uploadToCloudinary(file as File) : null;
+
+        const payload = {
+            type,
+            title: form.title,
+            bank_name: form.bank_name,
+            account_name: form.account_name,
+            account_number: form.account_number,
+            ifsc: form.ifsc,
+            swift_code: form.swift_code,
+            upi_id: form.upi_id,
+            crypto_network: form.crypto_network,
+            crypto_address: form.crypto_address,
+            international_name: form.international_name,
+            international_email: form.international_email,
+        } as const;
 
         add.mutate(
             {
-                type,
-                title: form.title,
-                bank_name: form.bank_name,
-                account_name: form.account_name,
-                account_number: form.account_number,
-                ifsc: form.ifsc,
-                upi_id: form.upi_id,
-                crypto_network: form.crypto_network,
-                crypto_address: form.crypto_address,
-                international_name: form.international_name,
-                international_email: form.international_email,
-                image_url: img?.secure_url ?? "",
-                image_public_id: img?.public_id ?? "",
+                ...payload,
+                ...(img
+                    ? { image_url: img.secure_url, image_public_id: img.public_id }
+                    : {}),
             },
             { onSuccess: onClose, onSettled: () => setLoading(false) }
         );
@@ -163,11 +172,12 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {type === "BANK" && (
                                 <>
-                                    <Input label="Bank name" placeholder="HDFC Bank" onChange={(v) => setForm({ ...form, bank_name: v })} />
-                                    <Input label="Account holder" placeholder="John Doe" onChange={(v) => setForm({ ...form, account_name: v })} />
-                                    <Input label="Account number" placeholder="************1234" onChange={(v) => setForm({ ...form, account_number: v })} />
-                                    <Input label="IFSC code" placeholder="HDFC0001234" onChange={(v) => setForm({ ...form, ifsc: v })} />
-                                </>
+                                <Input label="Bank name" placeholder="HDFC Bank" onChange={(v) => setForm({ ...form, bank_name: v })} />
+                                <Input label="Account holder" placeholder="John Doe" onChange={(v) => setForm({ ...form, account_name: v })} />
+                                <Input label="Account number" placeholder="************1234" onChange={(v) => setForm({ ...form, account_number: v })} />
+                                <Input label="IFSC code" placeholder="HDFC0001234" onChange={(v) => setForm({ ...form, ifsc: v })} />
+                                <Input label="SWIFT code (optional)" placeholder="HDFCINBBXXX" onChange={(v) => setForm({ ...form, swift_code: v })} />
+                            </>
                             )}
 
                             {type === "UPI" && (
@@ -190,42 +200,44 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                         </div>
 
                         {/* Upload */}
-                        <div className="space-y-2">
-                            <label className="block text-xs font-medium text-[var(--text-muted)]">
-                                Proof / QR / Image{type === "INTERNATIONAL" ? " (optional)" : ""}
-                            </label>
+                        {type !== "BANK" && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-[var(--text-muted)]">
+                                    Proof / QR / Image{type === "INTERNATIONAL" ? " (optional)" : ""}
+                                </label>
 
-                            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[var(--card-border)]
+                                <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[var(--card-border)]
               bg-[var(--hover-bg)] p-3 text-xs text-[var(--text-muted)]">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p>Upload a QR code, cheque, or reference image.</p>
-                                    <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white">
-                                        Choose file
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*"
-                                            onChange={(e) =>
-                                                handleFileChange(e.target.files?.[0] || null)
-                                            }
-                                        />
-                                    </label>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p>Upload a QR code, cheque, or reference image.</p>
+                                        <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white">
+                                            Choose file
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={(e) =>
+                                                    handleFileChange(e.target.files?.[0] || null)
+                                                }
+                                            />
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {preview && (
-                                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--hover-bg)] p-2 inline-block">
-                                    <Image
-                                        src={preview}
-                                        alt="Preview"
-                                        width={400}
-                                        height={160}
-                                        unoptimized
-                                        className="max-h-40 w-auto rounded-md object-contain"
-                                    />
-                                </div>
-                            )}
-                        </div>
+                                {preview && (
+                                    <div className="rounded-lg border border-[var(--card-border)] bg-[var(--hover-bg)] p-2 inline-block">
+                                        <Image
+                                            src={preview}
+                                            alt="Preview"
+                                            width={400}
+                                            height={160}
+                                            unoptimized
+                                            className="max-h-40 w-auto rounded-md object-contain"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer */}
@@ -239,7 +251,7 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                             disabled={
                                 loading ||
                                 !form.title ||
-                                (type !== "INTERNATIONAL" && !file) ||
+                                ((type === "UPI" || type === "CRYPTO") && !file) ||
                                 (type === "INTERNATIONAL" &&
                                     (!form.international_name || !form.international_email))
                             }

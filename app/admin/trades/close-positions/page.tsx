@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, SlidersHorizontal, Check } from "lucide-react";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 
 interface Column {
   key: string;
@@ -95,7 +96,7 @@ export default function ClosedPositions() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-x-auto">
+      <DragScroll className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-x-auto">
         <table className="w-full text-sm min-w-max">
           <thead className="bg-[var(--input-bg)] border-b border-[var(--card-border)] text-[var(--text-muted)]">
             <tr>
@@ -121,7 +122,7 @@ export default function ClosedPositions() {
             </tr>
           </tbody>
         </table>
-      </div>
+      </DragScroll>
 
       {/* PAGINATION */}
       <div className="flex justify-between mt-4 flex-wrap gap-4 text-[var(--text-muted)]">

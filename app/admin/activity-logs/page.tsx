@@ -17,6 +17,7 @@ import {
 import { useAdminActivityLogs } from "@/hooks/useAdminActivityLogs";
 import type { AdminActivityLog } from "@/types/activity";
 import GlobalLoader from "../components/ui/GlobalLoader";
+import DragScroll from "../components/ui/DragScroll";
 
 const EMPTY_LOGS: AdminActivityLog[] = [];
 
@@ -292,7 +293,7 @@ export default function ActivityLogsPage() {
       </div>
 
       <div className="card-elevated overflow-hidden">
-        <div className="overflow-x-auto">
+        <DragScroll className="overflow-x-auto">
           <table className="table min-w-[1100px] w-full">
             <thead>
               <tr>
@@ -402,7 +403,7 @@ export default function ActivityLogsPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </DragScroll>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--card-border)] px-4 py-3">
           <span className="text-xs text-[var(--text-muted)]">

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { AccountPlan } from "@/types/accountPlan";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 
 interface Props {
   data: AccountPlan[];
@@ -49,7 +50,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
     <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] max-w-7xl p-2 sm:p-3">
       {/* Desktop table wrapper */}
       <div className="hidden lg:block">
-        <div className="max-h-[520px] overflow-auto rounded-lg bg-[var(--surface)]">
+        <DragScroll className="max-h-[520px] overflow-auto rounded-lg bg-[var(--surface)]">
           <table className="min-w-full border-collapse text-sm">
             <thead className="bg-[var(--table-header-bg)] text-[var(--text-muted)] text-xs uppercase sticky top-0 z-10 border-b border-[var(--border-subtle)]">
               <tr>
@@ -223,7 +224,7 @@ export default function AccountPlanTable({ data, onEdit, onDelete }: Props) {
               )}
             </tbody>
           </table>
-        </div>
+        </DragScroll>
 
         {/* Footer bar */}
         <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-5 py-3 text-xs text-[var(--text-muted)]">

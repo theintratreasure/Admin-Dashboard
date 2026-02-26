@@ -14,6 +14,7 @@ import {
     CircleEllipsis,
 } from "lucide-react";
 import { AdminKyc } from "@/services/kyc/kyc.types";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 
 type SortOrder = "asc" | "desc";
 
@@ -67,7 +68,7 @@ export default function AdminKycTable({
     };
 
     return (
-        <div className="lg:relative lg:-mx-2 lg:overflow-x-auto">
+        <DragScroll className="lg:relative lg:-mx-2 lg:overflow-x-auto">
             <div className="hidden min-w-[900px] space-y-3 px-2 lg:block">
 
                 {/* ================= HEADER ================= */}
@@ -259,6 +260,6 @@ export default function AdminKycTable({
                     </div>
                 ))}
             </div>
-        </div>
+        </DragScroll>
     );
 }

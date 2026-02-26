@@ -22,6 +22,7 @@ import {
 import Pagination from "../../components/ui/pagination";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import GlobalLoader from "../../components/ui/GlobalLoader";
+import DragScroll from "../../components/ui/DragScroll";
 import { getAccessTokenFromCookie } from "@/services/marketSocket.service";
 import { formatPrice, splitPrice } from "@/utils/priceFormat";
 
@@ -286,7 +287,7 @@ export default function MarketWatch() {
 
       {/* TABLE */}
       <div className="card overflow-hidden shadow-none p-0 border-0">
-        <div className="relative overflow-x-auto sm:overflow-visible">
+        <DragScroll className="relative overflow-x-auto sm:overflow-visible">
           <table className="table w-full text-[9px] sm:text-[13px] p-0">
             <thead style={{ background: "transparent" }}>
   <tr>
@@ -526,7 +527,7 @@ export default function MarketWatch() {
 </tbody>
 
           </table>
-        </div>
+        </DragScroll>
       </div>
 
       {/* PAGINATION */}

@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import Modal from "@/app/admin/components/ui/Modal";
 import Pagination from "@/app/admin/components/ui/pagination";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 import { useLiveQuotesBySymbols } from "@/hooks/useLiveQuotesBySymbols";
 import { useTradeAdminOpenTrades } from "@/hooks/useTradeAdminOpenTrades";
 import {
@@ -707,7 +708,7 @@ export default function ActivePositionsPage() {
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <DragScroll className="hidden overflow-x-auto md:block">
               <table className="min-w-[1700px] w-full text-left text-sm">
                 <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                   <tr>
@@ -897,7 +898,7 @@ export default function ActivePositionsPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </DragScroll>
 
             <div className="space-y-3 md:hidden">
               {rows.map((trade) => {

@@ -40,6 +40,7 @@ import GlobalLoader from "../../components/ui/GlobalLoader";
 import PremiumInput from "../../components/ui/PremiumInput";
 import Toggle from "../../components/ui/Toggle";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import DragScroll from "../../components/ui/DragScroll";
 import { getSymbolList, SymbolListItem } from "@/services/instrument.service";
 
 /* ================= TYPES ================= */
@@ -490,8 +491,7 @@ export default function ManageInstruments() {
         className="rounded-xl border-0 bg-[var(--card-bg)] shadow-none overflow-hidden p-0"
         style={{ boxShadow: "none", padding: 0 }}
       >
-        <div className="relative overflow-x-auto overscroll-x-contain hidden md:block">
-
+        <DragScroll className="relative overflow-x-auto overscroll-x-contain hidden md:block">
           <table className="table w-max min-w-[1500px]">
             <thead>
               <tr>
@@ -634,7 +634,7 @@ export default function ManageInstruments() {
               </AnimatePresence>
             </tbody>
           </table>
-        </div>
+        </DragScroll>
 
         {/* MOBILE LIST */}
         <div className="md:hidden p-0 space-y-3 text-[11px]">

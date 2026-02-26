@@ -27,6 +27,7 @@ import {
 import { useAdminDeposits } from "@/hooks/deposit/useAdminDeposits";
 import { useApproveDeposit, useRejectDeposit } from "@/hooks/deposit/useDepositActions";
 import Pagination from "../../components/ui/pagination";
+import DragScroll from "../../components/ui/DragScroll";
 import { useEditDepositAmount } from "@/hooks/deposit/useEditDepositAmount";
 import type { DepositMethod, DepositSortBy, SortDir } from "@/services/adminDeposit.service";
 import Link from "next/link";
@@ -464,7 +465,7 @@ export default function AllDeposit() {
 
       {/* MAIN TABLE */}
       <div className="card-elevated shadow-none">
-        <div className="overflow-x-auto">
+        <DragScroll className="overflow-x-auto">
           <table className="table w-full text-[11px] sm:text-[13px]">
             <thead>
               <tr>
@@ -656,7 +657,7 @@ export default function AllDeposit() {
               </AnimatePresence>
             </tbody>
           </table>
-        </div>
+        </DragScroll>
       </div>
 
       {/* ADVANCED PAGINATION */}

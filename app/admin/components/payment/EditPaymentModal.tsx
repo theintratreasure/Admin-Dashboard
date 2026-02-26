@@ -17,6 +17,7 @@ type PaymentMethod = {
   account_name?: string;
   account_number?: string;
   ifsc?: string;
+  swift_code?: string;
   upi_id?: string;
   crypto_network?: string;
   crypto_address?: string;
@@ -48,6 +49,7 @@ export default function EditPaymentModal({
       account_name: form.account_name,
       account_number: form.account_number,
       ifsc: form.ifsc,
+      swift_code: form.swift_code,
       upi_id: form.upi_id,
       crypto_network: form.crypto_network,
       crypto_address: form.crypto_address,
@@ -125,6 +127,7 @@ export default function EditPaymentModal({
                   <Field label="Account holder" placeholder="John Doe" value={form.account_name} onChange={(v) => setForm({ ...form, account_name: v })} />
                   <Field label="Account number" placeholder="************1234" value={form.account_number} onChange={(v) => setForm({ ...form, account_number: v })} />
                   <Field label="IFSC code" placeholder="HDFC0001234" value={form.ifsc} onChange={(v) => setForm({ ...form, ifsc: v })} />
+                  <Field label="SWIFT code (optional)" placeholder="HDFCINBBXXX" value={form.swift_code} onChange={(v) => setForm({ ...form, swift_code: v })} />
                 </>
               )}
 
@@ -148,42 +151,44 @@ export default function EditPaymentModal({
             </div>
 
             {/* Upload */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-[var(--text-muted)]">
-                Replace image (optional)
-              </label>
+            {form.type !== "BANK" && (
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-[var(--text-muted)]">
+                  Replace image (optional)
+                </label>
 
-              <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[var(--card-border)]
+                <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[var(--card-border)]
               bg-[var(--hover-bg)] p-3 text-xs text-[var(--text-muted)]">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p>Upload a new QR or proof image.</p>
-                  <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white">
-                    Upload
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) =>
-                        handleFileChange(e.target.files?.[0] || null)
-                      }
-                    />
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p>Upload a new QR or proof image.</p>
+                    <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white">
+                      Upload
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) =>
+                          handleFileChange(e.target.files?.[0] || null)
+                        }
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              {preview && (
-                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--hover-bg)] p-2 inline-block">
-                  <Image
-                    src={preview}
-                    alt="Payment image"
-                    width={400}
-                    height={160}
-                    unoptimized
-                    className="max-h-40 w-auto rounded-md object-contain"
-                  />
-                </div>
-              )}
-            </div>
+                {preview && (
+                  <div className="rounded-lg border border-[var(--card-border)] bg-[var(--hover-bg)] p-2 inline-block">
+                    <Image
+                      src={preview}
+                      alt="Payment image"
+                      width={400}
+                      height={160}
+                      unoptimized
+                      className="max-h-40 w-auto rounded-md object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}

@@ -43,6 +43,7 @@ import Modal from "@/app/admin/components/ui/Modal";
 import GlobalLoader from "@/app/admin/components/ui/GlobalLoader";
 import { Toast } from "@/app/admin/components/ui/Toast";
 import Pagination from "@/app/admin/components/ui/pagination";
+import DragScroll from "@/app/admin/components/ui/DragScroll";
 import { useAdminUser } from "@/hooks/useAdminUser";
 import { useAdminUserAccounts } from "@/hooks/useAdminUserAccounts";
 import { useAdminUserTransactions } from "@/hooks/useAdminUserTransactions";
@@ -2027,7 +2028,7 @@ export default function UserViewPage() {
             </button>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
+          <DragScroll className="mt-4 overflow-x-auto">
             <table className="min-w-[980px] w-full text-left text-sm">
               <thead className="bg-[var(--input-bg)] text-[var(--text-muted)] text-xs uppercase">
                 <tr>
@@ -2103,7 +2104,7 @@ export default function UserViewPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </DragScroll>
 
           <Pagination
             page={txPage}
@@ -2304,7 +2305,7 @@ export default function UserViewPage() {
                 })}
               </div>
 
-	              <div className="mt-4 hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
+	              <DragScroll className="mt-4 hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
 	                <table className="w-full table-auto text-left text-sm">
 	                  <thead className="bg-[var(--input-bg)] text-[var(--text-muted)] text-xs uppercase">
 	                    <tr>
@@ -2453,7 +2454,7 @@ export default function UserViewPage() {
                     })}
 	                  </tbody>
 	                </table>
-	              </div>
+	              </DragScroll>
 	            </>
 	          )}
 	        </div>
@@ -2532,7 +2533,7 @@ export default function UserViewPage() {
             </div>
           ) : (
             <div className="mt-4 space-y-4">
-              <div className="overflow-x-auto">
+              <DragScroll className="overflow-x-auto">
                 <table className="min-w-[1200px] w-full text-left text-sm">
                 <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                   <tr>
@@ -2621,7 +2622,7 @@ export default function UserViewPage() {
                   ))}
                 </tbody>
                 </table>
-              </div>
+              </DragScroll>
             </div>
           )}
         </div>
@@ -2708,7 +2709,7 @@ export default function UserViewPage() {
             </div>
           ) : (
             <div className="mt-4 space-y-4">
-              <div className="overflow-x-auto">
+              <DragScroll className="overflow-x-auto">
                 <table className="min-w-[1200px] w-full text-left text-sm">
                   <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                     <tr>
@@ -2782,7 +2783,7 @@ export default function UserViewPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DragScroll>
 
               <Pagination
                 page={closedPage}
@@ -2873,7 +2874,7 @@ export default function UserViewPage() {
             </div>
           ) : (
             <div className="mt-4 space-y-4">
-              <div className="overflow-x-auto">
+              <DragScroll className="overflow-x-auto">
                 <table className="min-w-[1200px] w-full text-left text-sm">
                   <thead className="bg-[var(--input-bg)] text-xs uppercase text-[var(--text-muted)]">
                     <tr>
@@ -2991,7 +2992,7 @@ export default function UserViewPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DragScroll>
 
               <Pagination
                 page={pendingPage}

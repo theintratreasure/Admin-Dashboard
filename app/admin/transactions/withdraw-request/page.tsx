@@ -28,6 +28,7 @@ import {
 } from "@/hooks/withdrawals/useWithdrawalActions";
 import { useAdminWithdrawals } from "@/hooks/withdrawals/useWithdrawals";
 import Pagination from "../../components/ui/pagination";
+import DragScroll from "../../components/ui/DragScroll";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -467,7 +468,7 @@ export default function AllWithdrawals() {
             </span>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <DragScroll className="overflow-x-auto">
           <table className="table w-full text-[11px] sm:text-[13px]">
             <thead>
               <tr>
@@ -663,7 +664,7 @@ export default function AllWithdrawals() {
               </AnimatePresence>
             </tbody>
           </table>
-        </div>
+        </DragScroll>
       </div>
 
       {/* PAGINATION */}
