@@ -32,6 +32,7 @@ type PaymentMethod = {
   crypto_address?: string;
   international_name?: string;
   international_email?: string;
+  conversion_rate?: number;
   image_url?: string;
 };
 
@@ -54,6 +55,11 @@ export default function PaymentMethodCard({
 
   const typeMeta = getTypeMeta(data.type);
   const TypeIcon = typeMeta.icon;
+  const hasRate =
+    typeof data.conversion_rate === "number" && Number.isFinite(data.conversion_rate) && data.conversion_rate > 0;
+  const conversionLabel = hasRate
+    ? `1 USDT = ${data.conversion_rate} (bank currency)`
+    : "";
 
   return (
     <article className="relative overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)]">
@@ -141,6 +147,14 @@ export default function PaymentMethodCard({
                 value={data.swift_code}
                 onCopy={() => setToast("SWIFT code copied")}
               />
+              {conversionLabel ? (
+                <CopyField
+                  icon={Globe2}
+                  label="Conversion"
+                  value={conversionLabel}
+                  onCopy={() => setToast("Conversion copied")}
+                />
+              ) : null}
             </>
           )}
 
@@ -184,6 +198,14 @@ export default function PaymentMethodCard({
                 value={data.international_email}
                 onCopy={() => setToast("Email copied")}
               />
+              {conversionLabel ? (
+                <CopyField
+                  icon={Globe2}
+                  label="Conversion"
+                  value={conversionLabel}
+                  onCopy={() => setToast("Conversion copied")}
+                />
+              ) : null}
             </>
           )}
         </div>

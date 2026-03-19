@@ -20,6 +20,7 @@ type PaymentMethodDraft = {
     crypto_address?: string;
     international_name?: string;
     international_email?: string;
+    conversion_rate?: string;
 };
 
 export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
@@ -44,6 +45,9 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
         const shouldUpload = Boolean(file) && type !== "BANK";
         const img = shouldUpload ? await uploadToCloudinary(file as File) : null;
 
+        const parsedRate = Number(form.conversion_rate || "");
+        const hasRate = Number.isFinite(parsedRate) && parsedRate > 0;
+
         const payload = {
             type,
             title: form.title,
@@ -57,6 +61,7 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
             crypto_address: form.crypto_address,
             international_name: form.international_name,
             international_email: form.international_email,
+            conversion_rate: hasRate ? parsedRate : undefined,
         } as const;
 
         add.mutate(
@@ -177,6 +182,11 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                                 <Input label="Account number" placeholder="************1234" onChange={(v) => setForm({ ...form, account_number: v })} />
                                 <Input label="IFSC code" placeholder="HDFC0001234" onChange={(v) => setForm({ ...form, ifsc: v })} />
                                 <Input label="SWIFT code (optional)" placeholder="HDFCINBBXXX" onChange={(v) => setForm({ ...form, swift_code: v })} />
+                                <Input
+                                    label="Conversion rate (1 USDT = ? in bank currency)"
+                                    placeholder="200"
+                                    onChange={(v) => setForm({ ...form, conversion_rate: v })}
+                                />
                             </>
                             )}
 
@@ -195,6 +205,11 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                                 <>
                                     <Input label="Account holder name" placeholder="Account Holder Name" onChange={(v) => setForm({ ...form, international_name: v })} />
                                     <Input label="Email" placeholder="user@example.com" onChange={(v) => setForm({ ...form, international_email: v })} />
+                                    <Input
+                                        label="Conversion rate (1 USDT = ? in bank currency)"
+                                        placeholder="200"
+                                        onChange={(v) => setForm({ ...form, conversion_rate: v })}
+                                    />
                                 </>
                             )}
                         </div>

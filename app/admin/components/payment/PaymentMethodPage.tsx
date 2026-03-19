@@ -33,6 +33,7 @@ type PaymentMethod = {
   crypto_address?: string;
   international_name?: string;
   international_email?: string;
+  conversion_rate?: number;
   image_url?: string;
 };
 

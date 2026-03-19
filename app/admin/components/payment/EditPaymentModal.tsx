@@ -23,6 +23,7 @@ type PaymentMethod = {
   crypto_address?: string;
   international_name?: string;
   international_email?: string;
+  conversion_rate?: number;
   image_url?: string;
   image_public_id?: string;
 };
@@ -55,6 +56,10 @@ export default function EditPaymentModal({
       crypto_address: form.crypto_address,
       international_name: form.international_name,
       international_email: form.international_email,
+      conversion_rate:
+        typeof form.conversion_rate === "number" && Number.isFinite(form.conversion_rate)
+          ? form.conversion_rate
+          : undefined,
     };
 
     if (file) {
@@ -128,6 +133,21 @@ export default function EditPaymentModal({
                   <Field label="Account number" placeholder="************1234" value={form.account_number} onChange={(v) => setForm({ ...form, account_number: v })} />
                   <Field label="IFSC code" placeholder="HDFC0001234" value={form.ifsc} onChange={(v) => setForm({ ...form, ifsc: v })} />
                   <Field label="SWIFT code (optional)" placeholder="HDFCINBBXXX" value={form.swift_code} onChange={(v) => setForm({ ...form, swift_code: v })} />
+                  <Field
+                    label="Conversion rate (1 USDT = ? in bank currency)"
+                    placeholder="200"
+                    value={
+                      typeof form.conversion_rate === "number"
+                        ? String(form.conversion_rate)
+                        : ""
+                    }
+                    onChange={(v) =>
+                      setForm({
+                        ...form,
+                        conversion_rate: v ? Number(v) : undefined,
+                      })
+                    }
+                  />
                 </>
               )}
 
@@ -146,6 +166,21 @@ export default function EditPaymentModal({
                 <>
                   <Field label="Account holder name" placeholder="Account Holder Name" value={form.international_name} onChange={(v) => setForm({ ...form, international_name: v })} />
                   <Field label="Email" placeholder="user@example.com" value={form.international_email} onChange={(v) => setForm({ ...form, international_email: v })} />
+                  <Field
+                    label="Conversion rate (1 USDT = ? in bank currency)"
+                    placeholder="200"
+                    value={
+                      typeof form.conversion_rate === "number"
+                        ? String(form.conversion_rate)
+                        : ""
+                    }
+                    onChange={(v) =>
+                      setForm({
+                        ...form,
+                        conversion_rate: v ? Number(v) : undefined,
+                      })
+                    }
+                  />
                 </>
               )}
             </div>
