@@ -55,6 +55,8 @@ import { useUpdateAdminUser } from "@/hooks/useUpdateAdminUser";
 import { useChangeAdminUserPassword } from "@/hooks/useChangeAdminUserPassword";
 import { useUpdateAdminUserAccount } from "@/hooks/useUpdateAdminUserAccount";
 import { useAdminInternalTransfer } from "@/hooks/useAdminInternalTransfer";
+import { useDeleteAdminUser } from "@/hooks/useDeleteAdminUser";
+import { useDeleteAdminUserTradeAccount } from "@/hooks/useDeleteAdminUserTradeAccount";
 import {
   useResetAccountTradePassword,
   useResetAccountWatchPassword,
@@ -378,6 +380,8 @@ export default function UserViewPage() {
   const changePasswordMutation = useChangeAdminUserPassword();
   const updateAccountMutation = useUpdateAdminUserAccount();
   const internalTransferMutation = useAdminInternalTransfer();
+  const deleteUserMutation = useDeleteAdminUser();
+  const deleteTradeAccountMutation = useDeleteAdminUserTradeAccount();
   const resetTradePasswordMutation = useResetAccountTradePassword();
   const resetWatchPasswordMutation = useResetAccountWatchPassword();
   const modifyPendingMutation = useTradeAdminModifyPendingOrder();
@@ -515,6 +519,10 @@ export default function UserViewPage() {
   const [internalTransferTo, setInternalTransferTo] = useState("");
   const [internalTransferAmount, setInternalTransferAmount] = useState("");
   const [internalTransferError, setInternalTransferError] = useState("");
+  const [deleteActionOpen, setDeleteActionOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<"whole" | "trade">("whole");
+  const [deleteTradeAccountId, setDeleteTradeAccountId] = useState("");
+  const [deleteActionError, setDeleteActionError] = useState("");
 
   const profileFromParams = useMemo(() => {
     const name = searchParams.get("name") ?? "";
@@ -1645,6 +1653,66 @@ export default function UserViewPage() {
     setResetPasswordOpen(false);
   };
 
+  const openDeleteAction = () => {
+    setDeleteActionOpen(true);
+    setDeleteMode("whole");
+    setDeleteTradeAccountId(accountList[0]?._id ?? "");
+    setDeleteActionError("");
+  };
+
+  const closeDeleteAction = () => {
+    if (deleteUserMutation.isPending || deleteTradeAccountMutation.isPending) {
+      return;
+    }
+    setDeleteActionOpen(false);
+    setDeleteActionError("");
+  };
+
+  const handleDeleteAction = async () => {
+    setDeleteActionError("");
+
+    try {
+      if (deleteMode === "whole") {
+        if (!userId) {
+          setDeleteActionError("User id not found.");
+          return;
+        }
+
+        const resp = await deleteUserMutation.mutateAsync(userId);
+        setToast(extractMessage(resp) || "User account deleted.");
+        setDeleteActionOpen(false);
+        router.push("/admin/users/users");
+        return;
+      }
+
+      if (!deleteTradeAccountId) {
+        setDeleteActionError("Please select a trade login account.");
+        return;
+      }
+
+      const resp = await deleteTradeAccountMutation.mutateAsync({
+        accountId: deleteTradeAccountId,
+        userId,
+      });
+      setToast(extractMessage(resp) || "Trade login account deleted.");
+      setDeleteActionOpen(false);
+
+      if (selectedAccountId === deleteTradeAccountId) {
+        setSelectedAccountId("");
+      }
+      if (accountViewOpen) {
+        setAccountViewOpen(false);
+      }
+      if (accountEditOpen) {
+        setAccountEditOpen(false);
+      }
+    } catch (err: unknown) {
+      setDeleteActionError(
+        extractMessage(err) || "Unable to complete delete action."
+      );
+    }
+  };
+
   const handleResetAccountPassword = () => {
     setAccountPasswordError("");
     const accountId = resetPasswordAccount?._id;
@@ -1801,6 +1869,12 @@ export default function UserViewPage() {
                 className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]"
               >
                 <KeyRound size={16} /> Change Password
+              </button>
+              <button
+                onClick={openDeleteAction}
+                className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-500/15"
+              >
+                <XCircle size={16} /> Delete Account
               </button>
             </div>
           </div>
@@ -3724,6 +3798,105 @@ export default function UserViewPage() {
             </>
           )}
         </form>
+      </Modal>
+
+      <Modal
+        title="Delete Account"
+        open={deleteActionOpen}
+        onClose={closeDeleteAction}
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeDeleteAction}
+              disabled={deleteUserMutation.isPending || deleteTradeAccountMutation.isPending}
+              className="rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)] disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteAction}
+              disabled={deleteUserMutation.isPending || deleteTradeAccountMutation.isPending}
+              className="rounded-md border border-rose-600 bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            >
+              {deleteUserMutation.isPending || deleteTradeAccountMutation.isPending
+                ? "Deleting..."
+                : "Delete"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">
+            This action is permanent and cannot be undone.
+          </div>
+
+          {deleteActionError && (
+            <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {deleteActionError}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+              <input
+                type="radio"
+                name="delete-mode"
+                checked={deleteMode === "whole"}
+                onChange={() => setDeleteMode("whole")}
+                className="mt-1"
+              />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-semibold text-[var(--text-main)]">
+                  Delete Whole User Account
+                </span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  Removes user profile and all trading accounts.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
+              <input
+                type="radio"
+                name="delete-mode"
+                checked={deleteMode === "trade"}
+                onChange={() => setDeleteMode("trade")}
+                className="mt-1"
+              />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-semibold text-[var(--text-main)]">
+                  Delete Trade Login Account
+                </span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  Deletes only one selected trading account.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          {deleteMode === "trade" && (
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)]">
+                Select trading account
+              </label>
+              <select
+                value={deleteTradeAccountId}
+                onChange={(event) => setDeleteTradeAccountId(event.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-sm text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+              >
+                <option value="">Select account</option>
+                {accountList.map((account) => (
+                  <option key={account._id} value={account._id}>
+                    {account.account_number || account._id} ({(account.account_type || "--").toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </Modal>
 
       <Modal

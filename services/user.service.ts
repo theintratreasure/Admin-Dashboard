@@ -157,3 +157,17 @@ export async function changeAdminUserPassword(
   );
   return data as { success?: boolean; message?: string };
 }
+
+export async function deleteAdminUser(
+  userId: string
+): Promise<{ success?: boolean; message?: string; data?: unknown }> {
+  const { data } = await api.delete(`/user/admin/${userId}`);
+  return data as { success?: boolean; message?: string; data?: unknown };
+}
+
+export async function deleteAdminUserTradeAccount(
+  accountId: string
+): Promise<{ success?: boolean; message?: string; data?: unknown }> {
+  const { data } = await api.delete(`/accounts/admin/${accountId}`);
+  return data as { success?: boolean; message?: string; data?: unknown };
+}
