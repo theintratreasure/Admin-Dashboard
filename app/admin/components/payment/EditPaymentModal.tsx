@@ -37,6 +37,9 @@ export default function EditPaymentModal({
 }) {
   const update = useUpdatePaymentMethod();
   const [form, setForm] = useState<PaymentMethod>({ ...data });
+  const [conversionRateInput, setConversionRateInput] = useState(
+    typeof data.conversion_rate === "number" ? String(data.conversion_rate) : ""
+  );
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(data.image_url || null);
   const [loading, setLoading] = useState(false);
@@ -80,6 +83,15 @@ export default function EditPaymentModal({
   const handleFileChange = (f: File | null) => {
     setFile(f);
     setPreview(f ? URL.createObjectURL(f) : data.image_url || null);
+  };
+
+  const handleConversionRateChange = (v: string) => {
+    setConversionRateInput(v);
+
+    setForm({
+      ...form,
+      conversion_rate: v === "" ? undefined : Number(v),
+    });
   };
 
   return (
@@ -136,17 +148,8 @@ export default function EditPaymentModal({
                   <Field
                     label="Conversion rate (1 USDT = ? in bank currency)"
                     placeholder="200"
-                    value={
-                      typeof form.conversion_rate === "number"
-                        ? String(form.conversion_rate)
-                        : ""
-                    }
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        conversion_rate: v ? Number(v) : undefined,
-                      })
-                    }
+                    value={conversionRateInput}
+                    onChange={handleConversionRateChange}
                   />
                 </>
               )}
@@ -169,17 +172,8 @@ export default function EditPaymentModal({
                   <Field
                     label="Conversion rate (1 USDT = ? in bank currency)"
                     placeholder="200"
-                    value={
-                      typeof form.conversion_rate === "number"
-                        ? String(form.conversion_rate)
-                        : ""
-                    }
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        conversion_rate: v ? Number(v) : undefined,
-                      })
-                    }
+                    value={conversionRateInput}
+                    onChange={handleConversionRateChange}
                   />
                 </>
               )}
