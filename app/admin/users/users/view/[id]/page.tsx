@@ -474,16 +474,10 @@ export default function UserViewPage() {
   const [txReferenceId, setTxReferenceId] = useState("");
   const [txSortBy, setTxSortBy] = useState("createdAt");
   const [txSortDir, setTxSortDir] = useState("desc");
-  const [fromDate, setFromDate] = useState<string>(() => {
-    const year = new Date().getFullYear();
-    return `${year}-01-01`;
-  });
-  const [toDate, setToDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [draftFromDate, setDraftFromDate] = useState<string>(() => {
-    const year = new Date().getFullYear();
-    return `${year}-01-01`;
-  });
-  const [draftToDate, setDraftToDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [draftFromDate, setDraftFromDate] = useState<string>("");
+  const [draftToDate, setDraftToDate] = useState<string>("");
   const [form, setForm] = useState<AdminUserUpdatePayload>({
     name: "",
     phone: "",
@@ -2178,6 +2172,10 @@ export default function UserViewPage() {
                 setTxStatus("");
                 setTxReferenceId("");
                 setTxAccountId("");
+                setFromDate("");
+                setToDate("");
+                setDraftFromDate("");
+                setDraftToDate("");
                 setTxSortBy("createdAt");
                 setTxSortDir("desc");
                 setTxPage(1);
