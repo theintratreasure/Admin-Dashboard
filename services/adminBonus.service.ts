@@ -18,8 +18,10 @@ export type BonusSettingsPayload = {
 };
 
 export type BonusCreditPayload = {
+  userId?: string;
   accountId: string;
-  amount: number;
+  amount?: number;
+  bonusAmount?: number;
   reason?: string;
 };
 
@@ -28,9 +30,12 @@ export type BonusCreditResponse = {
   message?: string;
   data?: {
     accountId?: string;
+    userId?: string;
     bonusAdded?: number;
+    realBalance?: number;
     bonusBalance?: number;
     equity?: number;
+    totalBalance?: number;
   };
 };
 
@@ -61,6 +66,6 @@ export const updateBonusSettings = async (
 export const creditBonus = async (
   payload: BonusCreditPayload
 ): Promise<BonusCreditResponse> => {
-  const res = await api.post<BonusCreditResponse>("/bonus/admin/credit", payload);
+  const res = await api.post<BonusCreditResponse>("/bonus/admin/add-bonus", payload);
   return res.data;
 };

@@ -12,8 +12,11 @@ export type AdminAccount = {
   swap_enabled?: boolean;
   swap_charge?: number;
   balance?: number;
+  bonus_balance?: number;
+  bonus_granted?: number;
   hold_balance?: number;
   equity?: number;
+  total_balance?: number;
   currency?: string;
   first_deposit?: boolean;
   bonus_percent_override?: number | null;
