@@ -14,7 +14,7 @@ import {
 import toast from "react-hot-toast";
 import GlobalLoader from "../components/ui/GlobalLoader";
 import { useBonusSettings, useUpdateBonusSettings } from "@/hooks/bonus/useBonusSettings";
-import { useBonusCredit } from "@/hooks/bonus/useBonusCredit";
+import { useBonusCredit, useTradableFundCredit } from "@/hooks/bonus/useBonusCredit";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAdminUserAccounts } from "@/hooks/useAdminUserAccounts";
 import type { AdminUser } from "@/types/user";
@@ -32,6 +32,8 @@ export default function BonusPage() {
   } = useBonusSettings();
   const updateMutation = useUpdateBonusSettings();
   const creditMutation = useBonusCredit();
+  const tradableFundMutation = useTradableFundCredit();
+  const [creditMode, setCreditMode] = useState<"bonus" | "tradable">("bonus");
 
   const [enabledInput, setEnabledInput] = useState<boolean | null>(null);
   const [percentInput, setPercentInput] = useState<string | null>(null);
@@ -46,6 +48,9 @@ export default function BonusPage() {
     bonusAdded?: number;
     bonusBalance?: number;
     equity?: number;
+    tradableFundAdded?: number;
+    realBalance?: number;
+    nonWithdrawableBalance?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -163,26 +168,60 @@ export default function BonusPage() {
 
   const onSubmitCredit = async () => {
     if (!canSubmitCredit) {
-      toast.error("Select an account and enter a bonus amount.");
+      toast.error(
+        creditMode === "tradable"
+          ? "Select an account and enter a tradable fund amount."
+          : "Select an account and enter a bonus amount."
+      );
       return;
     }
 
     try {
-      const response = await creditMutation.mutateAsync({
-        accountId: selectedAccountId.trim(),
-        amount: creditAmountNumber,
-        reason: creditReason.trim() || undefined,
-      });
+      const response =
+        creditMode === "tradable"
+          ? await tradableFundMutation.mutateAsync({
+              accountId: selectedAccountId.trim(),
+              amount: creditAmountNumber,
+              reason: creditReason.trim() || undefined,
+            })
+          : await creditMutation.mutateAsync({
+              accountId: selectedAccountId.trim(),
+              amount: creditAmountNumber,
+              reason: creditReason.trim() || undefined,
+            });
       setCreditResult({
-        bonusAdded: response.data?.bonusAdded,
+        bonusAdded: "bonusAdded" in (response.data ?? {}) ? response.data?.bonusAdded : undefined,
         bonusBalance: response.data?.bonusBalance,
         equity: response.data?.equity,
+        tradableFundAdded:
+          "tradableFundAdded" in (response.data ?? {})
+            ? response.data?.tradableFundAdded
+            : undefined,
+        realBalance:
+          "realBalance" in (response.data ?? {}) ? response.data?.realBalance : undefined,
+        nonWithdrawableBalance:
+          "nonWithdrawableBalance" in (response.data ?? {})
+            ? response.data?.nonWithdrawableBalance
+            : undefined,
       });
-      toast.success(response.message || "Bonus credited successfully.");
+      toast.success(
+        response.message ||
+          (creditMode === "tradable"
+            ? "Tradable fund added successfully."
+            : "Bonus credited successfully.")
+      );
+      void accountsQuery.refetch();
       setCreditAmount("");
       setCreditReason("");
     } catch (submitError) {
-      toast.error(getErrorMessage(submitError, "Unable to credit bonus."));
+      toast.error(
+        getErrorMessage(
+          submitError,
+          creditMode === "tradable"
+            ? "Unable to add tradable fund."
+            : "Unable to credit bonus."
+        )
+      );
     }
   };
 
@@ -319,11 +358,55 @@ export default function BonusPage() {
         </div>
 
         <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4 sm:p-5">
-          <div>
-            <h2 className="text-lg font-semibold">Manual Bonus Credit</h2>
-            <p className="text-sm text-[var(--text-muted)]">
-              Add a bonus amount to a single account.
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Manual Credit Controls</h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                Add bonus or tradable-only fund to a single account.
+              </p>
+            </div>
+            <div className="inline-flex rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreditMode("bonus");
+                  setCreditResult(null);
+                }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  creditMode === "bonus"
+                    ? "bg-[var(--primary)] text-white"
+                    : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                }`}
+              >
+                Add Bonus
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreditMode("tradable");
+                  setCreditResult(null);
+                }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  creditMode === "tradable"
+                    ? "bg-emerald-600 text-white"
+                    : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)]"
+                }`}
+              >
+                Add Tradable Fund
+              </button>
+            </div>
+          </div>
+
+          <div
+            className={`mt-4 rounded-xl border px-3 py-3 text-xs sm:text-sm ${
+              creditMode === "tradable"
+                ? "border-amber-400/30 bg-amber-500/5 text-amber-800"
+                : "border-purple-400/30 bg-purple-500/5 text-purple-800"
+            }`}
+          >
+            {creditMode === "tradable"
+              ? "This fund increases trading balance, but the added amount remains non-withdrawable. It can be used in trades and can be lost in trading."
+              : "Manual bonus is credited to bonus balance and follows the existing bonus rules."}
           </div>
 
           <div className="mt-4 space-y-3">
@@ -436,15 +519,25 @@ export default function BonusPage() {
                       ${selectedAccount.hold_balance?.toLocaleString() ?? "0"}
                     </span>
                   </p>
+                  <p className="text-[var(--text-muted)]">
+                    Non-withdrawable:{" "}
+                    <span className="font-semibold text-rose-600">
+                      ${selectedAccount.non_withdrawable_balance?.toLocaleString() ?? "0"}
+                    </span>
+                  </p>
                 </div>
               )}
             </div>
             <div>
               <label className="text-xs font-medium text-[var(--text-muted)]">
-                Bonus Amount
+                {creditMode === "tradable" ? "Tradable Fund Amount" : "Bonus Amount"}
               </label>
               <div className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2">
-                <Gift size={16} className="text-[var(--text-muted)]" />
+                {creditMode === "tradable" ? (
+                  <Wallet size={16} className="text-[var(--text-muted)]" />
+                ) : (
+                  <Gift size={16} className="text-[var(--text-muted)]" />
+                )}
                 <input
                   type="number"
                   min={0}
@@ -452,7 +545,11 @@ export default function BonusPage() {
                   value={creditAmount}
                   onChange={(event) => setCreditAmount(event.target.value)}
                   className="w-full bg-transparent text-sm outline-none"
-                  placeholder="Enter bonus amount"
+                  placeholder={
+                    creditMode === "tradable"
+                      ? "Enter tradable fund amount"
+                      : "Enter bonus amount"
+                  }
                 />
               </div>
             </div>
@@ -465,7 +562,11 @@ export default function BonusPage() {
                   value={creditReason}
                   onChange={(event) => setCreditReason(event.target.value)}
                   className="w-full bg-transparent text-sm outline-none"
-                  placeholder="Goodwill / promo / adjustment"
+                  placeholder={
+                    creditMode === "tradable"
+                      ? "Campaign / protected trading credit"
+                      : "Goodwill / promo / adjustment"
+                  }
                 />
               </div>
             </div>
@@ -473,20 +574,39 @@ export default function BonusPage() {
             <button
               type="button"
               onClick={onSubmitCredit}
-              disabled={creditMutation.isPending || !canSubmitCredit}
+              disabled={
+                creditMutation.isPending || tradableFundMutation.isPending || !canSubmitCredit
+              }
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
             >
-              <Gift size={16} />
-              {creditMutation.isPending ? "Crediting..." : "Credit Bonus"}
+              {creditMode === "tradable" ? <Wallet size={16} /> : <Gift size={16} />}
+              {creditMutation.isPending || tradableFundMutation.isPending
+                ? "Submitting..."
+                : creditMode === "tradable"
+                ? "Add Tradable Fund"
+                : "Credit Bonus"}
             </button>
 
             {creditResult ? (
               <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-700">
-                <p className="font-semibold">Bonus credited successfully.</p>
+                <p className="font-semibold">
+                  {creditMode === "tradable"
+                    ? "Tradable fund added successfully."
+                    : "Bonus credited successfully."}
+                </p>
                 <p className="text-xs">
-                  Added: {formatNumber(creditResult.bonusAdded, 2)} | Bonus Balance:{" "}
-                  {formatNumber(creditResult.bonusBalance, 2)} | Equity:{" "}
-                  {formatNumber(creditResult.equity, 2)}
+                  {creditMode === "tradable"
+                    ? `Added: ${formatNumber(creditResult.tradableFundAdded, 2)} | Balance: ${formatNumber(
+                        creditResult.realBalance,
+                        2
+                      )} | Non-withdrawable: ${formatNumber(
+                        creditResult.nonWithdrawableBalance,
+                        2
+                      )}`
+                    : `Added: ${formatNumber(creditResult.bonusAdded, 2)} | Bonus Balance: ${formatNumber(
+                        creditResult.bonusBalance,
+                        2
+                      )} | Equity: ${formatNumber(creditResult.equity, 2)}`}
                 </p>
               </div>
             ) : null}

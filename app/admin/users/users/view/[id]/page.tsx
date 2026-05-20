@@ -57,7 +57,7 @@ import { useUpdateAdminUserAccount } from "@/hooks/useUpdateAdminUserAccount";
 import { useAdminInternalTransfer } from "@/hooks/useAdminInternalTransfer";
 import { useDeleteAdminUser } from "@/hooks/useDeleteAdminUser";
 import { useDeleteAdminUserTradeAccount } from "@/hooks/useDeleteAdminUserTradeAccount";
-import { useBonusCredit } from "@/hooks/bonus/useBonusCredit";
+import { useBonusCredit, useTradableFundCredit } from "@/hooks/bonus/useBonusCredit";
 import {
   useResetAccountTradePassword,
   useResetAccountWatchPassword,
@@ -383,6 +383,7 @@ export default function UserViewPage() {
   const updateAccountMutation = useUpdateAdminUserAccount();
   const internalTransferMutation = useAdminInternalTransfer();
   const bonusCreditMutation = useBonusCredit();
+  const tradableFundCreditMutation = useTradableFundCredit();
   const deleteUserMutation = useDeleteAdminUser();
   const deleteTradeAccountMutation = useDeleteAdminUserTradeAccount();
   const resetTradePasswordMutation = useResetAccountTradePassword();
@@ -516,6 +517,10 @@ export default function UserViewPage() {
   const [bonusAccountId, setBonusAccountId] = useState("");
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusError, setBonusError] = useState("");
+  const [tradableFundModalOpen, setTradableFundModalOpen] = useState(false);
+  const [tradableFundAccountId, setTradableFundAccountId] = useState("");
+  const [tradableFundAmount, setTradableFundAmount] = useState("");
+  const [tradableFundError, setTradableFundError] = useState("");
   const [internalTransferFrom, setInternalTransferFrom] = useState("");
   const [internalTransferTo, setInternalTransferTo] = useState("");
   const [internalTransferAmount, setInternalTransferAmount] = useState("");
@@ -730,6 +735,9 @@ export default function UserViewPage() {
 	          totalBalance: acc.totalBalance + (account.balance ?? 0),
             totalBonusBalance: acc.totalBonusBalance + (account.bonus_balance ?? 0),
 	          totalHoldBalance: acc.totalHoldBalance + (account.hold_balance ?? 0),
+            totalNonWithdrawableBalance:
+              acc.totalNonWithdrawableBalance +
+              (account.non_withdrawable_balance ?? 0),
 	          totalEquity: acc.totalEquity + (account.equity ?? 0),
             totalUsableBalance:
               acc.totalUsableBalance +
@@ -740,6 +748,7 @@ export default function UserViewPage() {
             totalBalance: 0,
             totalBonusBalance: 0,
             totalHoldBalance: 0,
+            totalNonWithdrawableBalance: 0,
             totalEquity: 0,
             totalUsableBalance: 0,
           }
@@ -1328,6 +1337,31 @@ export default function UserViewPage() {
     setBonusError("");
   };
 
+  const openTradableFundModal = (accountId?: string) => {
+    const liveAccounts = nonDemoAccounts.filter(
+      (account) => (account.account_type ?? "").toLowerCase() === "live"
+    );
+    if (!liveAccounts.length) {
+      setToast("No live account available for tradable fund.");
+      return;
+    }
+
+    const resolvedAccountId =
+      accountId && liveAccounts.some((account) => account._id === accountId)
+        ? accountId
+        : liveAccounts[0]?._id ?? "";
+
+    setTradableFundAccountId(resolvedAccountId);
+    setTradableFundAmount("");
+    setTradableFundError("");
+    setTradableFundModalOpen(true);
+  };
+
+  const closeTradableFundModal = () => {
+    setTradableFundModalOpen(false);
+    setTradableFundError("");
+  };
+
   const handleBonusSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setBonusError("");
@@ -1367,6 +1401,50 @@ export default function UserViewPage() {
               (error as { message?: string }).message)
           : undefined;
       setBonusError(message || "Unable to add bonus.");
+    }
+  };
+
+  const handleTradableFundSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setTradableFundError("");
+
+    if (!userId) {
+      setTradableFundError("User not found.");
+      return;
+    }
+
+    if (!tradableFundAccountId) {
+      setTradableFundError("Please select an account.");
+      return;
+    }
+
+    const amount = parseNullableNumber(tradableFundAmount);
+    if (amount === null || amount <= 0) {
+      setTradableFundError(
+        "Please enter a valid tradable fund amount greater than 0."
+      );
+      return;
+    }
+
+    try {
+      const response = await tradableFundCreditMutation.mutateAsync({
+        userId,
+        accountId: tradableFundAccountId,
+        tradableFundAmount: amount,
+      });
+
+      await Promise.all([accountsQuery.refetch(), transactionsQuery.refetch()]);
+      closeTradableFundModal();
+      const added = response.data?.tradableFundAdded ?? amount;
+      setToast(`Tradable fund added successfully: $${formatAmount(added)}`);
+    } catch (error) {
+      const message =
+        typeof error === "object" && error !== null
+          ? ((error as { response?: { data?: { message?: string } }; message?: string }).response
+              ?.data?.message ??
+              (error as { message?: string }).message)
+          : undefined;
+      setTradableFundError(message || "Unable to add tradable fund.");
     }
   };
 
@@ -2301,6 +2379,15 @@ export default function UserViewPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => openTradableFundModal()}
+                  disabled={!nonDemoAccounts.length}
+                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <DollarSign size={14} />
+                  Add Tradable Fund
+                </button>
+                <button
+                  type="button"
                   onClick={() => openInternalTransfer()}
                   disabled={nonDemoAccounts.length < 2}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--hover-bg)] disabled:opacity-60 disabled:cursor-not-allowed"
@@ -2325,7 +2412,7 @@ export default function UserViewPage() {
 	            </div>
 	          ) : (
 	            <>
-	              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+	              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
 	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
 	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
 	                    Total Real Balance
@@ -2348,6 +2435,14 @@ export default function UserViewPage() {
 	                  </p>
                   <p className={`mt-1 text-lg font-semibold ${getAmountClass(accountSummary.totalHoldBalance, "text-amber-600")}`}>
                     ${formatAmount(accountSummary.totalHoldBalance)}
+                  </p>
+	                </div>
+	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
+	                  <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+	                    Total Non-Withdrawable
+	                  </p>
+                  <p className={`mt-1 text-lg font-semibold ${getAmountClass(accountSummary.totalNonWithdrawableBalance, "text-rose-600")}`}>
+                    ${formatAmount(accountSummary.totalNonWithdrawableBalance)}
                   </p>
 	                </div>
 	                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-3">
@@ -2426,6 +2521,12 @@ export default function UserViewPage() {
                           <span className="text-[var(--text-muted)]">Bonus:</span>{" "}
                           <span className={`font-semibold ${getAmountClass(account.bonus_balance, "text-violet-600")}`}>
                             ${formatAmount(account.bonus_balance)}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-[var(--text-muted)]">Non-withdrawable:</span>{" "}
+                          <span className={`font-semibold ${getAmountClass(account.non_withdrawable_balance, "text-rose-600")}`}>
+                            ${formatAmount(account.non_withdrawable_balance)}
                           </span>
                         </p>
                         <p>
@@ -3346,6 +3447,87 @@ export default function UserViewPage() {
                 value={bonusAmount}
                 onChange={(event) => setBonusAmount(event.target.value)}
                 placeholder="Enter bonus amount"
+                className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted)]"
+              />
+            </FieldControl>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        title="Add Tradable Fund"
+        open={tradableFundModalOpen}
+        onClose={closeTradableFundModal}
+        size="sm"
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeTradableFundModal}
+              className="w-full rounded-md border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold hover:bg-[var(--hover-bg)] sm:w-auto"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="add-tradable-fund-form"
+              disabled={tradableFundCreditMutation.isPending}
+              className="w-full rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
+            >
+              {tradableFundCreditMutation.isPending ? "Adding..." : "Submit"}
+            </button>
+          </div>
+        }
+      >
+        <form
+          id="add-tradable-fund-form"
+          onSubmit={handleTradableFundSubmit}
+          className="space-y-4"
+        >
+          {tradableFundError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {tradableFundError}
+            </div>
+          ) : null}
+
+          <div className="rounded-xl border border-amber-300/40 bg-amber-500/5 px-3 py-3 text-xs text-amber-800">
+            Tradable fund updates real balance for trading, but the added amount remains
+            non-withdrawable. It can be used in trades and can also be lost in trading.
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[var(--text-muted)]">
+              Select Account
+            </label>
+            <select
+              value={tradableFundAccountId}
+              onChange={(event) => setTradableFundAccountId(event.target.value)}
+              className="mt-1 h-11 w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-sm text-[var(--text-main)] outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="">Select live account</option>
+              {nonDemoAccounts
+                .filter((account) => (account.account_type ?? "").toLowerCase() === "live")
+                .map((account) => (
+                  <option key={account._id} value={account._id}>
+                    {account.account_number || account._id} | Real ${formatAmount(account.balance)} | Locked ${formatAmount(account.non_withdrawable_balance)}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[var(--text-muted)]">
+              Tradable Fund Amount
+            </label>
+            <FieldControl icon={DollarSign}>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={tradableFundAmount}
+                onChange={(event) => setTradableFundAmount(event.target.value)}
+                placeholder="Enter tradable fund amount"
                 className="w-full bg-transparent text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted)]"
               />
             </FieldControl>

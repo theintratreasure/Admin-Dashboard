@@ -39,6 +39,29 @@ export type BonusCreditResponse = {
   };
 };
 
+export type TradableFundCreditPayload = {
+  userId?: string;
+  accountId: string;
+  amount?: number;
+  tradableFundAmount?: number;
+  reason?: string;
+};
+
+export type TradableFundCreditResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    accountId?: string;
+    userId?: string;
+    tradableFundAdded?: number;
+    realBalance?: number;
+    bonusBalance?: number;
+    nonWithdrawableBalance?: number;
+    equity?: number;
+    totalBalance?: number;
+  };
+};
+
 function unwrapSettings(payload: BonusSettingsResponse | BonusSettings) {
   if (payload && typeof payload === "object" && "success" in payload) {
     if ((payload as BonusSettingsResponse).success === false) {
@@ -67,5 +90,15 @@ export const creditBonus = async (
   payload: BonusCreditPayload
 ): Promise<BonusCreditResponse> => {
   const res = await api.post<BonusCreditResponse>("/bonus/admin/add-bonus", payload);
+  return res.data;
+};
+
+export const creditTradableFund = async (
+  payload: TradableFundCreditPayload
+): Promise<TradableFundCreditResponse> => {
+  const res = await api.post<TradableFundCreditResponse>(
+    "/bonus/admin/add-tradable-fund",
+    payload
+  );
   return res.data;
 };

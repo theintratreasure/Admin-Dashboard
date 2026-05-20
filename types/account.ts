@@ -15,6 +15,7 @@ export type AdminAccount = {
   bonus_balance?: number;
   bonus_granted?: number;
   hold_balance?: number;
+  non_withdrawable_balance?: number;
   equity?: number;
   total_balance?: number;
   currency?: string;
