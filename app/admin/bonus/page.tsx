@@ -177,39 +177,42 @@ export default function BonusPage() {
     }
 
     try {
-      const response =
-        creditMode === "tradable"
-          ? await tradableFundMutation.mutateAsync({
-              accountId: selectedAccountId.trim(),
-              amount: creditAmountNumber,
-              reason: creditReason.trim() || undefined,
-            })
-          : await creditMutation.mutateAsync({
-              accountId: selectedAccountId.trim(),
-              amount: creditAmountNumber,
-              reason: creditReason.trim() || undefined,
-            });
-      setCreditResult({
-        bonusAdded: "bonusAdded" in (response.data ?? {}) ? response.data?.bonusAdded : undefined,
-        bonusBalance: response.data?.bonusBalance,
-        equity: response.data?.equity,
-        tradableFundAdded:
-          "tradableFundAdded" in (response.data ?? {})
-            ? response.data?.tradableFundAdded
-            : undefined,
-        realBalance:
-          "realBalance" in (response.data ?? {}) ? response.data?.realBalance : undefined,
-        nonWithdrawableBalance:
-          "nonWithdrawableBalance" in (response.data ?? {})
-            ? response.data?.nonWithdrawableBalance
-            : undefined,
-      });
-      toast.success(
-        response.message ||
-          (creditMode === "tradable"
-            ? "Tradable fund added successfully."
-            : "Bonus credited successfully.")
-      );
+      if (creditMode === "tradable") {
+        const response = await tradableFundMutation.mutateAsync({
+          accountId: selectedAccountId.trim(),
+          amount: creditAmountNumber,
+          reason: creditReason.trim() || undefined,
+        });
+
+        setCreditResult({
+          bonusAdded: undefined,
+          bonusBalance: response.data?.bonusBalance,
+          equity: response.data?.equity,
+          tradableFundAdded: response.data?.tradableFundAdded,
+          realBalance: response.data?.realBalance,
+          nonWithdrawableBalance: response.data?.nonWithdrawableBalance,
+        });
+
+        toast.success(response.message || "Tradable fund added successfully.");
+      } else {
+        const response = await creditMutation.mutateAsync({
+          accountId: selectedAccountId.trim(),
+          amount: creditAmountNumber,
+          reason: creditReason.trim() || undefined,
+        });
+
+        setCreditResult({
+          bonusAdded: response.data?.bonusAdded,
+          bonusBalance: response.data?.bonusBalance,
+          equity: response.data?.equity,
+          tradableFundAdded: undefined,
+          realBalance: response.data?.realBalance,
+          nonWithdrawableBalance: undefined,
+        });
+
+        toast.success(response.message || "Bonus credited successfully.");
+      }
+
       void accountsQuery.refetch();
       setCreditAmount("");
       setCreditReason("");
