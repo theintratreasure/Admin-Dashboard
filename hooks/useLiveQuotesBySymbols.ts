@@ -5,7 +5,7 @@ import {
     isMarketSocketDebugEnabled,
 } from "@/services/marketSocket.service";
 import { QuoteLiveState } from "@/types/market";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type QuoteMap = Record<string, QuoteLiveState>;
 
@@ -18,10 +18,15 @@ function normalizeSymbol(value: string) {
     return (value ?? "").trim().toUpperCase();
 }
 
+function compactSymbol(value: string) {
+    const compact = normalizeSymbol(value).replace(/[^A-Z0-9]/g, "");
+    return compact.replace(/^XBT/, "BTC");
+}
+
 function resolveFeedSymbol(value: string) {
     const normalized = normalizeSymbol(value);
     if (!normalized) return "";
-    return SYMBOL_ALIAS_MAP[normalized] ?? normalized;
+    return compactSymbol(SYMBOL_ALIAS_MAP[normalized] ?? normalized);
 }
 
 export function useLiveQuotesBySymbols(
@@ -69,6 +74,31 @@ export function useLiveQuotesBySymbols(
         };
     }
 
+    const getAliasKeys = useCallback((symbol: string) => {
+        const compact = compactSymbol(symbol);
+        const keys = new Set<string>();
+
+        Object.keys(bufferRef.current).forEach((key) => {
+            if (compactSymbol(key) === compact) keys.add(key);
+        });
+
+        Object.entries(aliasesRef.current).forEach(([feedSymbol, aliases]) => {
+            if (compactSymbol(feedSymbol) === compact) {
+                keys.add(feedSymbol);
+                aliases.forEach((alias) => keys.add(alias));
+            }
+        });
+
+        if (keys.size === 0 && compact) keys.add(compact);
+        return Array.from(keys);
+    }, []);
+
+    const writeQuoteToAliases = useCallback((symbol: string, quote: QuoteLiveState) => {
+        getAliasKeys(symbol).forEach((key) => {
+            bufferRef.current[key] = { ...quote, symbol: key };
+        });
+    }, [getAliasKeys]);
+
     function flush() {
         if (frameRef.current) return;
         frameRef.current = requestAnimationFrame(() => {
@@ -109,43 +139,65 @@ export function useLiveQuotesBySymbols(
             }
 
             if (raw.status === "subscribed") {
-                const s = typeof raw.symbol === "string" ? normalizeSymbol(raw.symbol) : "";
+                const s = typeof raw.symbol === "string" ? compactSymbol(raw.symbol) : "";
                 if (!s) return;
-                if (!bufferRef.current[s]) return;
 
                 const data = isRecord(raw.data) ? raw.data : undefined;
+                const providerSymbol =
+                    typeof raw.providerSymbol === "string"
+                        ? compactSymbol(raw.providerSymbol)
+                        : "";
+
+                if (providerSymbol && providerSymbol !== s) {
+                    if (!aliasesRef.current[providerSymbol]) {
+                        aliasesRef.current[providerSymbol] = [];
+                    }
+                    if (!aliasesRef.current[providerSymbol].includes(s)) {
+                        aliasesRef.current[providerSymbol].push(s);
+                    }
+                    if (!bufferRef.current[providerSymbol]) {
+                        bufferRef.current[providerSymbol] =
+                            bufferRef.current[s] ?? createEmptyQuote(providerSymbol);
+                    }
+                }
+
+                if (!bufferRef.current[s]) {
+                    bufferRef.current[s] = createEmptyQuote(s);
+                }
 
                 const nextOpen = pickNumber(
                     raw.dayOpen,
+                    raw.day_open,
                     raw.open,
                     data?.dayOpen,
+                    data?.day_open,
                     data?.open
                 );
                 const nextClose = pickNumber(
                     raw.dayClose,
+                    raw.day_close,
                     raw.close,
                     data?.dayClose,
+                    data?.day_close,
                     data?.close,
                     raw.prevClose,
                     data?.prevClose
                 );
 
-                bufferRef.current[s] = {
+                const next = {
                     ...bufferRef.current[s],
                     high:
-                        pickNumber(raw.dayHigh, data?.dayHigh) ??
+                        pickNumber(raw.dayHigh, raw.day_high, raw.high, data?.dayHigh, data?.day_high, data?.high) ??
                         bufferRef.current[s].high,
                     low:
-                        pickNumber(raw.dayLow, data?.dayLow) ??
+                        pickNumber(raw.dayLow, raw.day_low, raw.low, data?.dayLow, data?.day_low, data?.low) ??
                         bufferRef.current[s].low,
                     open: nextOpen ?? bufferRef.current[s].open,
                     close: nextClose ?? bufferRef.current[s].close,
                 };
-                const aliases = aliasesRef.current[s] ?? [];
-                aliases.forEach((alias) => {
-                    if (alias === s) return;
-                    bufferRef.current[alias] = { ...bufferRef.current[s], symbol: alias };
-                });
+
+                writeQuoteToAliases(s, next);
+                if (providerSymbol) writeQuoteToAliases(providerSymbol, next);
                 flush();
                 return;
             }
@@ -154,7 +206,7 @@ export function useLiveQuotesBySymbols(
                 const data = raw.data;
                 if (!isRecord(data)) return;
 
-                const s = typeof data.code === "string" ? normalizeSymbol(data.code) : "";
+                const s = typeof data.code === "string" ? compactSymbol(data.code) : "";
                 if (!s) return;
 
                 const bids = data.bids;
@@ -167,36 +219,68 @@ export function useLiveQuotesBySymbols(
 
                 const bidPrice = toQuoteString(bidRaw.price);
                 const askPrice = toQuoteString(askRaw.price);
-                const bidVolume = toQuoteString(bidRaw.volume);
-                const askVolume = toQuoteString(askRaw.volume);
-                if (!bidPrice || !askPrice || !bidVolume || !askVolume) {
+                const bidVolume = toQuoteString(bidRaw.volume) ?? "--";
+                const askVolume = toQuoteString(askRaw.volume) ?? "--";
+                if (!bidPrice || !askPrice) {
                     return;
                 }
 
-                const old = bufferRef.current[s];
-                if (!old) return;
+                const old = bufferRef.current[s] ?? createEmptyQuote(s);
 
                 const nextOpen = pickNumber(
                     data.dayOpen,
+                    data.day_open,
                     data.open,
                     data.openPrice
                 );
                 const nextClose = pickNumber(
                     data.dayClose,
+                    data.day_close,
                     data.close,
                     data.prevClose
                 );
 
-                bufferRef.current[s] = {
+                const current = Number(bidPrice);
+                const fallbackOpen =
+                    nextOpen ??
+                    old.open ??
+                    (Number.isFinite(current) ? current : undefined);
+                const changeBase = nextClose ?? old.close ?? fallbackOpen;
+                const change =
+                    Number.isFinite(current) && typeof changeBase === "number"
+                        ? current - changeBase
+                        : old.change;
+                const changePercent =
+                    Number.isFinite(current) &&
+                        typeof changeBase === "number" &&
+                        changeBase !== 0
+                        ? ((current - changeBase) / changeBase) * 100
+                        : old.changePercent;
+
+                const next = {
                     ...old,
                     bid: bidPrice,
                     ask: askPrice,
                     bidVolume,
                     askVolume,
-                    high: pickNumber(data.dayHigh) ?? old.high,
-                    low: pickNumber(data.dayLow) ?? old.low,
-                    open: nextOpen ?? old.open,
+                    high:
+                        pickNumber(data.dayHigh, data.day_high, data.high) ??
+                        (typeof old.high === "number" && Number.isFinite(current)
+                            ? Math.max(old.high, current)
+                            : Number.isFinite(current)
+                                ? current
+                                : old.high),
+                    low:
+                        pickNumber(data.dayLow, data.day_low, data.low) ??
+                        (typeof old.low === "number" && Number.isFinite(current)
+                            ? Math.min(old.low, current)
+                            : Number.isFinite(current)
+                                ? current
+                                : old.low),
+                    open: fallbackOpen,
                     close: nextClose ?? old.close,
+                    change,
+                    changePercent,
                     bidDir:
                         old.bid === "--"
                             ? "same"
@@ -212,14 +296,10 @@ export function useLiveQuotesBySymbols(
                                 ? "up"
                                 : Number(askPrice) < Number(old.ask)
                                     ? "down"
-                                    : old.askDir,
+                            : old.askDir,
                 };
 
-                const aliases = aliasesRef.current[s] ?? [];
-                aliases.forEach((alias) => {
-                    if (alias === s) return;
-                    bufferRef.current[alias] = { ...bufferRef.current[s], symbol: alias };
-                });
+                writeQuoteToAliases(s, next);
 
                 if (!firstTickLoggedRef.current.has(s)) {
                     if (debug) {
@@ -256,7 +336,7 @@ export function useLiveQuotesBySymbols(
             socket.close();
             socketRef.current = null;
         };
-    }, [token]);
+    }, [token, writeQuoteToAliases]);
 
     /* SYMBOL SYNC */
     useEffect(() => {

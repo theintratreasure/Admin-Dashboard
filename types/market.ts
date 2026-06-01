@@ -31,4 +31,6 @@ export type QuoteLiveState = {
   low?: number;
   open?: number;
   close?: number;
+  change?: number;
+  changePercent?: number;
 };

@@ -48,6 +48,13 @@ function calcSpread(bid?: string, ask?: string) {
   return Math.abs(Number(b) - Number(a)).toString().padStart(2, "0");
 }
 
+function formatVolume(value?: string | number) {
+  if (value === undefined || value === null || value === "--") return "--";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "--";
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
 export default function MarketWatch() {
   const token = getAccessTokenFromCookie();
   const [search, setSearch] = useState("");
@@ -352,8 +359,16 @@ export default function MarketWatch() {
         const spread = calcSpread(live?.bid, live?.ask);
         const current = toNumber(live?.bid ?? live?.ask);
         const open = toNumber(live?.open);
-        const delta = current !== null && open !== null ? current - open : null;
+        const delta =
+          typeof live?.change === "number"
+            ? live.change
+            : current !== null && open !== null
+            ? current - open
+            : null;
         const pct =
+          typeof live?.changePercent === "number"
+            ? live.changePercent
+            :
           current !== null && open !== null && open !== 0
             ? ((current - open) / open) * 100
             : null;
@@ -414,7 +429,7 @@ export default function MarketWatch() {
                   )}
                 </div>
                 <div className="text-[8px] sm:text-[11px] text-muted hidden sm:block">
-                  {live?.bidVolume ?? "--"}
+                  Vol {formatVolume(live?.bidVolume)}
                 </div>
               </td>
             )}
@@ -432,7 +447,7 @@ export default function MarketWatch() {
                   )}
                 </div>
                 <div className="text-[8px] sm:text-[11px] text-muted hidden sm:block">
-                  {live?.askVolume ?? "--"}
+                  Vol {formatVolume(live?.askVolume)}
                 </div>
               </td>
             )}
