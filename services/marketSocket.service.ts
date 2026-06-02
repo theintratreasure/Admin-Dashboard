@@ -146,7 +146,7 @@ export class MarketSocket {
       this.socket.send(
         JSON.stringify({
           type: "unsubscribe",
-          market: "crypto",
+          market: getMarketBySymbol(normalized),
           symbol: normalized,
         })
       );
@@ -164,7 +164,7 @@ export class MarketSocket {
     this.socket.send(
         JSON.stringify({
           type: "subscribe",
-        market: "crypto",
+        market: getMarketBySymbol(symbol),
         symbol,
         depth: 1,
       })
@@ -225,7 +225,9 @@ export function getMarketBySymbol(symbol: string): string {
     normalized.startsWith("XAU") ||
     normalized.startsWith("XAG") ||
     normalized.startsWith("XPT") ||
-    normalized.startsWith("XPD")
+    normalized.startsWith("XPD") ||
+    normalized === "GOLD" ||
+    normalized === "SILVER"
   ) {
     return "metal";
   }

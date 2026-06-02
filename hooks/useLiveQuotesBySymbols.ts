@@ -23,6 +23,19 @@ function compactSymbol(value: string) {
     return compact.replace(/^XBT/, "BTC");
 }
 
+function canonicalSymbol(value: string) {
+    const compact = compactSymbol(value);
+    if (compact === "GOLD") return "XAUUSD";
+    if (compact === "SILVER") return "XAGUSD";
+    return compact;
+}
+
+function sameSymbol(a: string, b: string) {
+    const ca = canonicalSymbol(a);
+    const cb = canonicalSymbol(b);
+    return Boolean(ca && cb && ca === cb);
+}
+
 function resolveFeedSymbol(value: string) {
     const normalized = normalizeSymbol(value);
     if (!normalized) return "";
@@ -79,11 +92,11 @@ export function useLiveQuotesBySymbols(
         const keys = new Set<string>();
 
         Object.keys(bufferRef.current).forEach((key) => {
-            if (compactSymbol(key) === compact) keys.add(key);
+            if (compactSymbol(key) === compact || sameSymbol(key, symbol)) keys.add(key);
         });
 
         Object.entries(aliasesRef.current).forEach(([feedSymbol, aliases]) => {
-            if (compactSymbol(feedSymbol) === compact) {
+            if (compactSymbol(feedSymbol) === compact || sameSymbol(feedSymbol, symbol)) {
                 keys.add(feedSymbol);
                 aliases.forEach((alias) => keys.add(alias));
             }
