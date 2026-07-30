@@ -37,7 +37,7 @@ export default function Topbar() {
           />
           <div className="min-w-0 leading-none">
             <p className="truncate text-sm font-bold tracking-wide text-[var(--foreground)]">
-              ALS
+              FP
             </p>
             <p className="truncate text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--primary)] sm:text-[11px]">
               Trades
