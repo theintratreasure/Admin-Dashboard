@@ -150,7 +150,7 @@ export default function CreateTraderFund() {
             let payout: WithdrawalPayoutPayload;
 
             if (withdrawMethod === "BANK") {
-              if (!bankName || !accountHolderName || !accountNumber || !ifsc) {
+              if (!bankName || !accountHolderName || !accountNumber) {
                 throw new Error("Bank payout details are required.");
               }
               payout = {

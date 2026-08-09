@@ -180,7 +180,7 @@ export default function AddPaymentModal({ onClose }: { onClose: () => void }) {
                                 <Input label="Bank name" placeholder="HDFC Bank" onChange={(v) => setForm({ ...form, bank_name: v })} />
                                 <Input label="Account holder" placeholder="John Doe" onChange={(v) => setForm({ ...form, account_name: v })} />
                                 <Input label="Account number" placeholder="************1234" onChange={(v) => setForm({ ...form, account_number: v })} />
-                                <Input label="IFSC code" placeholder="HDFC0001234" onChange={(v) => setForm({ ...form, ifsc: v })} />
+                                <Input label="IFSC code (optional)" placeholder="HDFC0001234" onChange={(v) => setForm({ ...form, ifsc: v })} />
                                 <Input label="SWIFT code (optional)" placeholder="HDFCINBBXXX" onChange={(v) => setForm({ ...form, swift_code: v })} />
                                 <Input
                                     label="Conversion rate (1 USDT = ? in bank currency)"

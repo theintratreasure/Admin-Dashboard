@@ -143,7 +143,7 @@ export default function EditPaymentModal({
                   <Field label="Bank name" placeholder="HDFC Bank" value={form.bank_name} onChange={(v) => setForm({ ...form, bank_name: v })} />
                   <Field label="Account holder" placeholder="John Doe" value={form.account_name} onChange={(v) => setForm({ ...form, account_name: v })} />
                   <Field label="Account number" placeholder="************1234" value={form.account_number} onChange={(v) => setForm({ ...form, account_number: v })} />
-                  <Field label="IFSC code" placeholder="HDFC0001234" value={form.ifsc} onChange={(v) => setForm({ ...form, ifsc: v })} />
+                  <Field label="IFSC code (optional)" placeholder="HDFC0001234" value={form.ifsc} onChange={(v) => setForm({ ...form, ifsc: v })} />
                   <Field label="SWIFT code (optional)" placeholder="HDFCINBBXXX" value={form.swift_code} onChange={(v) => setForm({ ...form, swift_code: v })} />
                   <Field
                     label="Conversion rate (1 USDT = ? in bank currency)"
